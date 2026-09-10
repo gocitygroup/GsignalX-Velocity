@@ -1,0 +1,120 @@
+; GSignalX v1.19 preset - EUR 100 raw-spread 1:500 growth account
+; Charts: M5, EURUSD + GBPUSD (skip XAUUSD until ~EUR 500)
+; Two-engine mode: InpExitMode=Scouter (ProfitScouter owns all closes)
+; Growth ladder + rationale: docs/PRESET_100EUR_RawSpread.md
+; Generated 2026-09-10
+;
+; 1) Mode & signal routing
+InpMode=0||0||1||1||N
+InpTrigPP=true||false||0||true||N
+InpTrigST=false||false||0||true||N
+InpTrigSBT=true||false||0||true||N
+InpMinAgree=2||1||1||3||N
+InpStartMode=0||0||1||1||N
+InpEvalClosedBar=true||false||0||true||N
+;
+; 2) PP SuperTrend (pivot)
+InpPivotPrd=2||1||1||10||N
+InpPPFactor=3.0||1.0||0.5||10.0||N
+InpPPAtrLen=10||2||1||50||N
+;
+; 3) ATR SuperTrend + MA filter
+InpStLen=10||2||1||50||N
+InpStMult=3.0||1.0||0.5||10.0||N
+InpUseMA=true||false||0||true||N
+InpMaLen=20||2||1||200||N
+;
+; 4) SuperBollingerTrend
+InpBBLen=12||2||1||50||N
+InpBBMult=2.0||1.0||0.5||5.0||N
+;
+; 5) Trade management
+InpAllowLong=true||false||0||true||N
+InpAllowShort=true||false||0||true||N
+InpReverse=true||false||0||true||N
+InpUseStop=true||false||0||true||N
+InpStopMult=2.0||1.0||0.5||5.0||N
+InpStrategicStopEnable=true||false||0||true||N
+InpStrategicStopMult=4.0||2.0||0.5||8.0||N
+InpUseTarget=false||false||0||true||N
+InpTargetMult=4.0||1.0||0.5||10.0||N
+InpRiskAtrLen=14||2||1||50||N
+InpTrailMode=0||0||1||2||N
+InpTrailBufferPt=20||0||1||100||N
+;
+; 5b) Entry order type
+InpEntryMode=3||0||1||3||N
+InpOffsetUnit=0||0||1||1||N
+InpLimitOffset=5||4||1||20||N
+InpStopOffset=5||4||1||20||N
+InpPendExpiryBars=0||0||1||100||N
+InpPendMaxAgeMin=60||0||10||600||N
+InpCancelOnFlip=true||false||0||true||N
+InpPendFromSignalOpen=true||false||0||true||N
+;
+; 5c) Scalping drill
+InpDrillEnable=true||false||0||true||N
+InpDrillMinutes=10||5||1||15||N
+InpDrillAllowReentry=true||false||0||true||N
+InpDrillFollowActive=true||false||0||true||N
+InpDrillMarchAfterFlat=true||false||0||true||N
+;
+; 5d) Fleet fill  (EUR 100: 2 pairs max; 3 at EUR 250, 4 at EUR 400+)
+InpFleetEnable=true||false||0||true||N
+InpFleetTargetPairs=2||1||1||6||N
+InpFleetFillCooldownSec=10||5||5||60||N
+InpFleetRequireDrill=false||false||0||true||N
+;
+; 5e) Exit ownership
+InpExitMode=1||0||1||1||N
+InpScoutLinkEnable=true||false||0||true||N
+InpScoutInstanceID=1||1||1||10||N
+InpFlipWaitDefault=false||false||0||true||N
+;
+; 6) Money management  (min-lot floor dominates below ~EUR 200)
+InpRiskMode=1||0||1||1||N
+InpFixedLot=0.10||0.01||0.01||10.0||N
+InpRiskPct=1.0||0.1||0.1||5.0||N
+InpMaxLot=0.10||0.01||0.01||10.0||N
+;
+; 7) Market open, sessions & weekend
+InpBlockWeekend=true||false||0||true||N
+InpUseSessions=true||false||0||true||N
+InpStaleTickSec=180||30||30||600||N
+InpUseHourFilter=true||false||0||true||N
+InpStartHour=7||0||1||23||N
+InpEndHour=20||0||1||23||N
+InpFridayStop=true||false||0||true||N
+InpFridayStopHr=20||0||1||23||N
+InpCloseBeforeWE=false||false||0||true||N
+InpCloseWEHour=21||0||1||23||N
+InpCryptoAllowWeekend=true||false||0||true||N
+InpCryptoExtraList=
+;
+; 8) Execution
+InpMagic=20260904||0||1||9999999||N
+InpSlippage=20||0||1||100||N
+InpMaxSpreadPt=25||0||5||200||N
+InpLookback=1200||200||100||5000||N
+InpComment=GsignalX
+;
+; 10) Chart appearance & controls (cosmetics left at defaults)
+InpShowButtons=true||false||0||true||N
+InpShowArrows=true||false||0||true||N
+InpArrowBars=300||0||50||2000||N
+InpShowLevels=true||false||0||true||N
+InpPanelX=12||0||1||2000||N
+InpPanelY=22||0||1||2000||N
+InpFontSize=9||6||1||16||N
+;
+; 9) Notifications & panel
+InpShowPanel=true||false||0||true||N
+InpAlertPopup=false||false||0||true||N
+InpAlertPush=false||false||0||true||N
+InpVerboseSignals=true||false||0||true||N
+;
+; 11) Connector bus (FILE_COMMON)
+InpBusEnable=true||false||0||true||N
+InpSwingStartHour=12||0||1||23||N
+InpSwingEndHour=17||0||1||23||N
+InpBusShowGrades=true||false||0||true||N

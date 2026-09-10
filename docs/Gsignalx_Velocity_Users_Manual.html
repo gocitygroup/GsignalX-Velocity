@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="description" content="Gsignalx Velocity — MetaTrader 5 trader manual for prop desks and small funds. Daily sessions, dollar-target harvest, fund growth from €10."/>
+<title>Gsignalx Velocity — Trader Manual | Gocity Group</title>
+<style>
+:root {
+  /* Executive / Gocity brand floor palette */
+  --bg: #0A121E;
+  --bg-elev: #0D2D48;
+  --bg-card: #144064;
+  --bg-soft: #103A5C;
+  --edge: #2D6EA0;
+  --edge-soft: #1E4F78;
+  --text: #F2F7FC;
+  --muted: #A8C4DB;
+  --gold: #FBA927;
+  --gold-dim: #D99212;
+  --brand-blue: #469AD4;
+  --bull: #16A34A;
+  --bear: #DC2626;
+  --link: #7EBFE8;
+  --rail-w: 220px;
+  --header-h: 68px;
+  --radius: 10px;
+  --font: "Segoe UI", "Candara", system-ui, sans-serif;
+  --mono: Consolas, "Cascadia Mono", monospace;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(251,169,39,0.10), transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, rgba(70,154,212,0.12), transparent 50%),
+    linear-gradient(180deg, #0A121E 0%, #0D2D48 55%, #0A121E 100%);
+  min-height: 100vh;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; color: var(--gold); }
+code, .mono {
+  font-family: var(--mono);
+  font-size: 0.88em;
+  background: var(--bg-soft);
+  padding: 0.12em 0.4em;
+  border-radius: 4px;
+  border: 1px solid var(--edge-soft);
+}
+pre {
+  background: var(--bg-elev);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+pre code { background: none; border: none; padding: 0; }
+
+/* Header */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px;
+  background: rgba(10,18,30,0.94);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(70,154,212,0.35);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  text-decoration: none;
+  color: inherit;
+}
+.brand-mark {
+  height: 40px;
+  width: auto;
+  max-width: 120px;
+  object-fit: contain;
+  object-position: left center;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.35));
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.brand-text strong {
+  display: block;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+.brand-text span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+.header-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  flex: 1;
+  padding: 4px 0;
+  scrollbar-width: thin;
+}
+.tab-btn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.tab-btn:hover { color: var(--text); background: var(--bg-soft); }
+.tab-btn.active {
+  color: #0A121E;
+  background: linear-gradient(180deg, #FDCD80, var(--gold));
+  border-color: rgba(251,169,39,0.55);
+  box-shadow: 0 0 16px rgba(251,169,39,0.35), 0 2px 8px rgba(0,0,0,0.2);
+}
+.header-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 1px solid var(--gold-dim);
+  color: var(--gold);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.header-cta:hover { background: rgba(251,169,39,0.14); text-decoration: none; color: var(--gold); }
+.header-cta.gh {
+  border-color: rgba(70,154,212,0.55);
+  color: var(--brand-blue);
+  background: rgba(70,154,212,0.12);
+}
+.header-cta.gh:hover { background: rgba(70,154,212,0.22); color: #7EBFE8; }
+
+/* Layout */
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  max-width: 1280px;
+  margin: 0 auto;
+  min-height: calc(100vh - var(--header-h));
+}
+.rail {
+  position: sticky;
+  top: var(--header-h);
+  height: calc(100vh - var(--header-h));
+  overflow-y: auto;
+  padding: 20px 12px 40px;
+  border-right: 1px solid var(--edge-soft);
+  background: rgba(18,22,30,0.55);
+}
+.rail-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  padding: 0 10px 8px;
+}
+.rail-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 2px;
+}
+.rail-btn:hover { background: var(--bg-soft); color: var(--text); }
+.rail-btn.active {
+  background: linear-gradient(90deg, rgba(240,185,60,0.18), transparent);
+  color: var(--gold);
+  border-left: 2px solid var(--gold);
+  padding-left: 10px;
+}
+.main {
+  padding: 28px 32px 80px;
+  max-width: 920px;
+}
+.panel { display: none; animation: fadeIn 0.22s ease; }
+.panel.active { display: block; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Typography */
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+h1 {
+  font-size: clamp(1.7rem, 3vw, 2.35rem);
+  line-height: 1.15;
+  margin: 0 0 12px;
+  letter-spacing: -0.02em;
+}
+h2 {
+  font-size: 1.35rem;
+  margin: 2em 0 0.6em;
+  color: var(--text);
+  border-bottom: 1px solid var(--edge-soft);
+  padding-bottom: 8px;
+}
+h2:first-of-type { margin-top: 1.2em; }
+h3 { font-size: 1.05rem; margin: 1.5em 0 0.5em; color: #E8ECF5; }
+.lede { font-size: 1.05rem; color: var(--muted); max-width: 62ch; margin: 0 0 1.4em; }
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 1.5em;
+}
+
+/* Chips & callouts */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--edge);
+}
+.chip-beginner { background: rgba(22,163,74,0.14); color: #4ADE80; border-color: rgba(22,163,74,0.4); }
+.chip-advanced { background: rgba(70,154,212,0.16); color: var(--link); border-color: rgba(70,154,212,0.4); }
+.chip-prop { background: rgba(251,169,39,0.14); color: var(--gold); border-color: rgba(251,169,39,0.4); }
+.chip-perf { background: rgba(220,38,38,0.14); color: #F87171; border-color: rgba(220,38,38,0.4); }
+.chip-version { background: var(--bg-soft); color: var(--muted); }
+
+.callout {
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin: 1.1em 0;
+  border: 1px solid var(--edge-soft);
+  background: var(--bg-card);
+}
+.callout.gold { border-color: rgba(251,169,39,0.5); background: linear-gradient(135deg, rgba(251,169,39,0.12), var(--bg-card)); }
+.callout.bull { border-color: rgba(22,163,74,0.4); }
+.callout.bear { border-color: rgba(220,38,38,0.45); }
+.callout.warn { border-color: rgba(251,169,39,0.55); }
+.callout strong.label { display: block; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; color: var(--gold); }
+
+/* Cards & tables */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin: 1.2em 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.card h3 { margin-top: 0; }
+.card .num {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: -0.03em;
+}
+.day-card {
+  background: linear-gradient(160deg, var(--bg-card), var(--bg-soft));
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin: 1.2em 0;
+}
+.day-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.day-card header h3 { margin: 0; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  margin: 1em 0;
+}
+th, td {
+  border: 1px solid var(--edge-soft);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: var(--bg-soft);
+  color: var(--gold);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+.checklist { list-style: none; padding: 0; margin: 0.8em 0; }
+.checklist li {
+  position: relative;
+  padding: 8px 10px 8px 36px;
+  border-bottom: 1px solid var(--edge-soft);
+}
+.checklist li::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 11px;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--gold-dim);
+  border-radius: 4px;
+}
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 1.2em 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+.flow .node {
+  background: var(--bg-card);
+  border: 1px solid var(--edge);
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+.flow .node.gold { border-color: var(--gold); color: var(--gold); }
+.flow .node.bull { border-color: var(--bull); color: var(--bull); }
+.flow .arrow { color: var(--muted); }
+
+.kbd-hint {
+  margin-top: 24px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.footer-note {
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 1px solid var(--edge-soft);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; }
+  .rail { display: none; }
+  .main { padding: 20px 16px 64px; }
+  .header-cta span.hide-sm { display: none; }
+  .brand-text { display: none; }
+  .header-actions { gap: 6px; }
+  .header-cta { padding: 7px 10px; font-size: 11px; }
+}
+@media print {
+  :root { --bg: #fff; --text: #111; --muted: #444; }
+  body { background: #fff; color: #111; }
+  .site-header, .rail, .header-cta, .kbd-hint { display: none !important; }
+  .shell { display: block; }
+  .panel { display: block !important; page-break-before: always; }
+  .panel:first-of-type { page-break-before: avoid; }
+  .tab-btn, .rail-btn { display: none; }
+  a { color: #0B3D5C; }
+  th, td, .card, .callout, .day-card { border-color: #ccc; background: #fff !important; color: #111; }
+  th { color: #0B3D5C; }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="brand" href="#welcome" data-tab="welcome">
+    <img class="brand-mark" src="assets/icons/group-icon.svg" width="120" height="66" alt="Gocity Group"/>
+    <div class="brand-text">
+      <strong>Gsignalx Velocity</strong>
+      <span>by Gocity Group · MT5 Desk Manual</span>
+    </div>
+  </a>
+  <nav class="header-tabs" id="headerTabs" aria-label="Manual sections"></nav>
+  <div class="header-actions">
+    <a class="header-cta gh" href="https://github.com/gocitygroup/GSignalX-MQL5-TradingToolkit" target="_blank" rel="noopener">
+      Clone on GitHub
+    </a>
+    <a class="header-cta" href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">
+      Executive <span class="hide-sm">→ gsignalx.cloud</span>
+    </a>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="rail" aria-label="Section rail">
+    <div class="rail-label">Chapters</div>
+    <nav id="railNav"></nav>
+  </aside>
+
+  <main class="main" id="main">
+
+    <!-- WELCOME -->
+    <section class="panel active" id="welcome" data-title="Welcome" data-short="Welcome">
+      <div class="kicker">Gocity Group · GSignalX Ecosystem</div>
+      <h1>Gsignalx Velocity Trader Manual</h1>
+      <p class="lede">Fund-manager instructions for running the Velocity MT5 desk: structured session entries, winners-only dollar harvest, and disciplined growth from micro capital through prop-firm and small-fund scale.</p>
+      <div class="meta-row">
+        <span class="chip chip-version">GSignalX v1.20 · ProfitScouter v1.21</span>
+        <span class="chip chip-prop">Prop &amp; small fund</span>
+        <span class="chip chip-beginner">Beginner → Advanced</span>
+        <span class="chip chip-perf">Behavioural performance</span>
+        <span class="chip chip-advanced">PolyForm-NC · source-available</span>
+      </div>
+
+      <p style="margin:0 0 1.2em">
+        <img src="assets/group-logo-transparent.svg" alt="Gocity Group / GSignalX" style="max-width:min(420px,100%);height:auto;display:block;filter:drop-shadow(0 4px 16px rgba(0,0,0,0.35))"/>
+      </p>
+
+      <div class="callout gold">
+        <strong class="label">Risk disclosure</strong>
+        Trading involves risk of loss, including loss of capital. This manual describes software behaviour for MetaTrader 5. It is not investment advice, not a performance guarantee, and not a substitute for your prop firm’s rules or your broker’s risk controls. Practise on demo before live capital.
+      </div>
+
+      <h2>Executive vs Velocity</h2>
+      <div class="card-grid">
+        <div class="card">
+          <h3>🔷 Executive (cloud)</h3>
+          <p>Probability / confluence conviction on the GSignalX platform. Use it to decide <em>what the market wants</em> before you risk size.</p>
+          <p><a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">Open gsignalx.cloud →</a></p>
+        </div>
+        <div class="card">
+          <h3>🔶 Velocity (this toolkit)</h3>
+          <p>Local MT5 momentum engines + ProfitScouter money targets. Use it to <em>execute the session</em> and bank closed P/L with process.</p>
+          <p>Runs on your Windows terminal — no cloud order routing in this build.</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong class="label">Senior desk rule</strong>
+        Executive informs conviction. Velocity owns the book on MT5. Do not confuse cloud signal pages with the EA’s local PP / SuperTrend / SuperBollinger engines — both can agree; only Velocity places and harvests tickets in this toolkit.
+      </div>
+
+      <h2>Who this manual is for</h2>
+      <table>
+        <thead><tr><th>Desk</th><th>How to use Velocity</th></tr></thead>
+        <tbody>
+          <tr><td>Beginner / funded challenge</td><td>One Scouter Service, 1–2 majors, hour filter ON, STOP at session end.</td></tr>
+          <tr><td>Prop trader (small–medium firm)</td><td>Fleet 2–4 pairs, ASAP floor ≈ 1% of balance, adverse Auto ON, daily loss budget outside the bot.</td></tr>
+          <tr><td>Fund / desk lead</td><td>Standardise presets, match Instance IDs, VPS + Confirm gates, grade bus advisory only.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>How to navigate</h2>
+      <p>Use the gold <strong>tabs</strong> in the header or the left rail. Keyboard: <code>←</code> / <code>→</code> moves sections. Links with hashes (e.g. <code>#deploy</code>) open the right chapter. Print expands all panels.</p>
+
+      <div class="flow">
+        <span class="node gold">Executive conviction</span>
+        <span class="arrow">→</span>
+        <span class="node">Velocity PLAY</span>
+        <span class="arrow">→</span>
+        <span class="node">Positions</span>
+        <span class="arrow">→</span>
+        <span class="node bull">ProfitScouter bank</span>
+        <span class="arrow">→</span>
+        <span class="node">Closed P/L</span>
+      </div>
+    </section>
+
+    <!-- SYSTEM -->
+    <section class="panel" id="system" data-title="System Map" data-short="System">
+      <div class="kicker">Architecture</div>
+      <h1>System map</h1>
+      <p class="lede">Two independent engines: GSignalX opens risk; ProfitScouter banks winners. Chart buttons never close trades.</p>
+
+      <pre>Watchlist charts                 PLAY / STOP / HALT / FOLLOW|WAIT
+       │                                    │
+       ▼                                    ▼
+ ┌─────────────┐                    Scalping drill (5–15 min)
+ │  GSignalX   │◄────────────────── after PLAY
+ │  entries    │
+ └──────┬──────┘
+        │ positions / pendings
+        ▼
+ ┌─────────────┐     optional      ┌─────────────┐
+ │ ProfitScout │◄──────────────────┤   Grader    │
+ │ ASAP / lock │    (advisory)     │  ranks only │
+ └──────┬──────┘                   └─────────────┘
+        │ bank winners at money floor
+        ▼
+ Flat → march-after-flat re-entry if PLAY + signal still valid</pre>
+
+      <table>
+        <thead><tr><th>Component</th><th>Opens?</th><th>Closes?</th><th>Needs chart?</th></tr></thead>
+        <tbody>
+          <tr><td><code>GsignalX_GocityGroup</code></td><td>Yes (PLAY)</td><td>No in Scouter mode; STOP/HALT never close</td><td>Yes</td></tr>
+          <tr><td><code>ProfitScouter_Service</code></td><td>No</td><td>Yes (money rules)</td><td>No</td></tr>
+          <tr><td><code>ProfitScouter_DollarTarget</code></td><td>No</td><td>Yes</td><td>Yes (panel host)</td></tr>
+          <tr><td><code>ProfitOpportunity_Grader</code></td><td>No</td><td>No</td><td>No</td></tr>
+          <tr><td><code>ProfitHarvest_Now</code></td><td>No</td><td>Yes (one-shot)</td><td>Drop on any chart</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Brand names vs MT5 Navigator</h2>
+      <table>
+        <thead><tr><th>Velocity desk name</th><th>What you see in MT5</th></tr></thead>
+        <tbody>
+          <tr><td>Velocity entry engine</td><td><code>GsignalX_GocityGroup</code> (Expert)</td></tr>
+          <tr><td>Profit scouting (chart)</td><td><code>ProfitScouter_DollarTarget</code></td></tr>
+          <tr><td>Profit scouting (24/7)</td><td><code>ProfitScouter_Service</code></td></tr>
+          <tr><td>Opportunity ranks</td><td><code>ProfitOpportunity_Grader</code></td></tr>
+          <tr><td>Manual bank-it-now</td><td><code>ProfitHarvest_Now</code></td></tr>
+        </tbody>
+      </table>
+
+      <h2>Non-negotiable behaviours</h2>
+      <ul>
+        <li><strong>STOP</strong> pauses new entries and cancels pendings — leaves open tickets for Scouter.</li>
+        <li><strong>HALT</strong> pauses entries <em>and</em> the linked Scouter — still does not close tickets.</li>
+        <li><strong>FOLLOW</strong> (default): keep filling latest signal direction; Scouter owns exits.</li>
+        <li><strong>WAIT</strong>: block new-direction entries while opposite magic exposure remains.</li>
+        <li>Profit path closes <strong>winners only</strong> (minimal set, biggest green first). Losers exit via adverse-bar Auto or catastrophe SL — not via ASAP floors.</li>
+        <li>One Scouter instance for “All symbols” — two harvest engines on the same book race.</li>
+      </ul>
+
+      <div class="callout bear">
+        <strong class="label">Removed — do not chase old docs</strong>
+        Account loss-guard inputs (<code>InpAccLossGuardEnable</code> / <code>InpAccMaxLossMoney</code>) are gone. Daily drawdown for prop challenges is a <em>trader discipline</em> (HALT / STOP / position count), not an automatic flatten in current Velocity builds.
+      </div>
+    </section>
+
+    <!-- DEPLOY -->
+    <section class="panel" id="deploy" data-title="Windows Deploy" data-short="Deploy">
+      <div class="kicker">Clone → MT5</div>
+      <h1>Windows deploy (easy path)</h1>
+      <p class="lede">Any Windows machine with MetaTrader 5 can host Velocity after a git clone. Prefer the batch scripts; confirm with the gated runbook.</p>
+
+      <div class="meta-row">
+        <span class="chip chip-beginner">Beginner path</span>
+        <span class="chip chip-prop">GitHub Pages ready</span>
+      </div>
+
+      <h2>Prerequisites</h2>
+      <ul>
+        <li>Windows 10/11</li>
+        <li>MetaTrader 5 build <strong>3000+</strong></li>
+        <li>Demo account first</li>
+        <li>Git (optional but recommended for updates)</li>
+      </ul>
+
+      <h2>Step 1 — Get the toolkit from GitHub</h2>
+      <p>Repository: <a href="https://github.com/gocitygroup/GSignalX-MQL5-TradingToolkit" target="_blank" rel="noopener">gocitygroup/GSignalX-MQL5-TradingToolkit</a></p>
+      <pre>git clone https://github.com/gocitygroup/GSignalX-MQL5-TradingToolkit.git
+cd GSignalX-MQL5-TradingToolkit</pre>
+      <p><strong>SSH:</strong></p>
+      <pre>git clone git@github.com:gocitygroup/GSignalX-MQL5-TradingToolkit.git
+cd GSignalX-MQL5-TradingToolkit</pre>
+      <p>Or download the ZIP: <a href="https://github.com/gocitygroup/GSignalX-MQL5-TradingToolkit/archive/refs/heads/main.zip" target="_blank" rel="noopener">main.zip</a> → Extract → open the folder that contains <code>deploy\</code> and the <code>.mq5</code> files.</p>
+
+      <div class="callout">
+        <strong class="label">Contribute &amp; feedback</strong>
+        Bug reports, prop-desk session notes, and doc fixes are welcome via
+        <a href="https://github.com/gocitygroup/GSignalX-MQL5-TradingToolkit/issues" target="_blank" rel="noopener">GitHub Issues</a>
+        and <a href="https://github.com/gocitygroup/GSignalX-MQL5-TradingToolkit/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>.
+        Noncommercial source-available license — see Appendix.
+      </div>
+
+      <h2>Step 2 — Deploy into MT5</h2>
+      <div class="day-card">
+        <header>
+          <h3>Fastest (fresh install)</h3>
+          <span class="chip chip-beginner">Recommended</span>
+        </header>
+        <ol>
+          <li>Double-click <code>deploy\Click-and-Run-Deploy.bat</code></li>
+          <li>When prompted, select / confirm your terminal data path</li>
+          <li>Allow compile if the script offers it</li>
+        </ol>
+        <p><strong>Upgrade wipe:</strong> use <code>deploy\Clean-and-Deploy.bat</code> instead.</p>
+      </div>
+
+      <p>PowerShell alternative:</p>
+      <pre>powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 -ListTerminals
+powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
+  -TerminalDataPath "$env:APPDATA\MetaQuotes\Terminal\&lt;HASH&gt;" -Compile</pre>
+
+      <h2>Step 3 — File map (what landed where)</h2>
+      <table>
+        <thead><tr><th>Source in repo</th><th>MT5 Data Folder destination</th></tr></thead>
+        <tbody>
+          <tr><td><code>Include/GSignalX/*.mqh</code></td><td><code>MQL5\Include\GSignalX\</code></td></tr>
+          <tr><td><code>Include/ProfitScouter/*.mqh</code></td><td><code>MQL5\Include\ProfitScouter\</code></td></tr>
+          <tr><td><code>GsignalX_GocityGroup.mq5</code></td><td><code>MQL5\Experts\</code></td></tr>
+          <tr><td><code>ProfitScouter_DollarTarget.mq5</code></td><td><code>MQL5\Experts\</code></td></tr>
+          <tr><td><code>ProfitScouter_Service.mq5</code></td><td><code>MQL5\Services\</code></td></tr>
+          <tr><td><code>ProfitOpportunity_Grader.mq5</code></td><td><code>MQL5\Services\</code></td></tr>
+          <tr><td><code>ProfitHarvest_Now.mq5</code></td><td><code>MQL5\Scripts\</code></td></tr>
+        </tbody>
+      </table>
+      <p>Data folder: MT5 → <strong>File → Open Data Folder</strong> → typically <code>%APPDATA%\MetaQuotes\Terminal\&lt;HASH&gt;\</code>.</p>
+
+      <h2>Step 4 — First-run checklist</h2>
+      <ol class="checklist">
+        <li>Tools → Options → Expert Advisors → allow automated trading</li>
+        <li>Toolbar <strong>Algo Trading</strong> = green / ON</li>
+        <li>Navigator → Services → Add / Start <code>ProfitScouter_Service</code> (Bus ON)</li>
+        <li>Start <code>ProfitOpportunity_Grader</code> (one instance)</li>
+        <li>Open roster charts; attach <code>GsignalX_GocityGroup</code>; Common → Allow Algo Trading</li>
+        <li>Match <code>InpScoutInstanceID</code> (EA) = <code>InpInstanceID</code> (Service), default <strong>1</strong></li>
+        <li>Run <code>deploy\Confirm-After-Start.bat</code> (or Confirm script Gate All)</li>
+      </ol>
+
+      <div class="callout warn">
+        <strong class="label">Services do not hot-reload</strong>
+        After loading a <code>.set</code> preset or changing Service inputs, stop and restart the Service from Navigator. Chart EAs: remove and re-attach (or Reset inputs) if the panel still shows stale floors.
+      </div>
+
+      <h2>Host this manual on GitHub Pages</h2>
+      <ol>
+        <li>Repo Settings → Pages → Source: Deploy from a branch</li>
+        <li>Branch: <code>main</code> (or your default) · Folder: <code>/docs</code></li>
+        <li>Save — site URL serves <code>docs/index.html</code> → this manual</li>
+        <li><code>docs/.nojekyll</code> is included so Pages serves files as-is</li>
+      </ol>
+      <p>Offline: open <code>docs\Gsignalx_Velocity_Users_Manual.html</code> in any browser after clone — no build step.</p>
+    </section>
+
+    <!-- GROWTH -->
+    <section class="panel" id="growth" data-title="Fund Growth €10+" data-short="Growth">
+      <div class="kicker">Capital ladder</div>
+      <h1>Grow the fund from €10 / $10</h1>
+      <p class="lede">ASAP floors and fleet size must scale with balance. Stock defaults (~5 currency units) assume roughly mid-hundreds of capital — micro accounts need the ladder below.</p>
+
+      <div class="callout gold">
+        <strong class="label">Fund manager rule</strong>
+        Floor ≈ <strong>1% of balance</strong> per harvest cycle. Never widen catastrophe SL above <strong>4.0×ATR</strong>. Re-ladder monthly or every +50% equity, whichever comes first.
+      </div>
+
+      <h2>Growth ladder (sample)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Balance</th>
+            <th>ASAP / Lock arm</th>
+            <th>MinWin</th>
+            <th>Fleet pairs</th>
+            <th>MaxLot</th>
+            <th>Charts</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>€10–50</td>
+            <td>0.20–0.50</td>
+            <td>0.10–0.25</td>
+            <td>1</td>
+            <td>0.01</td>
+            <td>1 major M5 · paper preferred until margin comfortable</td>
+          </tr>
+          <tr>
+            <td>€100</td>
+            <td><strong>1.00</strong></td>
+            <td><strong>0.50</strong></td>
+            <td><strong>2</strong></td>
+            <td>0.10</td>
+            <td>EURUSD + GBPUSD M5 · load 100EUR presets</td>
+          </tr>
+          <tr>
+            <td>€250</td>
+            <td>2.50</td>
+            <td>1.00</td>
+            <td>3</td>
+            <td>0.25</td>
+            <td>+ AUDUSD or USDJPY M5</td>
+          </tr>
+          <tr>
+            <td>€500</td>
+            <td>5.00 (stock)</td>
+            <td>2.50</td>
+            <td>4</td>
+            <td>0.50</td>
+            <td>XAUUSD becomes viable at 0.01</td>
+          </tr>
+          <tr>
+            <td>€1,000+</td>
+            <td>≈1% balance</td>
+            <td>floor ÷ 2</td>
+            <td>4</td>
+            <td>risk-sized + hard cap</td>
+            <td>Full Velocity roster ≤ 4 concurrent</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>€100 raw-spread sample (production preset)</h2>
+      <p>Load from Inputs → Load:</p>
+      <ul>
+        <li><code>deploy/presets/GSignalX_100EUR_RawSpread.set</code></li>
+        <li><code>deploy/presets/ProfitScouter_100EUR_RawSpread.set</code></li>
+      </ul>
+      <table>
+        <thead><tr><th>Knob</th><th>Stock</th><th>EUR 100 preset</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>InpAccTargetMoney</code></td><td>5.0</td><td>1.0</td><td>1% harvest; stock 5 ≈ 50 pips at 0.01</td></tr>
+          <tr><td><code>InpMinWinProfit</code></td><td>5.0</td><td>0.50</td><td>Dust winners can jointly bank the floor</td></tr>
+          <tr><td><code>InpFleetTargetPairs</code></td><td>4</td><td>2</td><td>Cap correlated loser wave</td></tr>
+          <tr><td><code>InpUseHourFilter</code></td><td>false</td><td>true 7–20</td><td>Skip rollover</td></tr>
+          <tr><td><code>InpAdverseTimeframe</code></td><td>M15 Service</td><td>M5</td><td>Faster loser cut on M5 desk</td></tr>
+          <tr><td><code>InpMaxLot</code></td><td>5.0</td><td>0.10</td><td>Hard sanity</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout bull">
+        <strong class="label">Beginner</strong>
+        Below ~€200, percent risk often floors to broker minimum lot (0.01). Treat every trade as full min-lot risk. Prefer M5 over M15 so adverse Auto and catastrophe SL cost less in account %.
+      </div>
+
+      <div class="callout">
+        <strong class="label">Advanced</strong>
+        Keep <code>InpIncludeCommission</code> and <code>InpIncludeSwap</code> <strong>true</strong> on raw accounts so ASAP floors are net. Percent-of-balance on the account layer only <em>lowers</em> the floor when combined with a fixed target — ladder fixed money manually.
+      </div>
+    </section>
+
+    <!-- SESSIONS -->
+    <section class="panel" id="sessions" data-title="Session Timing" data-short="Sessions">
+      <div class="kicker">Broker server clock</div>
+      <h1>Trading session timing</h1>
+      <p class="lede">All hours are broker <strong>server</strong> time — not your local timezone unless they coincide. Prop desks standardise on one session window and STOP outside it.</p>
+
+      <h2>Controls</h2>
+      <table>
+        <thead><tr><th>Input</th><th>Default</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><code>InpUseSessions</code></td><td>true</td><td>Obey broker market session calendar</td></tr>
+          <tr><td><code>InpUseHourFilter</code></td><td>false</td><td>Hard gate when ON</td></tr>
+          <tr><td><code>InpStartHour</code> / <code>InpEndHour</code></td><td>7 / 20</td><td>Used when hour filter ON</td></tr>
+          <tr><td><code>InpFridayStop</code> / hour</td><td>true / 20</td><td>No new FX late Friday</td></tr>
+          <tr><td><code>InpBlockWeekend</code></td><td>true</td><td>No Sat/Sun FX</td></tr>
+          <tr><td><code>InpCloseBeforeWE</code></td><td>false</td><td>Optional Friday flatten</td></tr>
+          <tr><td><code>InpStaleTickSec</code></td><td>180</td><td>Treat market closed if no tick</td></tr>
+          <tr><td><code>InpSwingStartHour</code> / End</td><td>12 / 17</td><td>Grade boost only — does <em>not</em> block entries</td></tr>
+          <tr><td><code>InpCryptoAllowWeekend</code></td><td>true</td><td>Crypto skips FX weekend / Friday flat</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Beginner daily session recipe</h2>
+      <div class="day-card">
+        <header>
+          <h3>London–NY overlap desk</h3>
+          <span class="chip chip-beginner">Prop-safe</span>
+        </header>
+        <ol>
+          <li>Confirm broker server offset vs London (often GMT+2/+3).</li>
+          <li>Set <code>InpUseHourFilter = true</code>, example <code>Start=8</code> <code>End=17</code> (or 7–20 stock band).</li>
+          <li>Press <strong>PLAY</strong> only when you are watching the session.</li>
+          <li>Press <strong>STOP</strong> at session end — Scouter may still bank open winners if not HALTed.</li>
+          <li>Keep Friday stop ON for FX. No revenge PLAY after news spikes.</li>
+        </ol>
+      </div>
+
+      <h2>Sample session clock (illustrative)</h2>
+      <table>
+        <thead><tr><th>Server hour</th><th>Desk action</th></tr></thead>
+        <tbody>
+          <tr><td>07:00–08:00</td><td>Pre-flight: spreads, Algo ON, Scouter START, floors check</td></tr>
+          <tr><td>08:00–12:00</td><td>PLAY core pairs; drill windows; bank ASAP cycles</td></tr>
+          <tr><td>12:00–17:00</td><td>Swing band — grades richer; optional add pair if fleet room</td></tr>
+          <tr><td>17:00–20:00</td><td>Reduce roster; widen spread filter awareness</td></tr>
+          <tr><td>≥20:00 Friday</td><td>No new FX; STOP / optional flatten</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <strong class="label">Advanced</strong>
+        Leave hour filter OFF only if you accept full broker-session exposure and enforce PLAY discipline yourself. Use swing hours for Grader timing, not as a hard risk gate.
+      </div>
+    </section>
+
+    <!-- BEGINNER -->
+    <section class="panel" id="beginner" data-title="Beginner Day" data-short="Beginner">
+      <div class="kicker">First automated day</div>
+      <h1>Beginner automated day</h1>
+      <p class="lede">Run this once on demo until the loop feels boring. Boring is the goal.</p>
+
+      <div class="day-card">
+        <header>
+          <h3>Sample demo day — €500 notionals</h3>
+          <span class="chip chip-beginner">ASAP 5</span>
+        </header>
+        <p><strong>Inputs snapshot:</strong> Bracket Both 5+5 pips · Drill 10 min · ASAP <code>InpAccTargetMoney=5</code> · Fleet 2 · Hour filter 8–17 · Instance ID 1</p>
+        <ol>
+          <li>Start <strong>ProfitScouter_Service</strong> (ASAP armed, START state respected).</li>
+          <li>Start <strong>ProfitOpportunity_Grader</strong>.</li>
+          <li>Attach GSignalX on EURUSD M5 and GBPUSD M5; Algo Trading allowed.</li>
+          <li>At session open → <strong>PLAY</strong> on each chart. Watch drill countdown.</li>
+          <li>Confirm Working pendings or Position; Status RUNNING.</li>
+          <li>When combined floating P/L ≥ 5 → Scouter banks <strong>winners only</strong>; losers stay.</li>
+          <li>If PLAY still on and signal agrees → march-after-flat may re-open.</li>
+          <li>Session end → <strong>STOP</strong> every chart. Leave Friday rules ON.</li>
+        </ol>
+        <p>You just ran: <strong>signal → entry → scout → harvest → optional re-entry</strong>.</p>
+      </div>
+
+      <h2>First settings that matter</h2>
+      <table>
+        <thead><tr><th>Area</th><th>Suggested first setting</th></tr></thead>
+        <tbody>
+          <tr><td>Entry</td><td>Limit+Stop bracket, offsets <strong>5</strong> (scalp 4–6; clamp 4–20)</td></tr>
+          <tr><td>Drill</td><td>Enabled, <strong>10</strong> minutes</td></tr>
+          <tr><td>Exit mode</td><td><code>GSX_EXIT_SCOUTER</code> (default)</td></tr>
+          <tr><td>Strategic SL</td><td>ON · <strong>4.0×ATR</strong> · TP open</td></tr>
+          <tr><td>ProfitScouter</td><td>Scalp ASAP · floor sized to account · commission/swap ON</td></tr>
+          <tr><td>Scope</td><td>All symbols · <strong>one</strong> Service instance</td></tr>
+          <tr><td>Flip policy</td><td>FOLLOW</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Manual tools without full automation</h2>
+      <ul>
+        <li>Read panel bias / Last signal; place your own tickets; keep Scouter for banking.</li>
+        <li>Drag <code>ProfitHarvest_Now</code> for a one-shot bank (default account target 10; Confirm ON).</li>
+        <li>Use <strong>HALT</strong> when walking away mid-book without wanting harvest to continue.</li>
+      </ul>
+    </section>
+
+    <!-- ADVANCED -->
+    <section class="panel" id="advanced" data-title="Advanced Desk" data-short="Advanced">
+      <div class="kicker">Power settings</div>
+      <h1>Advanced desk</h1>
+      <p class="lede">Change these only when you can state the risk effect in one sentence.</p>
+
+      <h2>Engine agreement</h2>
+      <table>
+        <thead><tr><th>Mode</th><th>Behaviour</th></tr></thead>
+        <tbody>
+          <tr><td>Simple (<code>GSX_SIMPLE</code>)</td><td>Any enabled trigger may fire</td></tr>
+          <tr><td>Advanced</td><td>Need <code>InpMinAgree</code> (default 2) among PP / ST / SBT</td></tr>
+        </tbody>
+      </table>
+      <p>Stock often enables PP + SuperBollingerTrend; ATR SuperTrend optional.</p>
+
+      <h2>FOLLOW vs WAIT</h2>
+      <ul>
+        <li><strong>FOLLOW</strong> — leave opens for Scouter; keep filling latest direction on free charts / fleet slots.</li>
+        <li><strong>WAIT</strong> — no new-direction entries while opposite-direction magic exposure remains. Prefer WAIT on news days or when book is mixed.</li>
+      </ul>
+
+      <h2>Fleet fill</h2>
+      <p><code>InpFleetTargetPairs</code> (default 4) counts a pair complete when it has an <strong>open position or working pending</strong>. Fill stops at coverage. Cooldown <code>InpFleetFillCooldownSec</code> default 10. Unfilled pendings age out (<code>InpPendMaxAgeMin</code>, stock 240; EUR100 preset 60 on M5).</p>
+
+      <h2>Adverse-bar Auto (loser path)</h2>
+      <ul>
+        <li>BUY + ≥3 selling closed bars (or SELL + buying) → close <strong>same-symbol losers only</strong>.</li>
+        <li>Only profit-engine path with <code>allowLoss</code>. Toggle with chart <strong>AUTO</strong>.</li>
+        <li>Match TF to charts (M5 desk → M5 adverse TF).</li>
+        <li><code>InpAdverseRequireSignal</code> true (default) — needs conflicting bus direction.</li>
+      </ul>
+
+      <h2>Profit lock</h2>
+      <p>Arm when peak ≥ <code>InpProfitLockArm</code>; close on give-back to <code>max(50% of peak, MinWinProfit)</code>. Align arm with ASAP floor on micro accounts.</p>
+
+      <h2>Multi-terminal bus</h2>
+      <p>Common Files: <code>%APPDATA%\MetaQuotes\Terminal\Common\Files\GSignalX\bus\v1\</code></p>
+      <ul>
+        <li>GSignalX → <code>signals/{symbol}.json</code> + heartbeat</li>
+        <li>Scouter → <code>scouter/snapshot.json</code></li>
+        <li>Grader → <code>grades/latest.json</code> (advisory — never executes)</li>
+      </ul>
+
+      <div class="callout">
+        <strong class="label">Prop desk</strong>
+        Grades are scores for prioritising PLAY charts — not orders. Do not size up solely because a grade is green.
+      </div>
+    </section>
+
+    <!-- PROP -->
+    <section class="panel" id="prop" data-title="Prop Behaviour" data-short="Prop">
+      <div class="kicker">Small &amp; medium prop firms</div>
+      <h1>Prop-firm behavioural playbook</h1>
+      <p class="lede">Velocity optimises harvest process. Prop survival optimises drawdown, consistency, and session hygiene. Own both.</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="num">1%</div>
+          <h3>ASAP floor vs balance</h3>
+          <p>Each banked cycle ≈ +1% when laddered. Size so a normal adverse loser (&lt; catastrophe SL) stays inside daily loss limit.</p>
+        </div>
+        <div class="card">
+          <div class="num">1</div>
+          <h3>Scouter instance</h3>
+          <p>One harvest brain per account book. Match Instance IDs. No dual Services on All symbols.</p>
+        </div>
+        <div class="card">
+          <div class="num">0</div>
+          <h3>Revenge PLAY</h3>
+          <p>After HALT or a red cycle, wait for the next session window. Do not widen MaxLot to “catch up.”</p>
+        </div>
+      </div>
+
+      <h2>Daily loss budget (trader-owned)</h2>
+      <p>Current builds do <strong>not</strong> auto-flatten on account loss. Set a personal / firm daily max (example: 2–3% for challenges). When hit: <strong>HALT</strong>, Algo Trading OFF, walk away. Log it.</p>
+
+      <h2>Consistency habits</h2>
+      <ul>
+        <li>Same session hours every trading day (hour filter).</li>
+        <li>Same roster size unless laddering capital.</li>
+        <li>Include commission + swap so floors match closed P/L reporting.</li>
+        <li>News: STOP 5–10 minutes before high-impact prints; WAIT if mixed book.</li>
+        <li>Friday: respect Friday stop; do not “squeeze one more.”</li>
+      </ul>
+
+      <h2>Link integrity</h2>
+      <table>
+        <thead><tr><th>Check</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>GSignalX <code>InpScoutInstanceID</code></td><td>1 (example)</td></tr>
+          <tr><td>Scouter <code>InpInstanceID</code></td><td>1</td></tr>
+          <tr><td>Scouter <code>InpRespectChartRunState</code></td><td>true (Service)</td></tr>
+          <tr><td>Bus enable</td><td>true on EA + Service + Grader</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout bear">
+        <strong class="label">Challenge killers</strong>
+        Over-fleet on micro capital · ASAP floor still at 5 on a €100 book · Algo green overnight without hour filter · Two Scouters racing · Widening strategic SL past 4.0×ATR.
+      </div>
+    </section>
+
+    <!-- PERFORMANCE -->
+    <section class="panel" id="performance" data-title="Performance Check" data-short="Performance">
+      <div class="kicker">Behavioural audit</div>
+      <h1>Performance checklist</h1>
+      <p class="lede">Best use is process control. Run these checks until they are muscle memory.</p>
+
+      <h2>Pre-session</h2>
+      <ul class="checklist">
+        <li>Balance vs ASAP floor / MinWin / Lock arm still laddered?</li>
+        <li>Algo Trading ON only because you intend to trade?</li>
+        <li>Scouter panel: ASAP floor, win floor, Adverse Auto TF correct?</li>
+        <li>Fleet target ≤ your capital rung?</li>
+        <li>Spreads normal on roster pairs?</li>
+        <li>Executive desk reviewed on <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">gsignalx.cloud</a> if you use cloud conviction?</li>
+      </ul>
+
+      <h2>Mid-session</h2>
+      <ul class="checklist">
+        <li>PLAY only on pairs you are willing to hold through drill?</li>
+        <li>No stale pendings older than your age policy?</li>
+        <li>Mixed book → consider WAIT?</li>
+        <li>After harvest, confirm march re-entries are intentional?</li>
+        <li>Spread blowout → STOP new entries?</li>
+      </ul>
+
+      <h2>End of day</h2>
+      <ul class="checklist">
+        <li>STOP all Velocity charts (or HALT if leaving harvest paused)</li>
+        <li>Log closed P/L cycles vs floor (process adherence, not just PnL)</li>
+        <li>Note any catastrophe SL hits — usually means adverse Auto TF too slow or session quality poor</li>
+        <li>Friday: confirm no weekend FX risk</li>
+        <li>Algo Trading OFF if leaving the machine</li>
+      </ul>
+
+      <h2>Improve for best performance</h2>
+      <table>
+        <thead><tr><th>Symptom</th><th>Likely fix</th></tr></thead>
+        <tbody>
+          <tr><td>No entries</td><td>PLAY? Algo? Hour/session/spread? Drill over waiting for flip?</td></tr>
+          <tr><td>Pendings rejected</td><td>Offset vs stops level; try 5–6 pips; RETURN filling</td></tr>
+          <tr><td>No harvest</td><td>Scouter START? Floor too high for lot size? Scope/magic?</td></tr>
+          <tr><td>Double closes</td><td>Two Scouters — keep one</td></tr>
+          <tr><td>Losers too large</td><td>Adverse TF to chart TF; do not widen 4.0×ATR; cut fleet</td></tr>
+          <tr><td>Grades empty</td><td>Bus + Grader + Common Files path</td></tr>
+          <tr><td>Stale ASAP on panel</td><td>Restart Service / re-attach EA after preset load</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- SAMPLES -->
+    <section class="panel" id="samples" data-title="Sample Setups" data-short="Samples">
+      <div class="kicker">Worked examples</div>
+      <h1>Sample setups</h1>
+
+      <div class="day-card">
+        <header>
+          <h3>A — €100 two-major scalp desk</h3>
+          <span class="chip chip-beginner">Prop starter</span>
+        </header>
+        <ul>
+          <li>Load EUR100 RawSpread presets; M5 EURUSD + GBPUSD</li>
+          <li>ASAP 1.00 · MinWin 0.50 · Fleet 2 · Hour 7–20 · Adverse M5</li>
+          <li>PLAY both at session open; STOP at end</li>
+          <li>Expect: many small banked cycles; cut losers via Auto, not ASAP</li>
+        </ul>
+      </div>
+
+      <div class="day-card">
+        <header>
+          <h3>B — €1,000 four-pair Velocity session</h3>
+          <span class="chip chip-advanced">Fund growth</span>
+        </header>
+        <ul>
+          <li>ASAP ≈ 10 · MinWin 5 · Fleet 4 · MaxLot 1.0 hard cap</li>
+          <li>Risk mode % balance 0.5–1.0 with ATR sizing span</li>
+          <li>Hour filter 8–17; swing grades 12–17</li>
+          <li>FOLLOW in trend days; WAIT when book splits after news</li>
+          <li>Grader ON — PLAY highest grades first when adding the 3rd/4th pair</li>
+        </ul>
+      </div>
+
+      <div class="day-card">
+        <header>
+          <h3>C — Executive cloud + Velocity harvest-only</h3>
+          <span class="chip chip-prop">Hybrid desk</span>
+        </header>
+        <ul>
+          <li>Read Executive signals on <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">gsignalx.cloud</a></li>
+          <li>Enter manually or with GSignalX on selective PLAY charts that match Executive bias</li>
+          <li>Keep ProfitScouter_Service running for dollar targets regardless</li>
+          <li>Do not expect the MQ5 files to poll the cloud API in this release</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- CHEATSHEET -->
+    <section class="panel" id="cheatsheet" data-title="Controls &amp; Defaults" data-short="Cheatsheet">
+      <div class="kicker">Reference</div>
+      <h1>Controls &amp; defaults cheat sheet</h1>
+
+      <h2>GSignalX chart buttons</h2>
+      <table>
+        <thead><tr><th>Button</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><strong>PLAY</strong></td><td>Allow entries; start drill; can resume linked Scouter</td></tr>
+          <tr><td><strong>STOP</strong></td><td>Pause entries; cancel pendings; <em>never closes</em></td></tr>
+          <tr><td><strong>HALT</strong></td><td>Pause entries + linked Scouter; <em>never closes</em></td></tr>
+          <tr><td><strong>FOLLOW / WAIT</strong></td><td>Flip-fill policy</td></tr>
+        </tbody>
+      </table>
+
+      <h2>ProfitScouter buttons</h2>
+      <table>
+        <thead><tr><th>Button</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><strong>START</strong></td><td>Arm harvest</td></tr>
+          <tr><td><strong>STOP</strong></td><td>Watch-only; no closes</td></tr>
+          <tr><td><strong>AUTO</strong></td><td>Adverse-bar loser exit on/off</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Key GSignalX defaults (v1.20)</h2>
+      <table>
+        <thead><tr><th>Input</th><th>Default</th></tr></thead>
+        <tbody>
+          <tr><td><code>InpMode</code></td><td>Simple</td></tr>
+          <tr><td><code>InpTrigPP</code> / <code>InpTrigSBT</code></td><td>true / true</td></tr>
+          <tr><td><code>InpEntryMode</code></td><td>Both (limit+stop)</td></tr>
+          <tr><td><code>InpLimitOffset</code> / Stop</td><td>5 / 5</td></tr>
+          <tr><td><code>InpDrillMinutes</code></td><td>10</td></tr>
+          <tr><td><code>InpFleetTargetPairs</code></td><td>4</td></tr>
+          <tr><td><code>InpExitMode</code></td><td>Scouter</td></tr>
+          <tr><td><code>InpStrategicStopMult</code></td><td>4.0</td></tr>
+          <tr><td><code>InpRiskPct</code></td><td>1.0</td></tr>
+          <tr><td><code>InpMaxLot</code></td><td>5.0</td></tr>
+          <tr><td><code>InpMagic</code></td><td>20260904</td></tr>
+          <tr><td><code>InpMaxSpreadPt</code></td><td>40</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Key ProfitScouter defaults (v1.21)</h2>
+      <table>
+        <thead><tr><th>Input</th><th>Default</th></tr></thead>
+        <tbody>
+          <tr><td><code>InpAccTargetMoney</code></td><td>5.0 (scale for micro!)</td></tr>
+          <tr><td><code>InpProfitLockArm</code></td><td>5.0</td></tr>
+          <tr><td><code>InpMinWinProfit</code></td><td>5.0</td></tr>
+          <tr><td><code>InpProfitLockKeepPct</code></td><td>50</td></tr>
+          <tr><td><code>InpAdverseExitEnable</code></td><td>true</td></tr>
+          <tr><td><code>InpAdverseMinBars</code></td><td>2 (fires at streak &gt;2 → ≥3 bars)</td></tr>
+          <tr><td><code>InpCheckIntervalMs</code></td><td>100</td></tr>
+          <tr><td><code>InpIncludeCommission</code> / Swap</td><td>true / true</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- APPENDIX -->
+    <section class="panel" id="appendix" data-title="Appendix" data-short="Appendix">
+      <div class="kicker">Documents &amp; glossary</div>
+      <h1>Appendix</h1>
+
+      <h2>Related documents in this repo</h2>
+      <table>
+        <thead><tr><th>Document</th><th>Topic</th></tr></thead>
+        <tbody>
+          <tr><td><code>README.md</code></td><td>Toolkit overview</td></tr>
+          <tr><td><code>LICENSE</code> / <code>NOTICE</code></td><td>PolyForm Noncommercial 1.0.0</td></tr>
+          <tr><td><code>CONTRIBUTING.md</code></td><td>Bugs, feedback, PRs</td></tr>
+          <tr><td><code>README_ProfitScouter.md</code></td><td>Harvest depth</td></tr>
+          <tr><td><code>DEPLOYMENT.md</code></td><td>Install &amp; verify</td></tr>
+          <tr><td><code>DEPLOYMENT_RUNBOOK.md</code></td><td>Gates G0–G7 with feedback</td></tr>
+          <tr><td><code>docs/PRESET_100EUR_RawSpread.md</code></td><td>Micro capital preset rationale</td></tr>
+          <tr><td><code>ARCHITECTURE_CONNECTOR_BUS.md</code></td><td>Bus protocol</td></tr>
+          <tr><td><code>docs/CREED_ALGO_Users_Manual.md</code></td><td>Legacy umbrella manual</td></tr>
+        </tbody>
+      </table>
+
+      <h2>License (source-available, non-commercial)</h2>
+      <div class="callout warn">
+        <strong class="label">PolyForm Noncommercial 1.0.0</strong>
+        This toolkit is <strong>source-available</strong> under the
+        <a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener">PolyForm Noncommercial License 1.0.0</a>
+        (SPDX: <code>PolyForm-Noncommercial-1.0.0</code>). You may use, study, modify, and share it for
+        <strong>personal, educational, research, and other noncommercial</strong> purposes. Commercial use or sale is not permitted under this license — contact Gocity Group for commercial terms.
+        Full text: <code>LICENSE</code> · Required notice: <code>NOTICE</code>.
+      </div>
+      <p>
+        Feedback and contributions: <a href="https://github.com/gocitygroup/GSignalX-MQL5-TradingToolkit/issues" target="_blank" rel="noopener">GitHub Issues</a>
+        · <a href="https://github.com/gocitygroup/GSignalX-MQL5-TradingToolkit/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>
+        · Clone: <a href="https://github.com/gocitygroup/GSignalX-MQL5-TradingToolkit" target="_blank" rel="noopener">gocitygroup/GSignalX-MQL5-TradingToolkit</a>
+      </p>
+
+      <p style="margin:1.5em 0">
+        <img src="assets/gruop-high-resulation-file.svg" alt="Gocity Group wordmark" style="max-width:min(360px,100%);height:auto;opacity:0.9"/>
+      </p>
+
+      <h2>Glossary</h2>
+      <table>
+        <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Gsignalx Velocity</strong></td><td>This MT5 momentum + harvest desk brand</td></tr>
+          <tr><td><strong>Executive</strong></td><td>Cloud confluence signals at gsignalx.cloud</td></tr>
+          <tr><td><strong>PLAY / STOP / HALT</strong></td><td>Per-chart arming; never closes tickets</td></tr>
+          <tr><td><strong>Drill</strong></td><td>Timed window after PLAY for active-direction entries</td></tr>
+          <tr><td><strong>March-after-flat</strong></td><td>Re-arm after Scouter flats the chart</td></tr>
+          <tr><td><strong>ASAP floor</strong></td><td>Bank winners when floating P/L hits account minimum</td></tr>
+          <tr><td><strong>Fleet</strong></td><td>Max concurrent pairs (open or pending)</td></tr>
+          <tr><td><strong>Strategic SL</strong></td><td>Catastrophe broker stop (default 4×ATR)</td></tr>
+          <tr><td><strong>Adverse Auto</strong></td><td>Close same-symbol losers after ≥3 opposing bars</td></tr>
+          <tr><td><strong>FILE_COMMON bus</strong></td><td>Shared JSON across terminals on one Windows user</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Version alignment</h2>
+      <p>This manual matches toolkit behaviour as of <strong>GSignalX v1.20</strong> / <strong>ProfitScouter v1.21</strong> (entry sanctity, winners-only ASAP, adverse-bar Auto, strategic SL, FOLLOW/WAIT, fleet pending-complete). Prefer these defaults over older CREED appendix notes that still mention account loss-guard.</p>
+
+      <div class="callout gold">
+        <strong class="label">Executive signals</strong>
+        For confluence conviction and the broader GSignalX trader/investor programs, visit
+        <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">https://www.gsignalx.cloud/</a>.
+      </div>
+
+      <p class="footer-note">© Gocity Group — Gsignalx Velocity / GSignalX. For research and educational use with MetaTrader 5. Trade responsibly. Past performance is not indicative of future results.</p>
+    </section>
+
+  </main>
+</div>
+
+<p class="kbd-hint" style="text-align:center;padding:0 16px 24px;">Keyboard ← → switches chapters · Print expands all sections</p>
+
+<script>
+(function () {
+  var panels = Array.prototype.slice.call(document.querySelectorAll('.panel'));
+  var headerTabs = document.getElementById('headerTabs');
+  var railNav = document.getElementById('railNav');
+  var ids = panels.map(function (p) { return p.id; });
+
+  function shortOf(p) { return p.getAttribute('data-short') || p.id; }
+  function titleOf(p) { return p.getAttribute('data-title') || p.id; }
+
+  panels.forEach(function (p) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'tab-btn';
+    btn.textContent = shortOf(p);
+    btn.dataset.tab = p.id;
+    btn.setAttribute('aria-controls', p.id);
+    headerTabs.appendChild(btn);
+
+    var r = document.createElement('button');
+    r.type = 'button';
+    r.className = 'rail-btn';
+    r.textContent = titleOf(p);
+    r.dataset.tab = p.id;
+    railNav.appendChild(r);
+  });
+
+  function activate(id, push) {
+    if (ids.indexOf(id) < 0) id = 'welcome';
+    panels.forEach(function (p) {
+      p.classList.toggle('active', p.id === id);
+    });
+    document.querySelectorAll('.tab-btn, .rail-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.tab === id);
+    });
+    if (push !== false) {
+      history.replaceState(null, '', '#' + id);
+    }
+    window.scrollTo(0, 0);
+  }
+
+  document.body.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-tab]');
+    if (!t) return;
+    e.preventDefault();
+    activate(t.dataset.tab);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    var cur = ids.indexOf((location.hash || '#welcome').slice(1));
+    if (cur < 0) cur = 0;
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      activate(ids[Math.min(ids.length - 1, cur + 1)]);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      activate(ids[Math.max(0, cur - 1)]);
+    }
+  });
+
+  function fromHash() {
+    activate((location.hash || '#welcome').slice(1) || 'welcome', false);
+  }
+  window.addEventListener('hashchange', fromHash);
+  fromHash();
+})();
+</script>
+</body>
+</html>

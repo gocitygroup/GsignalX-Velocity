@@ -1,0 +1,89 @@
+; ProfitScouter Service v1.18 preset - EUR 100 raw-spread 1:500 growth account
+; ASAP floor family scaled to 1% of balance: floor 1.00 / lock arm 1.00 / win floor 0.50
+; Adverse-bar loser cut moved to M5 to match GSignalX chart timeframe
+; Growth ladder + rationale: docs/PRESET_100EUR_RawSpread.md
+; Generated 2026-09-10
+;
+; 1. General / Filters
+InpInstanceID=1||1||1||10||N
+InpUseMagicFilter=false||false||0||true||N
+InpMagicNumber=0||0||1||9999999||N
+InpScope=1||0||1||2||N
+InpSymbolList=EURUSD,GBPUSD
+InpPrimarySymbol=EURUSD
+InpCheckIntervalMs=100||50||50||1000||N
+InpTargetCurrency=
+InpIncludeSwap=true||false||0||true||N
+InpIncludeCommission=true||false||0||true||N
+InpSlippagePoints=30||0||5||100||N
+InpMaxRetries=3||1||1||10||N
+InpScalpAsapAccountOnly=true||false||0||true||N
+InpRespectChartRunState=true||false||0||true||N
+;
+; 2. Per-position target  (ASAP: driven by account floor)
+InpPosTargetEnable=false||false||0||true||N
+InpPosTargetMoney=10.0||1.0||0.5||100.0||N
+InpPosPartialPct=0.0||0.0||10.0||100.0||N
+;
+; 3. Per-position trailing
+InpPosTrailEnable=false||false||0||true||N
+InpPosTrailArm=5.0||1.0||0.5||100.0||N
+InpPosTrailGiveMoney=2.0||0.5||0.5||50.0||N
+InpPosTrailGivePct=30.0||5.0||5.0||90.0||N
+InpPosTrailMode=2||0||1||2||N
+;
+; 4. Per-pair (symbol basket) target  (ASAP: driven by account floor)
+InpSymTargetEnable=false||false||0||true||N
+InpSymTargetMoney=25.0||1.0||1.0||500.0||N
+InpSymTrailEnable=false||false||0||true||N
+InpSymTrailArm=12.0||1.0||1.0||200.0||N
+InpSymTrailGiveMoney=4.0||0.5||0.5||50.0||N
+InpSymTrailGivePct=30.0||5.0||5.0||90.0||N
+InpSymTrailMode=2||0||1||2||N
+;
+; 5. Account-level target  (EUR 100: floor = 1% of balance = EUR 1.00)
+InpAccTargetEnable=true||false||0||true||N
+InpAccTargetMoney=1.0||0.5||0.5||100.0||N
+InpAccTargetPctBal=0.0||0.0||0.1||10.0||N
+InpAccTrailEnable=false||false||0||true||N
+InpAccTrailArm=50.0||5.0||5.0||1000.0||N
+InpAccTrailGiveMoney=15.0||1.0||1.0||200.0||N
+InpAccTrailGivePct=30.0||5.0||5.0||90.0||N
+InpAccTrailMode=2||0||1||2||N
+;
+; 6. Time-from-open window  (ASAP: off)
+InpWindowEnable=false||false||0||true||N
+InpWindowStartMin=0||0||5||480||N
+InpWindowEndMin=60||0||5||1440||N
+InpTrailAfterWindow=true||false||0||true||N
+InpTargetsWindowOnly=false||false||0||true||N
+InpCloseAtWindowEnd=false||false||0||true||N
+InpWindowEndMinProfit=0.5||0.1||0.1||10.0||N
+;
+; 7. Trailing safety
+InpTrailRequirePositive=true||false||0||true||N
+InpTrailMinCloseProfit=0.10||0.01||0.01||10.0||N
+InpPersistPeaks=true||false||0||true||N
+;
+; 7b. Profit lock & winner floor  (aligned to the 1.00 floor)
+InpProfitLockEnable=true||false||0||true||N
+InpProfitLockArm=1.0||0.5||0.5||100.0||N
+InpProfitLockKeepPct=50.0||10.0||10.0||90.0||N
+InpMinWinProfit=0.50||0.10||0.10||100.0||N
+;
+; 7c. Adverse-bar Auto loss exit  (M5 = chart TF; fires at >=3 adverse closed bars)
+InpAdverseExitEnable=true||false||0||true||N
+InpAdverseMinBars=2||1||1||10||N
+InpAdverseTimeframe=5||1||1||30||N
+InpAdverseRequireSignal=true||false||0||true||N
+;
+; 8. Status / Notifications
+InpLogStatus=true||false||0||true||N
+InpStatusEverySec=60||10||10||600||N
+InpWriteStatusFile=false||false||0||true||N
+InpStatusFileName=ProfitScouter_status.txt
+InpPushOnClose=false||false||0||true||N
+InpVerboseLog=true||false||0||true||N
+;
+; 9. Connector bus (FILE_COMMON)
+InpBusEnable=true||false||0||true||N
