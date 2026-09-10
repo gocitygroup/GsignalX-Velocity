@@ -1,0 +1,8 @@
+# Not part of the Vercel static site (docs/ is outputDirectory)
+*.mq5
+Include/
+deploy/
+.git/
+.cursor/
+agent-tools/
+*.pdf

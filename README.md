@@ -1,7 +1,7 @@
 ﻿# GSignalX MQL5 Trading Toolkit
 
 [![License: PolyForm-Noncommercial-1.0.0](https://img.shields.io/badge/License-PolyForm--NC--1.0.0-blue.svg)](LICENSE)
-[![GitHub](https://img.shields.io/badge/GitHub-GSignalX--MQL5--TradingToolkit-469AD4?logo=github)](https://github.com/gocitygroup/GSignalX-MQL5-TradingToolkit)
+[![GitHub](https://img.shields.io/badge/GitHub-GsignalX--Velocity-469AD4?logo=github)](https://github.com/gocitygroup/GsignalX-Velocity)
 [![Manual](https://img.shields.io/badge/Manual-Gsignalx%20Velocity-FBA927)](docs/Gsignalx_Velocity_Users_Manual.html)
 
 Broker-agnostic MT5 toolkit for signals (GsignalX), profit harvesting (ProfitScouter), and multi-terminal opportunity grading via a FILE_COMMON connector bus. Product desk brand: **Gsignalx Velocity** (Gocity Group). Executive cloud conviction: [gsignalx.cloud](https://www.gsignalx.cloud/).
@@ -11,8 +11,8 @@ Broker-agnostic MT5 toolkit for signals (GsignalX), profit harvesting (ProfitSco
 **Clone:**
 
 ```bash
-git clone https://github.com/gocitygroup/GSignalX-MQL5-TradingToolkit.git
-cd GSignalX-MQL5-TradingToolkit
+git clone https://github.com/gocitygroup/GsignalX-Velocity.git
+cd GsignalX-Velocity
 ```
 
 ## Components
@@ -39,7 +39,7 @@ Shared libraries live under `Include/GSignalX/` and `Include/ProfitScouter/`.
 
 ## Docs
 
-- [**Gsignalx Velocity Trader Manual (HTML)**](docs/Gsignalx_Velocity_Users_Manual.html) — primary desk manual for prop / small-fund traders (sessions, €10+ growth ladder, deploy on Windows, behavioural checklist). GitHub Pages entry: [`docs/index.html`](docs/index.html). Executive cloud signals: [gsignalx.cloud](https://www.gsignalx.cloud/)
+- [**Gsignalx Velocity Trader Manual (HTML)**](docs/Gsignalx_Velocity_Users_Manual.html) — primary desk manual for prop / small-fund traders (sessions, €10+ growth ladder, deploy on Windows, behavioural checklist). GitHub Pages / Vercel entry: [`docs/index.html`](docs/index.html). Executive cloud signals: [gsignalx.cloud](https://www.gsignalx.cloud/)
 - [CREED ALGO Users Manual (legacy)](docs/CREED_ALGO_Users_Manual.md) — prior umbrella guide ([PDF](docs/CREED_ALGO_Users_Manual.pdf))
 - [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md) — **guided gates G0–G7 with feedback blocks** (use this for step-by-step confirm)
 - [DEPLOYMENT.md](DEPLOYMENT.md) — install, compile, first-run, verify
@@ -47,7 +47,19 @@ Shared libraries live under `Include/GSignalX/` and `Include/ProfitScouter/`.
 - [README_ProfitScouter.md](README_ProfitScouter.md) — Profit Scouter configuration and behaviour
 - [PRESET_100EUR_RawSpread.md](docs/PRESET_100EUR_RawSpread.md) — micro-capital raw-spread growth preset
 
-## Quick deploy
+## Deploy docs on Vercel (from GitHub)
+
+The Vercel site serves the **HTML trader manual only** (`docs/`). MT5 Experts/Services are not hosted there — clone this repo and use `deploy\` on Windows for the toolkit.
+
+1. Push `main` to [gocitygroup/GsignalX-Velocity](https://github.com/gocitygroup/GsignalX-Velocity).
+2. In [Vercel](https://vercel.com) → **Add New Project** → Import that GitHub repository.
+3. Framework Preset: **Other**. Root Directory: `.` (repo root). Build Command: leave empty. Output Directory: **`docs`** (already set in [`vercel.json`](vercel.json)).
+4. Deploy. The site root opens the Velocity manual (`/` rewrites to the manual; `docs/index.html` also redirects).
+5. Optional: attach a custom domain in the Vercel project settings.
+
+Config files: [`vercel.json`](vercel.json), [`.vercelignore`](.vercelignore).
+
+## Quick deploy (MT5 toolkit on Windows)
 
 **Easiest:** for a **new version upgrade**, double-click [`deploy\Clean-and-Deploy.bat`](deploy/Clean-and-Deploy.bat).  
 For a fresh deploy without wiping: [`deploy\Click-and-Run-Deploy.bat`](deploy/Click-and-Run-Deploy.bat).  

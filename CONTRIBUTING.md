@@ -17,7 +17,7 @@ By opening a pull request or issue with patches, you agree that your contributio
 
 ## Feedback channels
 
-- **GitHub Issues:** https://github.com/gocitygroup/GSignalX-MQL5-TradingToolkit/issues  
+- **GitHub Issues:** https://github.com/gocitygroup/GsignalX-Velocity/issues  
 - **Discussions / PR comments:** use the same repository  
 - **Executive cloud signals & product programs:** https://www.gsignalx.cloud/
 
@@ -48,7 +48,7 @@ Include when possible:
 ## Clone & local verify
 
 ```powershell
-git clone https://github.com/gocitygroup/GSignalX-MQL5-TradingToolkit.git
-cd GSignalX-MQL5-TradingToolkit
+git clone https://github.com/gocitygroup/GsignalX-Velocity.git
+cd GsignalX-Velocity
 # Then follow docs/Gsignalx_Velocity_Users_Manual.html → Deploy
 ```
