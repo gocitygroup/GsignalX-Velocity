@@ -176,6 +176,10 @@ With `InpCryptoAllowWeekend = true`, detected crypto symbols skip FX Saturday/Su
 | **PLAY** | New entries allowed; starts the **scalping drill** window (if enabled); linked Scouter resumes |
 | **STOP** | Pauses new entries; pendings cancelled. **Never closes a trade** — the Scouter keeps managing exits |
 | **HALT** | One-click full stop: pauses entries **and** the linked Scouter harvest. **Never closes a trade** |
+| **FOLLOW / WAIT** | Fleet fill new direction vs wait until opposite magic exposure is clear |
+| **SPREAD / IGN** | Respect `InpMaxSpreadPt` (default) vs ignore the entry spread gate for instant signal fills |
+
+**SPREAD / IGN** is per chart and survives restart (`GSX_SPREADIGN_{Symbol}_{Magic}`). Default is **SPREAD** (limit on). Press **IGN** when you want the signal filled even if the spread is above the limit — fills may be worse; press **SPREAD** again to restore the gate. Turning IGN on while PLAY re-arms evaluation so a chart stuck on `waiting: spread` can enter immediately. Exit/scouting logic is unchanged.
 
 ---
 
@@ -366,7 +370,7 @@ Set `InpScalpAsapAccountOnly = false` and enable per-position / per-pair / accou
 **Advanced safeguards**
 
 - `InpAccMaxLossMoney` — loss-guard threshold; used only when `InpAccLossGuardEnable = true` (default **off** — losers are never auto-closed)  
-- `InpMaxSpreadPt` — skip entries in wide spreads  
+- `InpMaxSpreadPt` — skip entries in wide spreads (chart **IGN** button can bypass this per symbol)  
 - Separate magics per strategy family  
 
 **Honest limits**
@@ -390,8 +394,8 @@ Set `InpScalpAsapAccountOnly = false` and enable per-position / per-pair / accou
 | Scalping drill | Window, re-entry, follow-active, march-after-flat |
 | Money management | Fixed lot or % risk, max lot |
 | Sessions & weekend | Sessions, hour filter, Friday, crypto |
-| Execution | Magic, slippage, max spread, lookback |
-| Panel & bus | PLAY buttons, grades, notifications |
+| Execution | Magic, slippage, max spread, ignore-spread default, lookback |
+| Panel & bus | PLAY / SPREAD|IGN buttons, grades, notifications |
 
 ### 11.2 Opportunity grades (bus)
 
@@ -414,7 +418,7 @@ Full gates: `DEPLOYMENT_RUNBOOK.md`.
 
 | Symptom | Check |
 |---|---|
-| No entries | PLAY? Algo Trading? Hour/session/spread? Drill expired waiting for flip? |
+| No entries | PLAY? Algo Trading? Hour/session/spread (try **IGN**)? Drill expired waiting for flip? |
 | Limit/Stop rejected | Offset vs stops level; panel Last action; try 5–6 pips; filling RETURN |
 | No harvest | Scouter **START**? Algo Trading? Scope/magic filter? ASAP target too high? |
 | Scout not closing | Panel shows `Scout: STOP` — press **START** |
@@ -429,6 +433,7 @@ Full gates: `DEPLOYMENT_RUNBOOK.md`.
 |---|---|
 | **CREED ALGO** | Product umbrella for this GSignalX + ProfitScouter toolkit |
 | **PLAY / STOP** | Per-chart arming of new entries |
+| **SPREAD / IGN** | Per-chart toggle: enforce vs bypass entry max-spread gate |
 | **Drill** | Timed window after PLAY for active-signal entries |
 | **March-after-flat** | Re-arm entry after Scouter (or close) flats the chart |
 | **ASAP account target** | Bank the target from winners only when total floating P/L hits one minimum |

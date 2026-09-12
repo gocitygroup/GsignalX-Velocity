@@ -175,11 +175,12 @@ input group "8) Execution"
 input long        InpMagic         = 20260904;     // Magic number
 input int         InpSlippage      = 20;           // Max deviation (points)
 input int         InpMaxSpreadPt   = 40;           // Max spread (points, 0 = off)
+input bool        InpIgnoreSpreadDefault = false;  // Chart SPREAD/IGN default (persisted)
 input int         InpLookback      = 1200;         // Bars used for calculation
 input string      InpComment       = "GsignalX";   // Order comment
 
 input group "10) Chart appearance & controls"
-input bool         InpShowButtons  = true;               // Show PLAY / STOP / HALT / FOLLOW|WAIT
+input bool         InpShowButtons  = true;               // Show PLAY / STOP / HALT / FOLLOW|WAIT / SPREAD|IGN
 input bool         InpShowArrows   = true;               // Draw signal arrows on the chart
 input int          InpArrowBars    = 300;                // Arrows: how many bars back
 input bool         InpShowLevels   = true;               // Draw engine + trade levels
@@ -259,6 +260,7 @@ int      gClosedWins     = 0;     // closes with profit >= 0
 int      gClosedLosses   = 0;     // closes with profit < 0 (manual / legacy only)
 double   gClosedRealized = 0.0;   // realized P/L this session (profit + swap + commission)
 bool     gFlipWaitMode   = false; // false=FOLLOW (2A), true=WAIT (2B)
+bool     gIgnoreSpread   = false; // true=bypass InpMaxSpreadPt on entries (IGN)
 //--- movable panel (drag title bar; position persisted per chart)
 int      g_panelX = 12;
 int      g_panelY = 22;
@@ -345,7 +347,7 @@ void GsxPublishBusState(const string tradeState)
    j += GsxJsonKV_B("friday_late", fridayLate);
    j += GsxJsonKV_B("swing_window", swing);
    j += GsxJsonKV_I("spread_pt", spread);
-   j += GsxJsonKV_I("max_spread_pt", InpMaxSpreadPt);
+   j += GsxJsonKV_I("max_spread_pt", EffectiveMaxSpreadPt());
    j += GsxJsonKV_B("stale_tick", stale);
    j += GsxJsonKV_B("market_open", marketOpen, false);
    j += GsxJsonKV_I("positions", fleetPos);
@@ -370,7 +372,7 @@ void GsxPublishBusState(const string tradeState)
    ein.friday_late = fridayLate;
    ein.swing_window = swing;
    ein.spread_pt = (int)spread;
-   ein.max_spread_pt = InpMaxSpreadPt;
+   ein.max_spread_pt = EffectiveMaxSpreadPt();
    ein.stale_tick = stale;
    ein.market_open = marketOpen;
    GsxGradeResult local = GsxGradeEntry(ein);
@@ -979,12 +981,21 @@ double MinStopDistance()
 //+------------------------------------------------------------------+
 //| Trading                                                          |
 //+------------------------------------------------------------------+
+// Effective entry spread limit: 0 = allow any (IGN on, or InpMaxSpreadPt=0).
+int EffectiveMaxSpreadPt()
+  {
+   if(gIgnoreSpread)
+      return(0);
+   return(InpMaxSpreadPt);
+  }
+
 bool SpreadOK(string &reason)
   {
-   if(InpMaxSpreadPt <= 0)
+   int lim = EffectiveMaxSpreadPt();
+   if(lim <= 0)
       return(true);
    long spread = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
-   if(spread > InpMaxSpreadPt)
+   if(spread > lim)
      { reason = "spread " + IntegerToString((int)spread) + " > limit"; return(false); }
    return(true);
   }
@@ -2403,7 +2414,7 @@ void UpdatePanel(string tradeState)
    bool marketOpen = (StringFind(tradeState, "OPEN") == 0);
    int  rows = 20 + (InpBusEnable ? 1 : 0);
    int  bodyTop = y + g_panelTitleH;
-   int  totalH = g_panelTitleH + rows * rh + (InpShowButtons ? 46 : 12);
+   int  totalH = g_panelTitleH + rows * rh + (InpShowButtons ? 78 : 12);
 
    SetRect("BG", x - 8, y - 8, w, totalH, InpColPanelBg, InpColPanelEdge, false);
    // Title bar = drag handle
@@ -2502,8 +2513,9 @@ void UpdatePanel(string tradeState)
 
    SetLabel("L_SPR", x, y + rh * r, "Spread / bar", InpColNeutral, InpFontSize, false);
    SetLabel("V_SPR", col2, y + rh * r,
-            IntegerToString((int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD)) + " pts   " +
-            BarCountdown(), InpColText, InpFontSize, false);
+            IntegerToString((int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD)) + " pts" +
+            (gIgnoreSpread ? " IGN" : "") + "   " + BarCountdown(),
+            gIgnoreSpread ? InpColAccent : InpColText, InpFontSize, false);
    r++;
 
    //--- position detail
@@ -2640,6 +2652,12 @@ void UpdatePanel(string tradeState)
                 gFlipWaitMode ? "WAIT" : "FOLLOW",
                 gFlipWaitMode ? InpColAccent : InpColBull,
                 InpColPanelBg);
+      //--- second row: spread gate toggle (IGN bypasses InpMaxSpreadPt)
+      int by2 = by + 30;
+      SetButton("BTN_SPREAD", x, by2, 74, 24,
+                gIgnoreSpread ? "IGN" : "SPREAD",
+                gIgnoreSpread ? InpColAccent : InpColPanelBg,
+                gIgnoreSpread ? InpColPanelBg : InpColText);
      }
 
    if(!g_panelDragging)
@@ -2665,6 +2683,11 @@ string FlipWaitVarName()
    return("GSX_FLIPWAIT_" + _Symbol + "_" + IntegerToString((int)InpMagic));
   }
 
+string SpreadIgnVarName()
+  {
+   return("GSX_SPREADIGN_" + _Symbol + "_" + IntegerToString((int)InpMagic));
+  }
+
 void LoadFlipWaitMode()
   {
    string n = FlipWaitVarName();
@@ -2675,6 +2698,18 @@ void LoadFlipWaitMode()
      }
    gFlipWaitMode = InpFlipWaitDefault;
    GlobalVariableSet(n, gFlipWaitMode ? 1.0 : 0.0);
+  }
+
+void LoadIgnoreSpread()
+  {
+   string n = SpreadIgnVarName();
+   if(GlobalVariableCheck(n))
+     {
+      gIgnoreSpread = (GlobalVariableGet(n) > 0.5);
+      return;
+     }
+   gIgnoreSpread = InpIgnoreSpreadDefault;
+   GlobalVariableSet(n, gIgnoreSpread ? 1.0 : 0.0);
   }
 
 void SetFlipWaitMode(const bool waitMode, const bool announce)
@@ -2688,6 +2723,37 @@ void SetFlipWaitMode(const bool waitMode, const bool announce)
                               : " FOLLOW - fill new dir on free charts");
       Notify(waitMode ? "WAIT: new-direction entries blocked while opposite magic positions exist"
                       : "FOLLOW: flat charts / fleet fill the latest signal direction");
+     }
+   UpdatePanel(g_lastPanelState);
+  }
+
+void SetIgnoreSpread(const bool on, const bool announce)
+  {
+   gIgnoreSpread = on;
+   GlobalVariableSet(SpreadIgnVarName(), on ? 1.0 : 0.0);
+
+   //--- IGN mid-block: re-arm so a chart stuck on "waiting: spread" can fill now
+   if(on && gTradingEnabled)
+     {
+      gNeedSignalEval = true;
+      string reason = "";
+      bool hours = TimeFilterOK(reason);
+      bool spread = SpreadOK(reason);
+      if(CalcEngines())
+        {
+         string block = "";
+         if(!TryRunSignalEval(hours, spread, block) && block != "" && InpVerboseSignals)
+            Print("GsignalX: IGN armed, waiting: ", block);
+        }
+     }
+
+   if(announce)
+     {
+      gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                    (on ? " IGN - spread gate off"
+                        : " SPREAD - limit " + IntegerToString(InpMaxSpreadPt) + " pt");
+      Notify(on ? "IGN: entries ignore max-spread gate (wider fills allowed)"
+                : "SPREAD: entries respect max-spread limit again");
      }
    UpdatePanel(g_lastPanelState);
   }
@@ -2769,15 +2835,18 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                if(sparam == gPfx + "BTN_FLIP")
                   SetFlipWaitMode(!gFlipWaitMode, true);
                else
-                  if(sparam == gPfx + "TITLE")
-                    {
-                     g_panelDragging = true;
-                     g_panelDragOffSet = false;
-                     ObjectSetInteger(0, sparam, OBJPROP_STATE, false);
-                     return;
-                    }
+                  if(sparam == gPfx + "BTN_SPREAD")
+                     SetIgnoreSpread(!gIgnoreSpread, true);
                   else
-                     return;
+                     if(sparam == gPfx + "TITLE")
+                       {
+                        g_panelDragging = true;
+                        g_panelDragOffSet = false;
+                        ObjectSetInteger(0, sparam, OBJPROP_STATE, false);
+                        return;
+                       }
+                     else
+                        return;
 
       ObjectSetInteger(0, sparam, OBJPROP_STATE, false);
       ChartRedraw();
@@ -2886,6 +2955,7 @@ int OnInit()
       SetRunState(true, false);
 
    LoadFlipWaitMode();
+   LoadIgnoreSpread();
 
    //--- sweep unfilled brackets left over from a previous session
    CleanupStalePendings();
