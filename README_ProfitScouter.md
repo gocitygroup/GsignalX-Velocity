@@ -83,7 +83,7 @@ Requires MetaTrader 5 build 3000+ (uses `input group`, `CTrade`, millisecond tim
 
 1. In MT5, refresh the Navigator (right-click → Refresh). The EA appears under **Expert Advisors**.
 2. Enable algo trading: **Tools → Options → Expert Advisors** → allow automated trading; then click the **Algo Trading** toolbar button so it is green.
-3. Open **one** chart to host the engine. Any symbol and timeframe works — with `InpScope = All symbols` the chart is only a container. A quiet symbol on H1 is fine.
+3. Open **one** chart to host the engine. With `InpScope = All symbols` the chart is only a container for the panel — but when pairing with **GSignalX**, host on **M5** (preliminary desk) so `InpAdverseTimeframe=CURRENT` matches the signal charts. Alone, any quiet symbol/TF is fine; Service users should still set `InpAdverseTimeframe=M5` for an M5 GSignalX desk.
 4. Drag the EA onto the chart. On the **Common** tab tick *Allow Algo Trading*. Set your inputs on the **Inputs** tab. Press OK.
 5. A smiley face appears top-right and the dashboard prints in the chart corner. **START** / **STOP** buttons appear (if `InpShowButtons=true`).
 
@@ -146,7 +146,7 @@ InpAccTrailEnable          = false
 
 InpAdverseExitEnable       = true
 InpAdverseMinBars          = 2       (fire when streak > 2, i.e. ≥3 closed bars)
-InpAdverseTimeframe        = CURRENT (EA) / M15 (Service)
+InpAdverseTimeframe        = CURRENT (EA) / M15 (Service stock)
 InpAdverseRequireSignal    = true    (skip if bus direction missing)
 
 InpWindowEnable            = false
@@ -157,6 +157,8 @@ InpProfitLockArm           = 5      (arm when peak >= ASAP floor)
 InpProfitLockKeepPct       = 50     (floor = max(50% of peak, MinWinProfit))
 InpMinWinProfit            = 5.0    (no winner close below ASAP floor)
 ```
+
+**Preliminary desk with GSignalX:** run signal charts on **M5** and set Service `InpAdverseTimeframe = PERIOD_M5` (the EUR100 RawSpread preset already does). For the chart EA, leave `PERIOD_CURRENT` and host it on an **M5** chart. That pairing keeps bus direction and adverse-bar cuts on the same clock — best performance for entry + harvest. Do not mix M15 signal charts with M5 adverse (or the reverse) unless you intentionally accept mismatched exit speed.
 
 Cycle: adverse Auto may cut same-symbol reds when signal vs bars conflict; ticket or pair hits **5** → bank from winners (≥5 each); account net hits **5** → bank **5** from winners (biggest first, minimal set); remaining / new opens continue the cycle.
 

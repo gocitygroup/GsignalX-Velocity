@@ -123,7 +123,7 @@ Confirm steps are documented in `DEPLOYMENT_RUNBOOK.md` (gates G0–G7).
 3. **Navigator → Services** — Add / Start:
    - `ProfitScouter_Service` (`InpBusEnable = true` recommended)
    - `ProfitOpportunity_Grader` (one instance)
-4. Open charts for your daily roster; attach `GsignalX_GocityGroup` on each.
+4. Open **M5** charts for your daily roster; attach `GsignalX_GocityGroup` on each.
 5. On each EA: Common tab → **Allow Algo Trading**.
 6. Run `deploy\Confirm-After-Start.bat` (or Confirm script Gate All).
 
@@ -202,15 +202,32 @@ Entries must pass the max-spread gate (`InpMaxSpreadPt`, default **40** points) 
 
 **Tuning tip:** keep **SPREAD** on day to day; set a higher `InpMaxSpreadPt` for crypto if wide-but-normal; reserve **IGN** for one-shot unlocks. `InpMaxSpreadPt = 0` always allows any spread (same as IGN, but input-level and not per-button).
 
+### 4.6 Preliminary chart: M5
+
+**M5 is the preliminary (primary) desk timeframe** for best paired performance of GSignalX entries and ProfitScouter exits.
+
+| Engine | Why M5 |
+|---|---|
+| **GSignalX** | Signal flips and the scalping drill (5–15 min) align with M5 bar pace; pending age and fleet refill stay meaningful inside a session |
+| **ProfitScouter** | Adverse-bar Auto fires after ≥3 closed bars (~15 min on M5 vs ~45 min on M15); catastrophe 4×ATR costs less account % on M5 |
+| **Together** | Bus signal TF matches adverse TF → cleaner loser cuts; ASAP harvest cycles turn faster on liquid majors |
+
+**Setup checklist**
+
+1. Attach `GsignalX_GocityGroup` on **M5** charts for each roster symbol.
+2. Set ProfitScouter **Service** `InpAdverseTimeframe = M5` (stock Service default is M15 — change it for this desk).
+3. If using `ProfitScouter_DollarTarget`, host it on an **M5** chart (`InpAdverseTimeframe = CURRENT`).
+4. Do not mix M15 signal charts with M5 adverse (or the reverse) unless you intentionally accept slower/faster exits.
+
 ---
 
 ## 5. Beginner automated day
 
 Follow this once on **demo**:
 
-1. Start **ProfitScouter_Service** (ASAP account target set to a small demo amount, e.g. 5–10).
+1. Start **ProfitScouter_Service** (ASAP account target set to a small demo amount, e.g. 5–10); set **adverse TF = M5**.
 2. Start **ProfitOpportunity_Grader**.
-3. Attach **GSignalX** on 1–3 liquid pairs; Algo Trading ON.
+3. Attach **GSignalX** on 1–3 liquid pairs on **M5**; Algo Trading ON.
 4. At session open, press **PLAY** on each chart you want live.
 5. Watch panel: Status RUNNING, Drill countdown, Working pendings or Position.
 6. When combined floating profit hits the Scouter account target → the target is **banked from the winners only** (biggest green tickets first, minimal set); losers stay open.
@@ -453,6 +470,7 @@ Full gates: `DEPLOYMENT_RUNBOOK.md`.
 | Term | Meaning |
 |---|---|
 | **CREED ALGO** | Product umbrella for this GSignalX + ProfitScouter toolkit |
+| **Preliminary chart** | **M5** — primary desk TF for GSignalX + Scouter adverse pairing |
 | **PLAY / STOP** | Per-chart arming of new entries |
 | **SPREAD / IGN** | Per-chart toggle: enforce vs bypass entry max-spread gate |
 | **Drill** | Timed window after PLAY for active-signal entries |
@@ -473,6 +491,8 @@ Full gates: `DEPLOYMENT_RUNBOOK.md`.
 | Item | Value |
 |---|---|
 | Hour filter | ON · Start 8 · End 17 (adjust to your broker server) |
+| Chart TF | **M5** (preliminary desk) |
+| Scouter adverse TF | **M5** (match charts) |
 | Swing grades | 12–17 |
 | Drill | 10 minutes |
 | Entry | Both · Limit 5 · Stop 5 |

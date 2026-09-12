@@ -31,6 +31,8 @@ cd GsignalX-Velocity
 
 **Spread gate (v1.20):** entries must pass `InpMaxSpreadPt` (default 40) unless you press **IGN** on that chart. Use **IGN** only for deliberate unlocks when the panel is blocked on spread (crypto wide-but-normal, or a signal you will not miss) — then return to **SPREAD**. Prefer raising `InpMaxSpreadPt` for a symbol class over leaving IGN on permanently. Exit/Scouter logic is unchanged.
 
+**Preliminary chart (M5):** attach **GSignalX on M5** as the primary desk timeframe. Match ProfitScouter adverse TF to **M5** (`InpAdverseTimeframe=M5` on the Service, or host DollarTarget on an M5 chart with `PERIOD_CURRENT`) so signal flips, drill pace, and loser cuts stay aligned — best paired performance for entry + harvest. Details: [Velocity manual](docs/Gsignalx_Velocity_Users_Manual.html), [EUR100 M5 preset](docs/PRESET_100EUR_RawSpread.md).
+
 Shared libraries live under `Include/GSignalX/` and `Include/ProfitScouter/`.
 
 **Crypto weekends:** GsignalX v1.11+ auto-detects crypto (path/currency/name) and, with `InpCryptoAllowWeekend=true` (default), skips FX Saturday/Sunday blocks, Friday cut-off, and weekend flatten. Add odd broker names to `InpCryptoExtraList` if needed.

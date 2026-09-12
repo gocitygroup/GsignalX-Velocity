@@ -836,6 +836,11 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       <h1>System map</h1>
       <p class="lede">Two independent engines: GSignalX opens risk; ProfitScouter banks winners. Chart buttons never close trades.</p>
 
+      <div class="callout gold">
+        <strong class="label">Preliminary desk = M5</strong>
+        Attach GSignalX on <strong>M5</strong> charts and set Scouter adverse TF to <strong>M5</strong>. That pairing is the primary (preliminary) standard for best signal + harvest performance — drill pace, bus direction, and loser cuts stay aligned.
+      </div>
+
       <pre>Watchlist charts                 PLAY / STOP / HALT / FOLLOW|WAIT / SPREAD|IGN
        │                                    │
        ▼                                    ▼
@@ -1145,18 +1150,18 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
     <section class="panel" id="beginner" data-title="Beginner Day" data-short="Beginner">
       <div class="kicker">First automated day</div>
       <h1>Beginner automated day</h1>
-      <p class="lede">Run this once on demo until the loop feels boring. Boring is the goal.</p>
+      <p class="lede">Run this once on demo until the loop feels boring. Boring is the goal. Use the <strong>preliminary M5 desk</strong> (GSignalX on M5 + Scouter adverse M5).</p>
 
       <div class="day-card">
         <header>
           <h3>Sample demo day — €500 notionals</h3>
           <span class="chip chip-beginner">ASAP 5</span>
         </header>
-        <p><strong>Inputs snapshot:</strong> Bracket Both 5+5 pips · Drill 10 min · ASAP <code>InpAccTargetMoney=5</code> · Fleet 2 · Hour filter 8–17 · Instance ID 1</p>
+        <p><strong>Inputs snapshot:</strong> Bracket Both 5+5 pips · Drill 10 min · ASAP <code>InpAccTargetMoney=5</code> · Fleet 2 · Hour filter 8–17 · Instance ID 1 · <strong>Adverse TF M5</strong></p>
         <ol>
-          <li>Start <strong>ProfitScouter_Service</strong> (ASAP armed, START state respected).</li>
+          <li>Start <strong>ProfitScouter_Service</strong> (ASAP armed, START state respected; set <code>InpAdverseTimeframe=M5</code>).</li>
           <li>Start <strong>ProfitOpportunity_Grader</strong>.</li>
-          <li>Attach GSignalX on EURUSD M5 and GBPUSD M5; Algo Trading allowed.</li>
+          <li>Attach GSignalX on EURUSD <strong>M5</strong> and GBPUSD <strong>M5</strong> (preliminary chart); Algo Trading allowed.</li>
           <li>At session open → <strong>PLAY</strong> on each chart. Watch drill countdown.</li>
           <li>Confirm Working pendings or Position; Status RUNNING.</li>
           <li>When combined floating P/L ≥ 5 → Scouter banks <strong>winners only</strong>; losers stay.</li>
@@ -1223,6 +1228,23 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
         <strong class="label">Tuning tip</strong>
         Prefer raising <code>InpMaxSpreadPt</code> on crypto charts for wide-but-normal spreads. Reserve <strong>IGN</strong> for one-shot unlocks — not a permanent substitute for the limit. Avoid IGN on FX news/rollover and on micro accounts where spread + commission erase scalp edge.
       </div>
+
+      <h2>Preliminary chart (M5)</h2>
+      <p><strong>M5 is the preliminary (primary) desk timeframe</strong> for best paired performance of Velocity entries and ProfitScouter exits.</p>
+      <table>
+        <thead><tr><th>Engine</th><th>Why M5</th></tr></thead>
+        <tbody>
+          <tr><td><strong>GSignalX</strong></td><td>Signal flips and the 5–15 min drill align with M5 bar pace; pending age and fleet refill stay meaningful in-session.</td></tr>
+          <tr><td><strong>ProfitScouter</strong></td><td>Adverse Auto after ≥3 closed bars ≈ 15 min on M5 (vs ≈ 45 min on M15); 4×ATR catastrophe costs less account %.</td></tr>
+          <tr><td><strong>Together</strong></td><td>Bus signal TF matches adverse TF → cleaner loser cuts; ASAP cycles turn faster on liquid majors.</td></tr>
+        </tbody>
+      </table>
+      <ul>
+        <li>Attach every GSignalX roster chart on <strong>M5</strong>.</li>
+        <li>Set Service <code>InpAdverseTimeframe = M5</code> (stock Service default is M15 — change it for this desk).</li>
+        <li>Host DollarTarget on an <strong>M5</strong> chart when using <code>PERIOD_CURRENT</code>.</li>
+        <li>Do not mix M15 signal charts with M5 adverse (or the reverse) unless you intentionally accept mismatched exit speed.</li>
+      </ul>
 
       <h2>Fleet fill</h2>
       <p><code>InpFleetTargetPairs</code> (default 4) counts a pair complete when it has an <strong>open position or working pending</strong>. Fill stops at coverage. Cooldown <code>InpFleetFillCooldownSec</code> default 10. Unfilled pendings age out (<code>InpPendMaxAgeMin</code>, stock 240; EUR100 preset 60 on M5).</p>
@@ -1457,6 +1479,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
           <tr><td><code>InpProfitLockKeepPct</code></td><td>50</td></tr>
           <tr><td><code>InpAdverseExitEnable</code></td><td>true</td></tr>
           <tr><td><code>InpAdverseMinBars</code></td><td>2 (fires at streak &gt;2 → ≥3 bars)</td></tr>
+          <tr><td><code>InpAdverseTimeframe</code></td><td>Stock Service <strong>M15</strong> — set to <strong>M5</strong> for the preliminary M5 desk; EA = CURRENT (host on M5)</td></tr>
           <tr><td><code>InpCheckIntervalMs</code></td><td>100</td></tr>
           <tr><td><code>InpIncludeCommission</code> / Swap</td><td>true / true</td></tr>
         </tbody>
@@ -1508,6 +1531,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
         <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
         <tbody>
           <tr><td><strong>Gsignalx Velocity</strong></td><td>This MT5 momentum + harvest desk brand</td></tr>
+          <tr><td><strong>Preliminary chart</strong></td><td><strong>M5</strong> — primary desk TF for GSignalX + Scouter adverse pairing</td></tr>
           <tr><td><strong>Executive</strong></td><td>Cloud confluence signals at gsignalx.cloud</td></tr>
           <tr><td><strong>PLAY / STOP / HALT</strong></td><td>Per-chart arming; never closes tickets</td></tr>
           <tr><td><strong>SPREAD / IGN</strong></td><td>Enforce vs bypass entry max-spread gate (entry-only)</td></tr>
@@ -1522,7 +1546,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
       </table>
 
       <h2>Version alignment</h2>
-      <p>This manual matches toolkit behaviour as of <strong>GSignalX v1.20</strong> / <strong>ProfitScouter v1.21</strong> (entry sanctity, winners-only ASAP, adverse-bar Auto, strategic SL, FOLLOW/WAIT, <strong>SPREAD/IGN</strong> entry spread toggle, fleet pending-complete). Prefer these defaults over older CREED appendix notes that still mention account loss-guard.</p>
+      <p>This manual matches toolkit behaviour as of <strong>GSignalX v1.20</strong> / <strong>ProfitScouter v1.21</strong> (entry sanctity, winners-only ASAP, adverse-bar Auto, strategic SL, FOLLOW/WAIT, <strong>SPREAD/IGN</strong> entry spread toggle, fleet pending-complete, <strong>preliminary M5 desk</strong>). Prefer these defaults over older CREED appendix notes that still mention account loss-guard.</p>
 
       <div class="callout gold">
         <strong class="label">Executive signals</strong>
