@@ -836,7 +836,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       <h1>System map</h1>
       <p class="lede">Two independent engines: GSignalX opens risk; ProfitScouter banks winners. Chart buttons never close trades.</p>
 
-      <pre>Watchlist charts                 PLAY / STOP / HALT / FOLLOW|WAIT
+      <pre>Watchlist charts                 PLAY / STOP / HALT / FOLLOW|WAIT / SPREAD|IGN
        │                                    │
        ▼                                    ▼
  ┌─────────────┐                    Scalping drill (5–15 min)
@@ -882,6 +882,8 @@ tr:nth-child(even) td { background: var(--row-stripe); }
         <li><strong>HALT</strong> pauses entries <em>and</em> the linked Scouter — still does not close tickets.</li>
         <li><strong>FOLLOW</strong> (default): keep filling latest signal direction; Scouter owns exits.</li>
         <li><strong>WAIT</strong>: block new-direction entries while opposite magic exposure remains.</li>
+        <li><strong>SPREAD</strong> (default): enforce <code>InpMaxSpreadPt</code> on entries.</li>
+        <li><strong>IGN</strong>: bypass the entry spread gate on that chart only (worse fills allowed; Scouter exits unchanged).</li>
         <li>Profit path closes <strong>winners only</strong> (minimal set, biggest green first). Losers exit via adverse-bar Auto or catastrophe SL — not via ASAP floors.</li>
         <li>One Scouter instance for “All symbols” — two harvest engines on the same book race.</li>
       </ul>
@@ -1208,6 +1210,20 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
         <li><strong>WAIT</strong> — no new-direction entries while opposite-direction magic exposure remains. Prefer WAIT on news days or when book is mixed.</li>
       </ul>
 
+      <h2>SPREAD vs IGN (entry spread gate)</h2>
+      <p>Entries must pass <code>InpMaxSpreadPt</code> (default <strong>40</strong> points) unless you unlock that chart with <strong>IGN</strong>. Toggle is per chart, persists across restart, and is <strong>entry-only</strong>. Panel Spread row shows <code>IGN</code> when unlocked; turning IGN on while PLAY re-arms evaluation so a chart stuck on <code>waiting: spread</code> can fill now.</p>
+      <table>
+        <thead><tr><th>Mode</th><th>When to use</th></tr></thead>
+        <tbody>
+          <tr><td><strong>SPREAD</strong> (default)</td><td>Liquid FX in-session; skip news / rollover / thin-liquidity spikes.</td></tr>
+          <tr><td><strong>IGN</strong></td><td>Panel blocked on spread but signal/drill still valid and you accept a worse fill; crypto (or 24/7) symbols with routinely wide-but-tradeable point spreads; short deliberate unlock — then return to SPREAD.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong class="label">Tuning tip</strong>
+        Prefer raising <code>InpMaxSpreadPt</code> on crypto charts for wide-but-normal spreads. Reserve <strong>IGN</strong> for one-shot unlocks — not a permanent substitute for the limit. Avoid IGN on FX news/rollover and on micro accounts where spread + commission erase scalp edge.
+      </div>
+
       <h2>Fleet fill</h2>
       <p><code>InpFleetTargetPairs</code> (default 4) counts a pair complete when it has an <strong>open position or working pending</strong>. Fill stops at coverage. Cooldown <code>InpFleetFillCooldownSec</code> default 10. Unfilled pendings age out (<code>InpPendMaxAgeMin</code>, stock 240; EUR100 preset 60 on M5).</p>
 
@@ -1327,7 +1343,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
       <table>
         <thead><tr><th>Symptom</th><th>Likely fix</th></tr></thead>
         <tbody>
-          <tr><td>No entries</td><td>PLAY? Algo? Hour/session/spread? Drill over waiting for flip?</td></tr>
+          <tr><td>No entries</td><td>PLAY? Algo? Hour/session/spread (try <strong>IGN</strong> if <code>waiting: spread</code>)? Drill over waiting for flip?</td></tr>
           <tr><td>Pendings rejected</td><td>Offset vs stops level; try 5–6 pips; RETURN filling</td></tr>
           <tr><td>No harvest</td><td>Scouter START? Floor too high for lot size? Scope/magic?</td></tr>
           <tr><td>Double closes</td><td>Two Scouters — keep one</td></tr>
@@ -1397,6 +1413,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
           <tr><td><strong>STOP</strong></td><td>Pause entries; cancel pendings; <em>never closes</em></td></tr>
           <tr><td><strong>HALT</strong></td><td>Pause entries + linked Scouter; <em>never closes</em></td></tr>
           <tr><td><strong>FOLLOW / WAIT</strong></td><td>Flip-fill policy</td></tr>
+          <tr><td><strong>SPREAD / IGN</strong></td><td>Enforce vs bypass entry max-spread gate (entry-only)</td></tr>
         </tbody>
       </table>
 
@@ -1426,6 +1443,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
           <tr><td><code>InpMaxLot</code></td><td>5.0</td></tr>
           <tr><td><code>InpMagic</code></td><td>20260904</td></tr>
           <tr><td><code>InpMaxSpreadPt</code></td><td>40</td></tr>
+          <tr><td><code>InpIgnoreSpreadDefault</code></td><td>false (SPREAD; chart IGN persists)</td></tr>
         </tbody>
       </table>
 
@@ -1492,6 +1510,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
           <tr><td><strong>Gsignalx Velocity</strong></td><td>This MT5 momentum + harvest desk brand</td></tr>
           <tr><td><strong>Executive</strong></td><td>Cloud confluence signals at gsignalx.cloud</td></tr>
           <tr><td><strong>PLAY / STOP / HALT</strong></td><td>Per-chart arming; never closes tickets</td></tr>
+          <tr><td><strong>SPREAD / IGN</strong></td><td>Enforce vs bypass entry max-spread gate (entry-only)</td></tr>
           <tr><td><strong>Drill</strong></td><td>Timed window after PLAY for active-direction entries</td></tr>
           <tr><td><strong>March-after-flat</strong></td><td>Re-arm after Scouter flats the chart</td></tr>
           <tr><td><strong>ASAP floor</strong></td><td>Bank winners when floating P/L hits account minimum</td></tr>
@@ -1503,7 +1522,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
       </table>
 
       <h2>Version alignment</h2>
-      <p>This manual matches toolkit behaviour as of <strong>GSignalX v1.20</strong> / <strong>ProfitScouter v1.21</strong> (entry sanctity, winners-only ASAP, adverse-bar Auto, strategic SL, FOLLOW/WAIT, fleet pending-complete). Prefer these defaults over older CREED appendix notes that still mention account loss-guard.</p>
+      <p>This manual matches toolkit behaviour as of <strong>GSignalX v1.20</strong> / <strong>ProfitScouter v1.21</strong> (entry sanctity, winners-only ASAP, adverse-bar Auto, strategic SL, FOLLOW/WAIT, <strong>SPREAD/IGN</strong> entry spread toggle, fleet pending-complete). Prefer these defaults over older CREED appendix notes that still mention account loss-guard.</p>
 
       <div class="callout gold">
         <strong class="label">Executive signals</strong>

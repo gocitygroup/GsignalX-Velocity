@@ -72,7 +72,7 @@ CREED ALGO is the trading umbrella for the Gocity **GSignalX** toolkit on MetaTr
 ## 2. System map
 
 ```
-  Watchlist charts          PLAY / STOP / HALT
+  Watchlist charts          PLAY / STOP / HALT / FOLLOW|WAIT / SPREAD|IGN
          │                        │
          ▼                        ▼
    ┌─────────────┐         Scalping drill window
@@ -179,7 +179,28 @@ With `InpCryptoAllowWeekend = true`, detected crypto symbols skip FX Saturday/Su
 | **FOLLOW / WAIT** | Fleet fill new direction vs wait until opposite magic exposure is clear |
 | **SPREAD / IGN** | Respect `InpMaxSpreadPt` (default) vs ignore the entry spread gate for instant signal fills |
 
-**SPREAD / IGN** is per chart and survives restart (`GSX_SPREADIGN_{Symbol}_{Magic}`). Default is **SPREAD** (limit on). Press **IGN** when you want the signal filled even if the spread is above the limit — fills may be worse; press **SPREAD** again to restore the gate. Turning IGN on while PLAY re-arms evaluation so a chart stuck on `waiting: spread` can enter immediately. Exit/scouting logic is unchanged.
+### 4.5 Spread limit and SPREAD / IGN
+
+Entries must pass the max-spread gate (`InpMaxSpreadPt`, default **40** points) unless you unlock that chart with **IGN**. The toggle is **per chart**, persists across restart (`GSX_SPREADIGN_{Symbol}_{Magic}`), and is **entry-only** — Profit Scouter exits are unchanged. Panel Spread row shows `IGN` when unlocked; bus grades treat effective max spread as 0. Turning **IGN** on while PLAY re-arms evaluation so a chart stuck on `waiting: spread` can fill immediately.
+
+| Mode | Effect |
+|---|---|
+| **SPREAD** (default) | Enforce `InpMaxSpreadPt`. Skip thin liquidity, news spikes, and rollover blowouts. |
+| **IGN** | Bypass the entry spread gate on this symbol so a valid signal/drill can fill now. Fills may be worse. |
+
+**Use IGN when**
+
+- Market shows `OPEN (spread …)` or Last action `waiting: spread`, the signal/drill is still valid, and you accept a worse fill to catch the move
+- Crypto (or other 24/7) symbols where point-spread is routinely above an FX-oriented limit but still tradeable
+- A short, deliberate unlock — then press **SPREAD** again
+
+**Prefer not IGN when**
+
+- FX around news, rollover, or session open when spreads explode
+- Small accounts where spread + commission erase scalp edge
+- As a permanent substitute for tuning `InpMaxSpreadPt` (raise the limit on crypto charts instead of leaving IGN on forever)
+
+**Tuning tip:** keep **SPREAD** on day to day; set a higher `InpMaxSpreadPt` for crypto if wide-but-normal; reserve **IGN** for one-shot unlocks. `InpMaxSpreadPt = 0` always allows any spread (same as IGN, but input-level and not per-button).
 
 ---
 
@@ -475,7 +496,7 @@ Full gates: `DEPLOYMENT_RUNBOOK.md`.
 
 ## Appendix C — Version notes
 
-Manual aligned with toolkit behaviour as of **GSignalX v1.16** / **ProfitScouter v1.14** (scalping drill, signal-open limit/stop defaults, Scalp ASAP account target, chart START/STOP scout, winners-only minimal threshold harvest, opt-in loss guard, non-closing STOP/HALT).
+Manual aligned with toolkit behaviour as of **GSignalX v1.20** / **ProfitScouter v1.21** (scalping drill, fleet fill, FOLLOW/WAIT, **SPREAD/IGN** entry spread toggle, signal-open limit/stop defaults, Scalp ASAP winners-only harvest, adverse-bar Auto, strategic SL, non-closing STOP/HALT).
 
 ---
 
