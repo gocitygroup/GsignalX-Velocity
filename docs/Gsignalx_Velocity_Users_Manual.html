@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="description" content="Gsignalx Velocity — MetaTrader 5 trader manual for prop desks and small funds. Daily sessions, dollar-target harvest, fund growth from €10."/>
+<meta name="description" content="Gsignalx Velocity v1.21 — MetaTrader 5 trader manual for prop desks and small funds. AutoLot, equity guide, Compact panel, dollar-target harvest, fund growth from €10."/>
 <meta name="color-scheme" content="dark light"/>
-<title>Gsignalx Velocity — Trader Manual | Gocity Group</title>
+<title>Gsignalx Velocity v1.21 — Trader Manual | Gocity Group</title>
 <script>
 (function () {
   try {
@@ -77,7 +77,7 @@
   --edge: #8BB4D4;
   --edge-soft: #C5D8E8;
   --text: #0A1F33;
-  --muted: #4A6A82;
+  --muted: #3D5A72;
   --heading-sub: #16324A;
   --gold: #D99212;
   --gold-dim: #B87A0E;
@@ -150,8 +150,41 @@ pre {
   font-size: 12.5px;
   line-height: 1.45;
   -webkit-overflow-scrolling: touch;
+  white-space: pre;
+  tab-size: 2;
+  color: var(--text);
 }
-pre code { background: none; border: none; padding: 0; }
+pre code { background: none; border: none; padding: 0; color: inherit; }
+
+/* Tables: scroll wrapper (JS wraps bare tables once — DRY) */
+.table-scroll {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  margin: 1em 0 1.25em;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius);
+  border: 1px solid var(--edge-soft);
+  scrollbar-width: thin;
+}
+.table-scroll::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 28px;
+  background: var(--table-fade);
+  opacity: 0.85;
+}
+.table-scroll table {
+  margin: 0;
+  border: none;
+  width: 100%;
+  min-width: 520px;
+}
 
 /* Header */
 .site-header {
@@ -430,7 +463,7 @@ h3 { font-size: 1.05rem; margin: 1.5em 0 0.5em; color: var(--heading-sub); }
   color: var(--chip-perf-fg);
   border-color: var(--chip-perf-edge);
 }
-.chip-version { background: var(--bg-soft); color: var(--muted); }
+.chip-version { background: var(--bg-soft); color: var(--text); border-color: var(--edge); }
 
 .callout {
   border-radius: var(--radius);
@@ -484,31 +517,6 @@ h3 { font-size: 1.05rem; margin: 1.5em 0 0.5em; color: var(--heading-sub); }
 }
 .day-card header h3 { margin: 0; }
 
-.table-scroll {
-  position: relative;
-  margin: 1em 0;
-  max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  border-radius: 8px;
-  scrollbar-width: thin;
-}
-.table-scroll::after {
-  content: "";
-  pointer-events: none;
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 28px;
-  background: var(--table-fade);
-  opacity: 0.85;
-}
-.table-scroll table {
-  width: 100%;
-  min-width: 520px;
-  margin: 0;
-}
 table {
   width: 100%;
   border-collapse: collapse;
@@ -672,13 +680,31 @@ tr:nth-child(even) td { background: var(--row-stripe); }
   }
   .shell { grid-template-columns: 1fr; }
   .rail { display: none; }
-  .main { padding: 20px 16px 64px; padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  .main {
+    padding: 20px 16px 64px;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    max-width: 100%;
+  }
   .header-cta span.hide-sm { display: none; }
   .brand-text { display: none; }
   .header-cta { padding: 8px 12px; font-size: 11px; }
   .kbd-hint .hint-desk { display: none; }
   .kbd-hint .hint-mobile { display: inline; }
-  .table-scroll table { min-width: 480px; }
+  .table-scroll table { min-width: 440px; }
+  h1 { font-size: 1.45rem; line-height: 1.25; overflow-wrap: anywhere; }
+  .lede { font-size: 1rem; }
+  .callout { padding: 12px 14px; font-size: 0.95rem; }
+  .meta-row { gap: 6px; }
+  .chip { font-size: 11px; padding: 4px 8px; }
+  pre {
+    font-size: 11px;
+    padding: 12px;
+    line-height: 1.4;
+  }
+  code { word-break: break-word; overflow-wrap: anywhere; }
+  th, td { padding: 8px 10px; font-size: 13px; }
+  .chapter-nav { gap: 8px; }
+  .chapter-nav a { min-height: 44px; }
 }
 
 @media (max-width: 480px) {
@@ -690,10 +716,18 @@ tr:nth-child(even) td { background: var(--row-stripe); }
   .header-cta.gh .gh-full { display: none; }
   .header-cta.gh .gh-short { display: inline; }
   .header-actions { gap: 4px; }
-  .main { padding: 16px 14px 56px; padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)); }
-  .card-grid { grid-template-columns: 1fr; }
-  .day-card { padding: 14px 14px; }
-  h2 { font-size: 1.2rem; }
+  .main {
+    padding: 16px 12px 56px;
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  }
+  .card-grid { grid-template-columns: 1fr; gap: 12px; }
+  .day-card { padding: 14px 12px; }
+  h1 { font-size: 1.28rem; }
+  h2 { font-size: 1.12rem; }
+  .table-scroll table { min-width: 360px; }
+  .table-scroll::after { width: 18px; }
+  .brand-logo-hero { max-width: min(280px, 88vw); margin-inline: auto; }
+  .site-header { box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18); }
 }
 
 @media print {
@@ -731,7 +765,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       <img class="brand-mark" src="assets/icons/group-icon.svg" width="120" height="66" alt="Gocity Group"/>
       <div class="brand-text">
         <strong>Gsignalx Velocity</strong>
-        <span>by Gocity Group · MT5 Desk Manual</span>
+        <span>by Gocity Group · MT5 Desk Manual · v1.21</span>
       </div>
     </a>
     <nav class="header-tabs" id="headerTabs" aria-label="Manual sections"></nav>
@@ -769,11 +803,16 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       <h1>Gsignalx Velocity Trader Manual</h1>
       <p class="lede">Fund-manager instructions for running the Velocity MT5 desk: structured session entries, winners-only dollar harvest, and disciplined growth from micro capital through prop-firm and small-fund scale.</p>
       <div class="meta-row">
-        <span class="chip chip-version">GSignalX v1.20 · ProfitScouter v1.21</span>
+        <span class="chip chip-version">GSignalX v1.21 · ProfitScouter v1.21</span>
         <span class="chip chip-prop">Prop &amp; small fund</span>
         <span class="chip chip-beginner">Beginner → Advanced</span>
         <span class="chip chip-perf">Behavioural performance</span>
         <span class="chip chip-advanced">PolyForm-NC · source-available</span>
+      </div>
+
+      <div class="callout gold">
+        <strong class="label">v1.21 commercial desk</strong>
+        Chart <strong>AUTOLOT / FIXED</strong>, <strong>EQ OFF→5→10→20%</strong> equity guide, and <strong>Compact / Full</strong> outcome panel. Recommended watchlist: <strong>M5 · Compact · AUTOLOT · EQ 10% · SPREAD</strong>. Deploy notes: <code>docs/RELEASE_v1.21_Commercial_Deploy.md</code>.
       </div>
 
       <p style="margin:0 0 1.2em">
@@ -841,19 +880,20 @@ tr:nth-child(even) td { background: var(--row-stripe); }
         Attach GSignalX on <strong>M5</strong> charts and set Scouter adverse TF to <strong>M5</strong>. That pairing is the primary (preliminary) standard for best signal + harvest performance — drill pace, bus direction, and loser cuts stay aligned.
       </div>
 
-      <pre>Watchlist charts                 PLAY / STOP / HALT / FOLLOW|WAIT / SPREAD|IGN
-       │                                    │
-       ▼                                    ▼
- ┌─────────────┐                    Scalping drill (5–15 min)
- │  GSignalX   │◄────────────────── after PLAY
+      <pre>Watchlist charts      PLAY / STOP / HALT / FOLLOW|WAIT
+                      SPREAD|IGN / AUTOLOT|FIXED / EQ %
+       │                         │
+       ▼                         ▼
+ ┌─────────────┐         Scalping drill (5–15 min)
+ │  GSignalX   │◄─────── after PLAY · Compact panel
  │  entries    │
  └──────┬──────┘
         │ positions / pendings
         ▼
- ┌─────────────┐     optional      ┌─────────────┐
- │ ProfitScout │◄──────────────────┤   Grader    │
- │ ASAP / lock │    (advisory)     │  ranks only │
- └──────┬──────┘                   └─────────────┘
+ ┌─────────────┐   optional    ┌─────────────┐
+ │ ProfitScout │◄──────────────┤   Grader    │
+ │ ASAP / lock │  (advisory)   │  ranks only │
+ └──────┬──────┘               └─────────────┘
         │ bank winners at money floor
         ▼
  Flat → march-after-flat re-entry if PLAY + signal still valid</pre>
@@ -889,13 +929,17 @@ tr:nth-child(even) td { background: var(--row-stripe); }
         <li><strong>WAIT</strong>: block new-direction entries while opposite magic exposure remains.</li>
         <li><strong>SPREAD</strong> (default): enforce <code>InpMaxSpreadPt</code> on entries.</li>
         <li><strong>IGN</strong>: bypass the entry spread gate on that chart only (worse fills allowed; Scouter exits unchanged).</li>
+        <li><strong>AUTOLOT</strong> (default): size lots from balance × risk% ÷ ATR stop distance (fail-safe → fixed lot).</li>
+        <li><strong>FIXED</strong>: always use <code>InpFixedLot</code> (clamped by max/broker step).</li>
+        <li><strong>EQ OFF / 5% / 10% / 20%</strong>: account equity drawdown guide — blocks <em>new entries</em> when live DD reaches the threshold (panel shows Account DD).</li>
+        <li><strong>Compact panel</strong> (default input): investor outcome strip; <strong>Full</strong> adds engine rows + entry detail (<code>InpPanelDensity</code>).</li>
         <li>Profit path closes <strong>winners only</strong> (minimal set, biggest green first). Losers exit via adverse-bar Auto or catastrophe SL — not via ASAP floors.</li>
         <li>One Scouter instance for “All symbols” — two harvest engines on the same book race.</li>
       </ul>
 
       <div class="callout bear">
         <strong class="label">Removed — do not chase old docs</strong>
-        Account loss-guard inputs (<code>InpAccLossGuardEnable</code> / <code>InpAccMaxLossMoney</code>) are gone. Daily drawdown for prop challenges is a <em>trader discipline</em> (HALT / STOP / position count), not an automatic flatten in current Velocity builds.
+        Account loss-guard inputs (<code>InpAccLossGuardEnable</code> / <code>InpAccMaxLossMoney</code>) are gone. Use chart <strong>EQ</strong> for floating equity DD on new entries, and prop daily loss as <em>trader discipline</em> (HALT / STOP / position count) — not an automatic flatten of all tickets.
       </div>
     </section>
 
@@ -1436,6 +1480,8 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
           <tr><td><strong>HALT</strong></td><td>Pause entries + linked Scouter; <em>never closes</em></td></tr>
           <tr><td><strong>FOLLOW / WAIT</strong></td><td>Flip-fill policy</td></tr>
           <tr><td><strong>SPREAD / IGN</strong></td><td>Enforce vs bypass entry max-spread gate (entry-only)</td></tr>
+          <tr><td><strong>AUTOLOT / FIXED</strong></td><td>Risk% sizing vs fixed lot (persists <code>GSX_AUTOLOT_*</code>)</td></tr>
+          <tr><td><strong>EQ OFF / 5% / 10% / 20%</strong></td><td>Equity DD guard for new entries (persists <code>GSX_EQGUARD_*</code>)</td></tr>
         </tbody>
       </table>
 
@@ -1449,7 +1495,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
         </tbody>
       </table>
 
-      <h2>Key GSignalX defaults (v1.20)</h2>
+      <h2>Key GSignalX defaults (v1.21)</h2>
       <table>
         <thead><tr><th>Input</th><th>Default</th></tr></thead>
         <tbody>
@@ -1463,6 +1509,9 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
           <tr><td><code>InpStrategicStopMult</code></td><td>4.0</td></tr>
           <tr><td><code>InpRiskPct</code></td><td>1.0</td></tr>
           <tr><td><code>InpMaxLot</code></td><td>5.0</td></tr>
+          <tr><td><code>InpAutoLotDefault</code></td><td>true (chart AUTOLOT)</td></tr>
+          <tr><td><code>InpMaxDailyDrawdownPct</code></td><td>0 (EQ OFF until chart cycle)</td></tr>
+          <tr><td><code>InpPanelDensity</code></td><td>Compact (investor outcome strip)</td></tr>
           <tr><td><code>InpMagic</code></td><td>20260904</td></tr>
           <tr><td><code>InpMaxSpreadPt</code></td><td>40</td></tr>
           <tr><td><code>InpIgnoreSpreadDefault</code></td><td>false (SPREAD; chart IGN persists)</td></tr>
@@ -1501,6 +1550,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
           <tr><td><code>README_ProfitScouter.md</code></td><td>Harvest depth</td></tr>
           <tr><td><code>DEPLOYMENT.md</code></td><td>Install &amp; verify</td></tr>
           <tr><td><code>DEPLOYMENT_RUNBOOK.md</code></td><td>Gates G0–G7 with feedback</td></tr>
+          <tr><td><code>docs/RELEASE_v1.21_Commercial_Deploy.md</code></td><td>v1.21 commercial deploy + checklist</td></tr>
           <tr><td><code>docs/PRESET_100EUR_RawSpread.md</code></td><td>Micro capital preset rationale</td></tr>
           <tr><td><code>ARCHITECTURE_CONNECTOR_BUS.md</code></td><td>Bus protocol</td></tr>
           <tr><td><code>docs/CREED_ALGO_Users_Manual.md</code></td><td>Legacy umbrella manual</td></tr>
@@ -1535,6 +1585,9 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
           <tr><td><strong>Executive</strong></td><td>Cloud confluence signals at gsignalx.cloud</td></tr>
           <tr><td><strong>PLAY / STOP / HALT</strong></td><td>Per-chart arming; never closes tickets</td></tr>
           <tr><td><strong>SPREAD / IGN</strong></td><td>Enforce vs bypass entry max-spread gate (entry-only)</td></tr>
+          <tr><td><strong>AUTOLOT / FIXED</strong></td><td>Risk% lot sizing vs fixed lot</td></tr>
+          <tr><td><strong>EQ guide</strong></td><td>Account equity DD% gate for new entries</td></tr>
+          <tr><td><strong>Compact / Full</strong></td><td>Panel density — investor strip vs trader engines</td></tr>
           <tr><td><strong>Drill</strong></td><td>Timed window after PLAY for active-direction entries</td></tr>
           <tr><td><strong>March-after-flat</strong></td><td>Re-arm after Scouter flats the chart</td></tr>
           <tr><td><strong>ASAP floor</strong></td><td>Bank winners when floating P/L hits account minimum</td></tr>
@@ -1546,7 +1599,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
       </table>
 
       <h2>Version alignment</h2>
-      <p>This manual matches toolkit behaviour as of <strong>GSignalX v1.20</strong> / <strong>ProfitScouter v1.21</strong> (entry sanctity, winners-only ASAP, adverse-bar Auto, strategic SL, FOLLOW/WAIT, <strong>SPREAD/IGN</strong> entry spread toggle, fleet pending-complete, <strong>preliminary M5 desk</strong>). Prefer these defaults over older CREED appendix notes that still mention account loss-guard.</p>
+      <p>This manual matches toolkit behaviour as of <strong>GSignalX v1.21</strong> / <strong>ProfitScouter v1.21</strong> (entry sanctity, winners-only ASAP, adverse-bar Auto, strategic SL, FOLLOW/WAIT, <strong>SPREAD/IGN</strong>, <strong>AUTOLOT/FIXED</strong>, <strong>EQ</strong> equity guide, <strong>Compact/Full</strong> panel, fleet pending-complete, <strong>preliminary M5 desk</strong>). Prefer these defaults over older CREED appendix notes that still mention account loss-guard.</p>
 
       <div class="callout gold">
         <strong class="label">Executive signals</strong>
@@ -1554,7 +1607,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
         <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">https://www.gsignalx.cloud/</a>.
       </div>
 
-      <p class="footer-note">© Gocity Group — Gsignalx Velocity / GSignalX. For research and educational use with MetaTrader 5. Trade responsibly. Past performance is not indicative of future results.</p>
+      <p class="footer-note">© Gocity Group — Gsignalx Velocity <strong>v1.21</strong> / GSignalX. For research and educational use with MetaTrader 5. Trade responsibly. Past performance is not indicative of future results. Commercial desk deploy: <code>docs/RELEASE_v1.21_Commercial_Deploy.md</code>.</p>
     </section>
 
     <nav class="chapter-nav" aria-label="Chapter navigation">

@@ -1,8 +1,9 @@
-; GSignalX v1.19 preset - EUR 100 raw-spread 1:500 growth account
+; GSignalX v1.21 preset - EUR 100 raw-spread 1:500 growth account
 ; Charts: M5, EURUSD + GBPUSD (skip XAUUSD until ~EUR 500)
+; Compact panel + AutoLot + EQ guard — see docs/RELEASE_v1.21_Commercial_Deploy.md
 ; Two-engine mode: InpExitMode=Scouter (ProfitScouter owns all closes)
 ; Growth ladder + rationale: docs/PRESET_100EUR_RawSpread.md
-; Generated 2026-09-10
+; Generated 2026-09-13
 ;
 ; 1) Mode & signal routing
 InpMode=0||0||1||1||N
@@ -76,6 +77,10 @@ InpRiskMode=1||0||1||1||N
 InpFixedLot=0.10||0.01||0.01||10.0||N
 InpRiskPct=1.0||0.1||0.1||5.0||N
 InpMaxLot=0.10||0.01||0.01||10.0||N
+InpAutoLotDefault=true||false||0||true||N
+InpMaxDailyPositions=0||0||1||50||N
+; InpMaxDailyDrawdownPct seeds chart EQ OFF/5/10/20 (GSX_EQGUARD_*); 0 = EQ OFF
+InpMaxDailyDrawdownPct=0.0||0.0||0.5||50.0||N
 ;
 ; 7) Market open, sessions & weekend
 InpBlockWeekend=true||false||0||true||N
@@ -98,7 +103,8 @@ InpMaxSpreadPt=25||0||5||200||N
 InpLookback=1200||200||100||5000||N
 InpComment=GsignalX
 ;
-; 10) Chart appearance & controls (cosmetics left at defaults)
+; 10) Chart appearance & controls (Compact = investor outcome strip)
+InpPanelDensity=0||0||1||1||N
 InpShowButtons=true||false||0||true||N
 InpShowArrows=true||false||0||true||N
 InpArrowBars=300||0||50||2000||N

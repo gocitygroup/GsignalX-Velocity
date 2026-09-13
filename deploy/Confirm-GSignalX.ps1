@@ -68,6 +68,8 @@ function Confirm-Files {
   Add-Line "=== GATE Files ==="
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\BusIO.mqh") "Include GSignalX\BusIO.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\OpportunityGrade.mqh") "Include GSignalX\OpportunityGrade.mqh" | Out-Null
+  Test-PathMark (Join-Path $mql5 "Include\GSignalX\LotSizing.mqh") "Include GSignalX\LotSizing.mqh" | Out-Null
+  Test-PathMark (Join-Path $mql5 "Include\GSignalX\ChartPanel.mqh") "Include GSignalX\ChartPanel.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\ProfitScouter\Core.mqh") "Include ProfitScouter\Core.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Experts\GsignalX_GocityGroup.mq5") "Experts GsignalX" | Out-Null
   Test-PathMark (Join-Path $mql5 "Experts\ProfitScouter_DollarTarget.mq5") "Experts ProfitScouter EA" | Out-Null

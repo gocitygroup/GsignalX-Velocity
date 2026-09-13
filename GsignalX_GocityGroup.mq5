@@ -18,8 +18,9 @@
 //|  (c) Gocity Group - GsignalX. Research / educational use.        |
 //+------------------------------------------------------------------+
 #property copyright "Gocity Group"
-#property version   "1.20"
-#property description "GsignalX - PP SuperTrend + ATR SuperTrend + SuperBollingerTrend"
+#property version   "1.21"
+#property description "GsignalX v1.21 - PP SuperTrend + ATR SuperTrend + SuperBollingerTrend"
+#property description "AutoLot/FIXED + EQ equity guide + Compact/Full outcome panel."
 #property description "Entry engine: limit/stop bracket, scalping drill, fleet fill."
 #property description "Fleet: 4 pairs complete = open position OR working pending."
 #property description "Scouter mode: catastrophe SL; FOLLOW/WAIT; movable panel."
@@ -32,6 +33,8 @@
 #include <GSignalX/SymbolCanon.mqh>
 #include <GSignalX/TerminalIdentity.mqh>
 #include <GSignalX/OpportunityGrade.mqh>
+#include <GSignalX/LotSizing.mqh>
+#include <GSignalX/ChartPanel.mqh>
 
 //+------------------------------------------------------------------+
 //| Enumerations                                                     |
@@ -79,6 +82,12 @@ enum EnExitMode
   {
    GSX_EXIT_SIGNAL   = 0,  // Signal closes on reverse (legacy)
    GSX_EXIT_SCOUTER  = 1   // Profit Scouter owns all closes (signal never closes)
+  };
+
+enum EnPanelDensity
+  {
+   GSX_PANEL_COMPACT = 0,  // Investor: outcome-first, engines hidden
+   GSX_PANEL_FULL    = 1   // Trader: engines + entry detail
   };
 
 //+------------------------------------------------------------------+
@@ -152,10 +161,13 @@ input int         InpScoutInstanceID   = 1;     // Profit Scouter instance ID to
 input bool        InpFlipWaitDefault   = false; // Initial FOLLOW/WAIT (false=FOLLOW fill new dir)
 
 input group "6) Money management"
-input EnRiskMode  InpRiskMode      = GSX_RISK_PCT; // Position sizing
-input double      InpFixedLot      = 0.10;         // Fixed lot (if Fixed lot)
+input EnRiskMode  InpRiskMode      = GSX_RISK_PCT; // Position sizing (when AUTOLOT on)
+input double      InpFixedLot      = 0.10;         // Fixed lot (FIXED mode / fallback)
 input double      InpRiskPct       = 1.0;          // Risk per trade (%)
 input double      InpMaxLot        = 5.0;          // Maximum lot cap
+input bool        InpAutoLotDefault = true;        // Chart AUTOLOT/FIXED default (persisted)
+input int         InpMaxDailyPositions = 0;        // Max new entries per UTC day (0 = off)
+input double      InpMaxDailyDrawdownPct = 0.0;     // Equity guard: block entries if DD% >= (0 = off)
 
 input group "7) Market open, sessions & weekend"
 input bool        InpBlockWeekend  = true;         // Never trade Saturday / Sunday (FX)
@@ -180,7 +192,8 @@ input int         InpLookback      = 1200;         // Bars used for calculation
 input string      InpComment       = "GsignalX";   // Order comment
 
 input group "10) Chart appearance & controls"
-input bool         InpShowButtons  = true;               // Show PLAY / STOP / HALT / FOLLOW|WAIT / SPREAD|IGN
+input EnPanelDensity InpPanelDensity = GSX_PANEL_COMPACT; // Panel density (Compact investor / Full trader)
+input bool         InpShowButtons  = true;               // Show PLAY/STOP/HALT/FOLLOW|WAIT/SPREAD|IGN/AUTOLOT|FIXED/EQ
 input bool         InpShowArrows   = true;               // Draw signal arrows on the chart
 input int          InpArrowBars    = 300;                // Arrows: how many bars back
 input bool         InpShowLevels   = true;               // Draw engine + trade levels
@@ -261,6 +274,10 @@ int      gClosedLosses   = 0;     // closes with profit < 0 (manual / legacy onl
 double   gClosedRealized = 0.0;   // realized P/L this session (profit + swap + commission)
 bool     gFlipWaitMode   = false; // false=FOLLOW (2A), true=WAIT (2B)
 bool     gIgnoreSpread   = false; // true=bypass InpMaxSpreadPt on entries (IGN)
+bool     gAutoLot        = true;  // true=risk%/InpRiskMode sizing; false=fixed lot
+double   gMaxDailyDrawdownPct = 0.0; // equity guard threshold % (0 = OFF; chart EQ cycle)
+int      gDailyPositionsOpened = 0; // entries counted today (UTC)
+datetime gDailyResetDate = 0;     // day-start of last daily counter reset
 //--- movable panel (drag title bar; position persisted per chart)
 int      g_panelX = 12;
 int      g_panelY = 22;
@@ -269,8 +286,13 @@ bool     g_panelDragOffSet = false;
 int      g_panelDragOffX = 0;
 int      g_panelDragOffY = 0;
 string   g_lastPanelState = "OPEN";
-int      g_panelW = 320;
+int      g_panelW = 400;
 int      g_panelTitleH = 22;
+string   gPanelBlockReason = "";  // surfaced on Status (equity/spread/daily/…)
+bool     gUiDirty = true;
+ulong    gUiLastMs = 0;
+bool     gUiNeedChartArt = true;  // redraw arrows/levels on bar or position change
+int      gUiLastPosDir = 0;       // track flat↔position for art dirty
 
 
 //+------------------------------------------------------------------+
@@ -936,40 +958,90 @@ bool AllowNewDirEntry(const int wanted)
 
 double NormalizeLot(double lot)
   {
-   double minLot  = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
-   double maxLot  = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
-   double stepLot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
-   if(stepLot <= 0.0)
-      stepLot = 0.01;
-   lot = MathFloor(lot / stepLot) * stepLot;
-   if(InpMaxLot > 0.0 && lot > InpMaxLot)
-      lot = MathFloor(InpMaxLot / stepLot) * stepLot;
-   if(lot < minLot)
-      lot = minLot;
-   if(lot > maxLot)
-      lot = maxLot;
-   return(NormalizeDouble(lot, 2));
+   return(GsxNormalizeLot(_Symbol, lot, InpMaxLot));
   }
 
 double CalcLot(double stopDistance)
   {
-   if(InpRiskMode == GSX_RISK_LOT || stopDistance <= 0.0)
-      return(NormalizeLot(InpFixedLot));
+   return(GsxCalcLot(_Symbol, stopDistance, gAutoLot, (int)InpRiskMode,
+                     InpRiskPct, InpFixedLot, InpMaxLot, InpVerboseSignals));
+  }
 
-   double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
-   double tickSize  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
-   if(tickValue <= 0.0 || tickSize <= 0.0)
+//+------------------------------------------------------------------+
+//| Daily position counter + equity drawdown gate (AutoLot guide)    |
+//+------------------------------------------------------------------+
+void CheckAndResetDailyCounters()
+  {
+   MqlDateTime dt;
+   TimeToStruct(TimeGMT(), dt);
+   datetime dayStart = StringToTime(StringFormat("%04d.%02d.%02d", dt.year, dt.mon, dt.day));
+   if(gDailyResetDate != dayStart)
      {
-      Print("GsignalX: tick value/size unavailable, falling back to fixed lot");
-      return(NormalizeLot(InpFixedLot));
+      gDailyPositionsOpened = 0;
+      gDailyResetDate = dayStart;
+      if(InpVerboseSignals)
+         Print("GsignalX: daily position counters reset for ",
+               TimeToString(dayStart, TIME_DATE));
      }
+  }
 
-   double riskMoney  = AccountInfoDouble(ACCOUNT_BALANCE) * InpRiskPct / 100.0;
-   double lossPerLot = (stopDistance / tickSize) * tickValue;
-   if(lossPerLot <= 0.0)
-      return(NormalizeLot(InpFixedLot));
+bool IsWithinEquityGuard()
+  {
+   if(gMaxDailyDrawdownPct <= 0.0)
+      return(true);
+   double balance = AccountInfoDouble(ACCOUNT_BALANCE);
+   if(balance <= 0.0)
+      return(false);
+   double drawdownPct = GsxAccountDrawdownPct();
+   if(drawdownPct >= gMaxDailyDrawdownPct)
+     {
+      if(InpVerboseSignals)
+         PrintFormat("GsignalX: equity guard triggered: drawdown=%.2f%% >= threshold=%.2f%%",
+                     drawdownPct, gMaxDailyDrawdownPct);
+      return(false);
+     }
+   return(true);
+  }
 
-   return(NormalizeLot(riskMoney / lossPerLot));
+bool CanOpenPosition()
+  {
+   CheckAndResetDailyCounters();
+   if(InpMaxDailyPositions > 0 && gDailyPositionsOpened >= InpMaxDailyPositions)
+     {
+      if(InpVerboseSignals)
+         PrintFormat("GsignalX: daily max positions reached (%d/%d) — no new orders",
+                     gDailyPositionsOpened, InpMaxDailyPositions);
+      return(false);
+     }
+   return(true);
+  }
+
+void RecordPositionOpened()
+  {
+   CheckAndResetDailyCounters();
+   gDailyPositionsOpened++;
+   if(InpVerboseSignals)
+      PrintFormat("GsignalX: position %d/%s opened today",
+                  gDailyPositionsOpened,
+                  (InpMaxDailyPositions > 0
+                   ? IntegerToString(InpMaxDailyPositions)
+                   : "∞"));
+  }
+
+bool EntryRiskGuardsOk(string &blockReason)
+  {
+   blockReason = "";
+   if(!IsWithinEquityGuard())
+     {
+      blockReason = "equity guard";
+      return(false);
+     }
+   if(!CanOpenPosition())
+     {
+      blockReason = "daily max positions";
+      return(false);
+     }
+   return(true);
   }
 
 double MinStopDistance()
@@ -1012,8 +1084,27 @@ void Notify(string text)
 void SignalSkip(const string why, const bool hadRawFlip = false)
   {
    gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " skip: " + why;
+   gPanelBlockReason = why;
+   gUiDirty = true;
    if(InpVerboseSignals && hadRawFlip)
       Print("GsignalX: skip: ", why);
+  }
+
+void GsxUiMarkDirty()
+  {
+   gUiDirty = true;
+  }
+
+bool GsxUiShouldRedraw()
+  {
+   ulong now = GetTickCount();
+   if(gUiDirty || (now - gUiLastMs) >= 250)
+     {
+      gUiLastMs = now;
+      gUiDirty = false;
+      return(true);
+     }
+   return(false);
   }
 
 bool TradeAllowedNow(string &reason)
@@ -1240,6 +1331,13 @@ bool PlacePending(int dir, bool isStop, double price, double atr)
 //--- dispatcher: market, limit, stop, or both (prices from signal bar open)
 bool PlaceEntry(int dir)
   {
+   string riskBlock = "";
+   if(!EntryRiskGuardsOk(riskBlock))
+     {
+      SignalSkip(riskBlock, true);
+      return(false);
+     }
+
    if(InpEntryMode == GSX_ENTRY_MARKET)
       return(OpenTrade(dir));
 
@@ -2147,73 +2245,26 @@ color  DirColor(int d) { return(d == 1 ? InpColBull : InpColBear); }
 
 void SetRect(string tag, int x, int y, int w, int h, color bg, color edge, bool selectable = false)
   {
-   string n = gPfx + tag;
-   if(ObjectFind(0, n) < 0)
-     {
-      ObjectCreate(0, n, OBJ_RECTANGLE_LABEL, 0, 0, 0);
-      ObjectSetInteger(0, n, OBJPROP_HIDDEN, true);
-      ObjectSetInteger(0, n, OBJPROP_BACK, false);
-      ObjectSetInteger(0, n, OBJPROP_BORDER_TYPE, BORDER_FLAT);
-     }
-   ObjectSetInteger(0, n, OBJPROP_CORNER, InpCorner);
-   ObjectSetInteger(0, n, OBJPROP_XDISTANCE, x);
-   ObjectSetInteger(0, n, OBJPROP_YDISTANCE, y);
-   ObjectSetInteger(0, n, OBJPROP_XSIZE, w);
-   ObjectSetInteger(0, n, OBJPROP_YSIZE, h);
-   ObjectSetInteger(0, n, OBJPROP_BGCOLOR, bg);
-   ObjectSetInteger(0, n, OBJPROP_COLOR, edge);
-   ObjectSetInteger(0, n, OBJPROP_SELECTABLE, selectable);
-   ObjectSetInteger(0, n, OBJPROP_SELECTED, false);
-   ObjectSetInteger(0, n, OBJPROP_ZORDER, selectable ? 5 : 0);
+   GsxPanelConfigure(gPfx, InpCorner, InpFont, InpFontSize, InpColPanelEdge);
+   GsxPanelRect(tag, x, y, w, h, bg, edge, selectable);
   }
 
 void SetLabel(string tag, int x, int y, string text, color clr, int size, bool bold)
   {
-   string n = gPfx + tag;
-   if(ObjectFind(0, n) < 0)
-     {
-      ObjectCreate(0, n, OBJ_LABEL, 0, 0, 0);
-      ObjectSetInteger(0, n, OBJPROP_SELECTABLE, false);
-      ObjectSetInteger(0, n, OBJPROP_HIDDEN, true);
-      ObjectSetInteger(0, n, OBJPROP_BACK, false);
-      ObjectSetInteger(0, n, OBJPROP_ZORDER, 10);
-     }
-   ObjectSetInteger(0, n, OBJPROP_CORNER, InpCorner);
-   ObjectSetInteger(0, n, OBJPROP_XDISTANCE, x);
-   ObjectSetInteger(0, n, OBJPROP_YDISTANCE, y);
-   ObjectSetString(0, n, OBJPROP_TEXT, text);
-   ObjectSetInteger(0, n, OBJPROP_COLOR, clr);
-   ObjectSetInteger(0, n, OBJPROP_FONTSIZE, size);
-   ObjectSetString(0, n, OBJPROP_FONT, bold ? "Segoe UI Bold" : InpFont);
+   GsxPanelConfigure(gPfx, InpCorner, InpFont, InpFontSize, InpColPanelEdge);
+   GsxPanelLabel(tag, x, y, text, clr, size, bold);
   }
 
 void SetButton(string tag, int x, int y, int w, int h, string text, color bg, color fg)
   {
-   string n = gPfx + tag;
-   if(ObjectFind(0, n) < 0)
-     {
-      ObjectCreate(0, n, OBJ_BUTTON, 0, 0, 0);
-      ObjectSetInteger(0, n, OBJPROP_SELECTABLE, false);
-      ObjectSetInteger(0, n, OBJPROP_HIDDEN, true);
-      ObjectSetInteger(0, n, OBJPROP_ZORDER, 20);
-      ObjectSetString(0, n, OBJPROP_FONT, "Segoe UI Bold");
-      ObjectSetInteger(0, n, OBJPROP_FONTSIZE, InpFontSize);
-     }
-   ObjectSetInteger(0, n, OBJPROP_CORNER, InpCorner);
-   ObjectSetInteger(0, n, OBJPROP_XDISTANCE, x);
-   ObjectSetInteger(0, n, OBJPROP_YDISTANCE, y);
-   ObjectSetInteger(0, n, OBJPROP_XSIZE, w);
-   ObjectSetInteger(0, n, OBJPROP_YSIZE, h);
-   ObjectSetString(0, n, OBJPROP_TEXT, text);
-   ObjectSetInteger(0, n, OBJPROP_BGCOLOR, bg);
-   ObjectSetInteger(0, n, OBJPROP_COLOR, fg);
-   ObjectSetInteger(0, n, OBJPROP_BORDER_COLOR, InpColPanelEdge);
-   ObjectSetInteger(0, n, OBJPROP_STATE, false);
+   GsxPanelConfigure(gPfx, InpCorner, InpFont, InpFontSize, InpColPanelEdge);
+   GsxPanelButton(tag, x, y, w, h, text, bg, fg);
   }
 
 void DeleteOurObjects()
   {
-   ObjectsDeleteAll(0, gPfx);
+   GsxPanelConfigure(gPfx, InpCorner, InpFont, InpFontSize, InpColPanelEdge);
+   GsxPanelDeleteAll();
   }
 
 string GsxPanelPosXVar()
@@ -2403,124 +2454,105 @@ void UpdatePanel(string tradeState)
       return;
      }
 
+   const bool compact = (InpPanelDensity == GSX_PANEL_COMPACT);
    int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
-   int x  = g_panelX;
-   int y  = g_panelY;
-   int rh = InpFontSize + 8;          // row height
-   int w  = g_panelW;
-   int col2 = x + 108;
+   int x = g_panelX;
+   int y = g_panelY;
    g_panelTitleH = InpFontSize + 12;
+   g_panelW = 400;
+
+   GsxPanelConfigure(gPfx, InpCorner, InpFont, InpFontSize, InpColPanelEdge);
+   GsxPanelBegin(x, y, g_panelW, InpFontSize, g_panelTitleH);
+
+   //--- Chrome BEFORE body rows so RECTANGLE_LABEL BG cannot cover text
+   int btnH = (InpShowButtons ? 78 : 12);
+   int estRows = compact ? 16 : 26;
+   if(InpBusEnable)
+      estRows++;
+   int estH = g_panelTitleH + estRows * (InpFontSize + 8) + btnH;
+   string densHint = compact ? "Compact · drag" : "Full · drag";
+   GsxPanelApplyChrome(estH, InpColPanelBg, InpColPanelEdge, C'36,42,54',
+                       InpColAccent, InpColNeutral, "GsignalX", densHint);
 
    bool marketOpen = (StringFind(tradeState, "OPEN") == 0);
-   int  rows = 20 + (InpBusEnable ? 1 : 0);
-   int  bodyTop = y + g_panelTitleH;
-   int  totalH = g_panelTitleH + rows * rh + (InpShowButtons ? 78 : 12);
 
-   SetRect("BG", x - 8, y - 8, w, totalH, InpColPanelBg, InpColPanelEdge, false);
-   // Title bar = drag handle
-   SetRect("TITLE", x - 8, y - 8, w, g_panelTitleH,
-           C'36,42,54', InpColPanelEdge, true);
-   SetLabel("H1", x, y - 2, "GsignalX", InpColAccent, InpFontSize + 3, true);
-   SetLabel("H2", x + 78, y + 2, "drag to move", InpColNeutral, InpFontSize - 1, false);
-
-   int r = 0;
-   y = bodyTop;   // content rows start below the title
-
-   //--- run state pill
+   //--- Status (surface waiting / block reason for investors)
    color runCol = !gTradingEnabled ? InpColBear : (marketOpen ? InpColBull : InpColNeutral);
    string runTxt = !gTradingEnabled ? "STOPPED" : (marketOpen ? "RUNNING" : "IDLE");
-   SetLabel("L_RUN",  x, y + rh * r, "Status", InpColNeutral, InpFontSize, false);
-   SetLabel("V_RUN",  col2, y + rh * r, runTxt, runCol, InpFontSize, true);
-   r++;
-
-   SetLabel("L_SYM",  x, y + rh * r, "Symbol / TF", InpColNeutral, InpFontSize, false);
-   SetLabel("V_SYM",  col2, y + rh * r, _Symbol + "  " +
-            StringSubstr(EnumToString((ENUM_TIMEFRAMES)_Period), 7), InpColText, InpFontSize, false);
-   r++;
-
-   SetLabel("L_MODE", x, y + rh * r, "Mode", InpColNeutral, InpFontSize, false);
-   SetLabel("V_MODE", col2, y + rh * r, (InpMode == GSX_SIMPLE ? "Simple" :
-            "Advanced " + IntegerToString(InpMinAgree) + "/3"), InpColText, InpFontSize, false);
-   r++;
-
-   RefreshDrillStatus();
-   color drillCol = InpColNeutral;
-   if(DrillWindowActive())
-      drillCol = InpColBull;
-   else
-      if(gDrillStatus == "expired")
-         drillCol = InpColBear;
-   SetLabel("L_DRL", x, y + rh * r, "Drill", InpColNeutral, InpFontSize, false);
-   SetLabel("V_DRL", col2, y + rh * r,
-            (!InpDrillEnable ? "off" : gDrillStatus),
-            drillCol, InpFontSize, true);
-   r++;
-
-   //--- engines
-   if(gDataReady && gN > 1)
+   if(gTradingEnabled && gPanelBlockReason != "")
      {
-      int last = gN - 1;
-      int bull = (gPPdir[last] == 1 ? 1 : 0) + (gSTdir[last] == 1 ? 1 : 0) + (gSBTdir[last] == 1 ? 1 : 0);
+      runTxt = "WAIT: " + gPanelBlockReason;
+      runCol = InpColAccent;
+     }
+   GsxPanelRow("Status", runTxt, InpColNeutral, runCol, true);
 
-      SetLabel("L_PP",  x, y + rh * r, "PP SuperTrend", InpColNeutral, InpFontSize, false);
-      SetLabel("V_PP",  col2, y + rh * r, DirText(gPPdir[last]) +
-               (InpTrigPP ? "  *" : ""), DirColor(gPPdir[last]), InpFontSize, true);
-      r++;
-      SetLabel("L_ST",  x, y + rh * r, "ATR SuperTrend", InpColNeutral, InpFontSize, false);
-      SetLabel("V_ST",  col2, y + rh * r, DirText(gSTdir[last]) +
-               (InpTrigST ? "  *" : ""), DirColor(gSTdir[last]), InpFontSize, true);
-      r++;
-      SetLabel("L_SB",  x, y + rh * r, "SuperBollinger", InpColNeutral, InpFontSize, false);
-      SetLabel("V_SB",  col2, y + rh * r, DirText(gSBTdir[last]) +
-               (InpTrigSBT ? "  *" : ""), DirColor(gSBTdir[last]), InpFontSize, true);
-      r++;
-
-      string meter = "";
-      for(int i = 0; i < 3; i++)
-         meter += (i < MathMax(bull, 3 - bull)) ? CharToString(110) : CharToString(111);
-      SetLabel("L_AGR", x, y + rh * r, "Agreement", InpColNeutral, InpFontSize, false);
-      SetLabel("V_AGR", col2, y + rh * r, IntegerToString(MathMax(bull, 3 - bull)) + "/3  " +
-               (bull >= 2 ? "BULL" : "BEAR"), bull >= 2 ? InpColBull : InpColBear, InpFontSize, true);
-      r++;
-
-      //--- last signal detail
-      string sigTxt = "none yet";
-      color  sigCol = InpColNeutral;
-      if(gLastSigIdx >= 0)
-        {
-         int ago = (gN - 1) - gLastSigIdx;
-         sigTxt = (gLastSigDir == 1 ? "BUY" : "SELL") + "  " +
-                  TimeToString(gBarTime[gLastSigIdx], TIME_MINUTES) +
-                  "  (" + IntegerToString(ago) + " bars)";
-         sigCol = DirColor(gLastSigDir);
-        }
-      SetLabel("L_SIG", x, y + rh * r, "Last signal", InpColNeutral, InpFontSize, false);
-      SetLabel("V_SIG", col2, y + rh * r, sigTxt, sigCol, InpFontSize, false);
-      r++;
+   //--- Scout link (read-only; PLAY/HALT write PS#_RUN)
+   bool scoutOn = true;
+   if(InpScoutLinkEnable)
+     {
+      string sn = StringFormat("PS%d_RUN", InpScoutInstanceID);
+      if(GlobalVariableCheck(sn))
+         scoutOn = (GlobalVariableGet(sn) > 0.5);
      }
    else
-     {
-      SetLabel("L_ENG", x, y + rh * r, "Engines", InpColNeutral, InpFontSize, false);
-      SetLabel("V_ENG", col2, y + rh * r, gStatus, InpColNeutral, InpFontSize, false);
-      r += 5;
-     }
+      scoutOn = false;
+   GsxPanelRow("Scout",
+               (!InpScoutLinkEnable ? "unlink" : (scoutOn ? "ON" : "OFF")),
+               InpColNeutral,
+               (!InpScoutLinkEnable ? InpColNeutral : (scoutOn ? InpColBull : InpColBear)),
+               true);
 
-   //--- market
-   SetLabel("L_MKT", x, y + rh * r, "Market", InpColNeutral, InpFontSize, false);
-   SetLabel("V_MKT", col2, y + rh * r, tradeState,
-            marketOpen ? InpColBull : InpColBear, InpFontSize, false);
-   r++;
+   GsxPanelRow("Symbol / TF",
+               _Symbol + "  " + StringSubstr(EnumToString((ENUM_TIMEFRAMES)_Period), 7),
+               InpColNeutral, InpColText, false);
 
-   SetLabel("L_SPR", x, y + rh * r, "Spread / bar", InpColNeutral, InpFontSize, false);
-   SetLabel("V_SPR", col2, y + rh * r,
-            IntegerToString((int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD)) + " pts" +
-            (gIgnoreSpread ? " IGN" : "") + "   " + BarCountdown(),
-            gIgnoreSpread ? InpColAccent : InpColText, InpFontSize, false);
-   r++;
+   //--- Account DD
+   {
+      double liveDd = GsxAccountDrawdownPct();
+      string guardTxt = (gMaxDailyDrawdownPct <= 0.0)
+                        ? "OFF"
+                        : (DoubleToString(gMaxDailyDrawdownPct, 0) + "%");
+      string ddTxt = DoubleToString(liveDd, 1) + "% / " + guardTxt;
+      color  ddCol = InpColNeutral;
+      if(gMaxDailyDrawdownPct > 0.0)
+         ddCol = (liveDd >= gMaxDailyDrawdownPct) ? InpColBear : InpColAccent;
+      GsxPanelRow("Account DD", ddTxt, InpColNeutral, ddCol, false);
+   }
 
-   //--- position detail
-   int dir;
+   //--- Session P/L + win%
+   {
+      double winPct = 0.0;
+      if(gClosedCount > 0)
+         winPct = 100.0 * (double)gClosedWins / (double)gClosedCount;
+      string ses = DoubleToString(gClosedRealized, 2) +
+                   "  " + IntegerToString(gClosedWins) + "W/" +
+                   IntegerToString(gClosedLosses) + "L  " +
+                   DoubleToString(winPct, 0) + "%";
+      color sesCol = (gClosedRealized > 0.0 ? InpColBull :
+                      (gClosedRealized < 0.0 ? InpColBear : InpColNeutral));
+      GsxPanelRow("Session", ses, InpColNeutral, sesCol, false);
+   }
+
+   //--- Fleet float
+   {
+      double fleetPL = 0.0;
+      int    fleetPos = 0;
+      FleetFloating(fleetPL, fleetPos);
+      int fleetN = (InpFleetEnable ? FleetActivePairs() : 0);
+      string fleetTxt = InpFleetEnable
+                        ? (IntegerToString(fleetN) + "/" + IntegerToString(InpFleetTargetPairs) +
+                           "  " + DoubleToString(fleetPL, 2))
+                        : ("off  " + DoubleToString(fleetPL, 2));
+      color fleetCol = (fleetPos > 0
+                        ? (fleetPL >= 0.0 ? InpColBull : InpColBear)
+                        : InpColText);
+      GsxPanelRow("Fleet P/L", fleetTxt, InpColNeutral, fleetCol, true);
+   }
+
+   //--- Open position / outcome
+   int dir = 0;
    ulong ticket = FindPosition(dir);
+   double pip = PipSize();
    if(ticket != 0 && PositionSelectByTicket(ticket))
      {
       double vol   = PositionGetDouble(POSITION_VOLUME);
@@ -2528,142 +2560,224 @@ void UpdatePanel(string tradeState)
       double sl    = PositionGetDouble(POSITION_SL);
       double tp    = PositionGetDouble(POSITION_TP);
       double prof  = PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
-      double pip   = PipSize();
-      double moved = (dir == 1) ? (SymbolInfoDouble(_Symbol, SYMBOL_BID) - open)
-                                : (open - SymbolInfoDouble(_Symbol, SYMBOL_ASK));
-
-      SetLabel("L_POS", x, y + rh * r, "Position", InpColNeutral, InpFontSize, false);
-      SetLabel("V_POS", col2, y + rh * r,
-               (dir == 1 ? "LONG " : "SHORT ") + DoubleToString(vol, 2) + " @ " +
-               DoubleToString(open, digits), DirColor(dir), InpFontSize, true);
-      r++;
-
-      string slTxt = (sl > 0.0) ? DoubleToString(sl, digits) : "none";
-      string tpTxt = (tp > 0.0) ? DoubleToString(tp, digits) : "open";
-      SetLabel("L_SLT", x, y + rh * r, "SL / TP", InpColNeutral, InpFontSize, false);
-      SetLabel("V_SLT", col2, y + rh * r, slTxt + "  /  " + tpTxt, InpColText, InpFontSize, false);
-      r++;
-
-      //--- result in currency and in R
-      string rTxt = "";
+      double bid   = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+      double ask   = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      double moved = (dir == 1) ? (bid - open) : (open - ask);
+      string rTxt = "R n/a";
+      string slPipTxt = "";
       if(sl > 0.0)
         {
          double riskDist = MathAbs(open - sl);
          if(riskDist > 0.0)
-            rTxt = "   " + DoubleToString(moved / riskDist, 2) + "R";
+            rTxt = DoubleToString(moved / riskDist, 2) + "R";
+         double toSl = (dir == 1) ? (bid - sl) : (sl - ask);
+         slPipTxt = "  SL " + DoubleToString(toSl / pip, 1) + "p";
         }
-      SetLabel("L_PL", x, y + rh * r, "Open result", InpColNeutral, InpFontSize, false);
-      SetLabel("V_PL", col2, y + rh * r,
-               DoubleToString(prof, 2) + "  (" + DoubleToString(moved / pip, 1) + "p)" + rTxt,
-               prof >= 0.0 ? InpColBull : InpColBear, InpFontSize, true);
-      r++;
+      GsxPanelRow("Position",
+                  (dir == 1 ? "LONG " : "SHORT ") + DoubleToString(vol, 2) +
+                  "  " + rTxt + slPipTxt + "  " + DoubleToString(prof, 2),
+                  InpColNeutral, DirColor(dir), true);
+      if(!compact)
+        {
+         string slTxt = (sl > 0.0) ? DoubleToString(sl, digits) : "none";
+         string tpTxt = (tp > 0.0) ? DoubleToString(tp, digits) : "open";
+         GsxPanelRow("SL / TP", slTxt + "  /  " + tpTxt, InpColNeutral, InpColText, false);
+        }
      }
    else
+      GsxPanelRow("Position", "flat", InpColNeutral, InpColNeutral, false);
+
+   //--- Next lot / risk $ / daily (always preview for outcome clarity)
+   {
+      double atr = (gDataReady && gN > 0) ? gAtrRisk[gN - 1] : 0.0;
+      double stopDist = (atr > 0.0) ? (InpStopMult * atr) : 0.0;
+      double nextLot = CalcLot(stopDist);
+      if(ticket != 0 && gIntendedLot > 0.0)
+         nextLot = gIntendedLot;
+      double riskMoney = AccountInfoDouble(ACCOUNT_BALANCE) * InpRiskPct / 100.0;
+      string dailyCap = (InpMaxDailyPositions > 0)
+                        ? IntegerToString(InpMaxDailyPositions)
+                        : "inf";
+      string riskTxt = DoubleToString(nextLot, 2) + " lot";
+      if(gAutoLot && InpRiskMode == GSX_RISK_PCT)
+         riskTxt += "  ~" + DoubleToString(riskMoney, 2);
+      else
+         riskTxt += "  fixed";
+      riskTxt += "  day " + IntegerToString(gDailyPositionsOpened) + "/" + dailyCap;
+      GsxPanelRow("Next risk", riskTxt, InpColNeutral,
+                  gAutoLot ? InpColBull : InpColText, false);
+   }
+
+   //--- Last signal
+   {
+      string sigTxt = "none yet";
+      color  sigCol = InpColNeutral;
+      if(gLastSigIdx >= 0 && gDataReady)
+        {
+         int ago = (gN - 1) - gLastSigIdx;
+         sigTxt = (gLastSigDir == 1 ? "BUY" : "SELL") + "  " +
+                  TimeToString(gBarTime[gLastSigIdx], TIME_MINUTES) +
+                  "  (" + IntegerToString(ago) + " bars)";
+         sigCol = DirColor(gLastSigDir);
+        }
+      GsxPanelRow("Last signal", sigTxt, InpColNeutral, sigCol, false);
+   }
+
+   //--- Engines: Full = detail + meter; Compact = one-liner only on Full path skip
+   if(!compact)
      {
-      SetLabel("L_POS", x, y + rh * r, "Position", InpColNeutral, InpFontSize, false);
-      SetLabel("V_POS", col2, y + rh * r, "flat", InpColNeutral, InpFontSize, false);
-      r++;
-      SetLabel("L_SLT", x, y + rh * r, "SL / TP", InpColNeutral, InpFontSize, false);
-      SetLabel("V_SLT", col2, y + rh * r, "-", InpColNeutral, InpFontSize, false);
-      r++;
-      SetLabel("L_PL",  x, y + rh * r, "Open result", InpColNeutral, InpFontSize, false);
-      SetLabel("V_PL",  col2, y + rh * r, "-", InpColNeutral, InpFontSize, false);
-      r++;
+      if(gDataReady && gN > 1)
+        {
+         int last = gN - 1;
+         int bull = (gPPdir[last] == 1 ? 1 : 0) + (gSTdir[last] == 1 ? 1 : 0) +
+                    (gSBTdir[last] == 1 ? 1 : 0);
+         string meter = "";
+         int agree = MathMax(bull, 3 - bull);
+         for(int i = 0; i < 3; i++)
+            meter += (i < agree) ? CharToString(110) : CharToString(111);
+
+         GsxPanelRow("PP SuperTrend",
+                     DirText(gPPdir[last]) + (InpTrigPP ? "  *" : ""),
+                     InpColNeutral, DirColor(gPPdir[last]), true);
+         GsxPanelRow("ATR SuperTrend",
+                     DirText(gSTdir[last]) + (InpTrigST ? "  *" : ""),
+                     InpColNeutral, DirColor(gSTdir[last]), true);
+         GsxPanelRow("SuperBollinger",
+                     DirText(gSBTdir[last]) + (InpTrigSBT ? "  *" : ""),
+                     InpColNeutral, DirColor(gSBTdir[last]), true);
+         GsxPanelRow("Agreement",
+                     IntegerToString(agree) + "/3  " + meter + "  " +
+                     (bull >= 2 ? "BULL" : "BEAR"),
+                     InpColNeutral, (bull >= 2 ? InpColBull : InpColBear), true);
+        }
+      else
+         GsxPanelRow("Engines", gStatus, InpColNeutral, InpColNeutral, false);
      }
+   else
+      if(gDataReady && gN > 1)
+        {
+         int last = gN - 1;
+         int bull = (gPPdir[last] == 1 ? 1 : 0) + (gSTdir[last] == 1 ? 1 : 0) +
+                    (gSBTdir[last] == 1 ? 1 : 0);
+         string eng = "PP " + DirText(gPPdir[last]) +
+                      " · ST " + DirText(gSTdir[last]) +
+                      " · SB " + DirText(gSBTdir[last]) +
+                      " · " + IntegerToString(MathMax(bull, 3 - bull)) + "/3";
+         GsxPanelRow("Engines", eng, InpColNeutral,
+                     (bull >= 2 ? InpColBull : InpColBear), false);
+        }
 
-   //--- working orders
-   int pend = CountOurPendings();
-   SetLabel("L_ORD", x, y + rh * r, "Entry orders", InpColNeutral, InpFontSize, false);
-   string entryTxt = "market";
-   if(InpEntryMode == GSX_ENTRY_LIMIT) entryTxt = "limit " + IntegerToString(ClampOffset(InpLimitOffset));
-   if(InpEntryMode == GSX_ENTRY_STOP)  entryTxt = "stop "  + IntegerToString(ClampOffset(InpStopOffset));
-   if(InpEntryMode == GSX_ENTRY_BOTH)  entryTxt = "L" + IntegerToString(ClampOffset(InpLimitOffset)) +
-                                                  "/S" + IntegerToString(ClampOffset(InpStopOffset));
-   string unitTxt = (InpEntryMode == GSX_ENTRY_MARKET ? "" :
-                     (InpOffsetUnit == GSX_UNIT_PIPS ? "p" : "pt"));
-   string anchorTxt = "";
-   if(InpEntryMode != GSX_ENTRY_MARKET && gSignalOpenPx > 0.0)
-      anchorTxt = " @" + DoubleToString(gSignalOpenPx, digits);
-   SetLabel("V_ORD", col2, y + rh * r, entryTxt + unitTxt + anchorTxt,
-            InpColText, InpFontSize, false);
-   r++;
-   SetLabel("L_WRK", x, y + rh * r, "Working", InpColNeutral, InpFontSize, false);
-   SetLabel("V_WRK", col2, y + rh * r,
-            pend == 0 ? "none" : IntegerToString(pend) + " pending " + (gPendDir == 1 ? "BUY" : "SELL"),
-            pend == 0 ? InpColNeutral : DirColor(gPendDir), InpFontSize, false);
-   r++;
+   //--- Market + spread
+   GsxPanelRow("Market", tradeState, InpColNeutral,
+               marketOpen ? InpColBull : InpColBear, false);
+   GsxPanelRow("Spread / bar",
+               IntegerToString((int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD)) + " pts" +
+               (gIgnoreSpread ? " IGN" : "") +
+               (gAutoLot ? " AUTO" : " FIX") + "  " + BarCountdown(),
+               InpColNeutral,
+               gIgnoreSpread ? InpColAccent : InpColText, false);
 
-   SetLabel("L_ACT", x, y + rh * r, "Last action", InpColNeutral, InpFontSize, false);
-   SetLabel("V_ACT", col2, y + rh * r, gLastAction, InpColText, InpFontSize - 1, false);
-   r++;
+   if(!compact)
+     {
+      RefreshDrillStatus();
+      color drillCol = InpColNeutral;
+      if(DrillWindowActive())
+         drillCol = InpColBull;
+      else
+         if(gDrillStatus == "expired")
+            drillCol = InpColBear;
+      GsxPanelRow("Drill",
+                  (!InpDrillEnable ? "off" : gDrillStatus),
+                  InpColNeutral, drillCol, true);
 
-   SetLabel("L_FLW", x, y + rh * r, "Flip fill", InpColNeutral, InpFontSize, false);
-   SetLabel("V_FLW", col2, y + rh * r,
-            gFlipWaitMode ? "WAIT (clear opposite first)" : "FOLLOW (fill new dir)",
-            gFlipWaitMode ? InpColAccent : InpColBull, InpFontSize, true);
-   r++;
+      GsxPanelRow("Mode",
+                  (InpMode == GSX_SIMPLE ? "Simple" :
+                   "Advanced " + IntegerToString(InpMinAgree) + "/3"),
+                  InpColNeutral, InpColText, false);
 
-   //--- fleet / exit ownership + account-wide live floating P/L
-   int  fleetN   = (InpFleetEnable ? FleetActivePairs() : 0);
-   bool fleetShort = (InpFleetEnable && fleetN < InpFleetTargetPairs);
-   double fleetPL = 0.0;
-   int    fleetPos = 0;
-   FleetFloating(fleetPL, fleetPos);
-   string fleetTxt = (InpFleetEnable ?
-                       IntegerToString(fleetN) + "/" + IntegerToString(InpFleetTargetPairs) +
-                       (fleetShort ? " filling" : " full") + " (pos|pend)" : "off");
-   SetLabel("L_FLT", x, y + rh * r, "Fleet / Exit", InpColNeutral, InpFontSize, false);
-   SetLabel("V_FLT", col2, y + rh * r, fleetTxt + " " + DoubleToString(fleetPL, 2) +
-            "  |  " + (InpExitMode == GSX_EXIT_SCOUTER ? "scout" : "signal"),
-            (fleetPos > 0 ? (fleetPL >= 0.0 ? InpColBull : InpColBear)
-                          : (fleetShort ? InpColAccent : InpColText)),
-            InpFontSize, true);
-   r++;
+      int pend = CountOurPendings();
+      string entryTxt = "market";
+      if(InpEntryMode == GSX_ENTRY_LIMIT)
+         entryTxt = "limit " + IntegerToString(ClampOffset(InpLimitOffset));
+      if(InpEntryMode == GSX_ENTRY_STOP)
+         entryTxt = "stop " + IntegerToString(ClampOffset(InpStopOffset));
+      if(InpEntryMode == GSX_ENTRY_BOTH)
+         entryTxt = "L" + IntegerToString(ClampOffset(InpLimitOffset)) +
+                    "/S" + IntegerToString(ClampOffset(InpStopOffset));
+      string unitTxt = (InpEntryMode == GSX_ENTRY_MARKET ? "" :
+                        (InpOffsetUnit == GSX_UNIT_PIPS ? "p" : "pt"));
+      string anchorTxt = "";
+      if(InpEntryMode != GSX_ENTRY_MARKET && gSignalOpenPx > 0.0)
+         anchorTxt = " @" + DoubleToString(gSignalOpenPx, digits);
+      GsxPanelRow("Entry orders", entryTxt + unitTxt + anchorTxt,
+                  InpColNeutral, InpColText, false);
+      GsxPanelRow("Working",
+                  pend == 0 ? "none"
+                            : IntegerToString(pend) + " pending " +
+                              (gPendDir == 1 ? "BUY" : "SELL"),
+                  InpColNeutral,
+                  pend == 0 ? InpColNeutral : DirColor(gPendDir), false);
 
-   //--- session outcomes (this chart's symbol, updated on every close)
-   SetLabel("L_SES", x, y + rh * r, "Session", InpColNeutral, InpFontSize, false);
-   SetLabel("V_SES", col2, y + rh * r,
-            "closed " + IntegerToString(gClosedCount) +
-            "  +" + IntegerToString(gClosedWins) + " / -" + IntegerToString(gClosedLosses) +
-            "  " + DoubleToString(gClosedRealized, 2),
-            (gClosedRealized > 0.0 ? InpColBull :
-             (gClosedRealized < 0.0 ? InpColBear : InpColNeutral)), InpFontSize, false);
-   r++;
+      GsxPanelRowSmall("Last action", gLastAction, InpColNeutral, InpColText);
+      GsxPanelRow("Flip fill",
+                  gFlipWaitMode ? "WAIT (clear opposite)" : "FOLLOW (fill new dir)",
+                  InpColNeutral,
+                  gFlipWaitMode ? InpColAccent : InpColBull, true);
+      GsxPanelRow("Exit owner",
+                  (InpExitMode == GSX_EXIT_SCOUTER ? "scout" : "signal"),
+                  InpColNeutral, InpColText, false);
+     }
 
    if(InpBusEnable)
-     {
-      SetLabel("L_BUS", x, y + rh * r, "Opp grades", InpColNeutral, InpFontSize, false);
-      SetLabel("V_BUS", col2, y + rh * r, gBusGradeLine, InpColAccent, InpFontSize - 1, false);
-      r++;
-     }
+      GsxPanelRowSmall("Opp grades", gBusGradeLine, InpColNeutral, InpColAccent);
 
-   //--- controls
+   GsxPanelTrimBody();
+
+   //--- shrink/grow BG to actual body height (size only — do not recreate BG)
+   int totalH = g_panelTitleH + GsxPanelRowCount() * (InpFontSize + 8) + btnH;
+   GsxPanelResizeBg(totalH);
+
    if(InpShowButtons)
      {
-      int by = y + rh * r + 6;
-      SetButton("BTN_RUN",  x,       by, 74, 24, "PLAY",
-                gTradingEnabled ? InpColBull : InpColPanelBg,
-                gTradingEnabled ? InpColPanelBg : InpColText);
-      SetButton("BTN_STOP", x + 80,  by, 74, 24, "STOP",
-                gTradingEnabled ? InpColPanelBg : InpColBear,
-                gTradingEnabled ? InpColText : InpColPanelBg);
-      SetButton("BTN_FLAT", x + 160, by, 74, 24, "HALT", InpColPanelBg, InpColAccent);
-      SetButton("BTN_FLIP", x + 240, by, 74, 24,
-                gFlipWaitMode ? "WAIT" : "FOLLOW",
-                gFlipWaitMode ? InpColAccent : InpColBull,
-                InpColPanelBg);
-      //--- second row: spread gate toggle (IGN bypasses InpMaxSpreadPt)
+      int by = GsxPanelButtonsY();
+      GsxPanelButton("BTN_RUN",  x,       by, 74, 24, "PLAY",
+                     gTradingEnabled ? InpColBull : InpColPanelBg,
+                     gTradingEnabled ? InpColPanelBg : InpColText);
+      GsxPanelButton("BTN_STOP", x + 80,  by, 74, 24, "STOP",
+                     gTradingEnabled ? InpColPanelBg : InpColBear,
+                     gTradingEnabled ? InpColText : InpColPanelBg);
+      GsxPanelButton("BTN_FLAT", x + 160, by, 74, 24, "HALT", InpColPanelBg, InpColAccent);
+      GsxPanelButton("BTN_FLIP", x + 240, by, 74, 24,
+                     gFlipWaitMode ? "WAIT" : "FOLLOW",
+                     gFlipWaitMode ? InpColAccent : InpColBull,
+                     InpColPanelBg);
       int by2 = by + 30;
-      SetButton("BTN_SPREAD", x, by2, 74, 24,
-                gIgnoreSpread ? "IGN" : "SPREAD",
-                gIgnoreSpread ? InpColAccent : InpColPanelBg,
-                gIgnoreSpread ? InpColPanelBg : InpColText);
+      GsxPanelButton("BTN_SPREAD", x, by2, 74, 24,
+                     gIgnoreSpread ? "IGN" : "SPREAD",
+                     gIgnoreSpread ? InpColAccent : InpColPanelBg,
+                     gIgnoreSpread ? InpColPanelBg : InpColText);
+      GsxPanelButton("BTN_AUTOLOT", x + 80, by2, 90, 24,
+                     gAutoLot ? "AUTOLOT" : "FIXED",
+                     gAutoLot ? InpColBull : InpColPanelBg,
+                     gAutoLot ? InpColPanelBg : InpColText);
+      bool eqOn = (gMaxDailyDrawdownPct > 0.0);
+      string eqLbl = eqOn ? StringFormat("EQ %.0f%%", gMaxDailyDrawdownPct) : "EQ OFF";
+      GsxPanelButton("BTN_EQGUARD", x + 176, by2, 90, 24,
+                     eqLbl,
+                     eqOn ? InpColAccent : InpColPanelBg,
+                     eqOn ? InpColPanelBg : InpColText);
      }
 
+   //--- chart art: skip while dragging; arrows only when marked dirty
    if(!g_panelDragging)
      {
-      DrawLevels();
-      DrawArrows();
+      if(gUiNeedChartArt || ticket != 0)
+         DrawLevels();
+      if(gUiNeedChartArt)
+        {
+         DrawArrows();
+         gUiNeedChartArt = false;
+        }
      }
    ChartRedraw();
   }
@@ -2686,6 +2800,16 @@ string FlipWaitVarName()
 string SpreadIgnVarName()
   {
    return("GSX_SPREADIGN_" + _Symbol + "_" + IntegerToString((int)InpMagic));
+  }
+
+string AutoLotVarName()
+  {
+   return("GSX_AUTOLOT_" + _Symbol + "_" + IntegerToString((int)InpMagic));
+  }
+
+string EquityGuardVarName()
+  {
+   return("GSX_EQGUARD_" + _Symbol + "_" + IntegerToString((int)InpMagic));
   }
 
 void LoadFlipWaitMode()
@@ -2712,6 +2836,34 @@ void LoadIgnoreSpread()
    GlobalVariableSet(n, gIgnoreSpread ? 1.0 : 0.0);
   }
 
+void LoadAutoLot()
+  {
+   string n = AutoLotVarName();
+   if(GlobalVariableCheck(n))
+     {
+      gAutoLot = (GlobalVariableGet(n) > 0.5);
+      return;
+     }
+   gAutoLot = InpAutoLotDefault;
+   GlobalVariableSet(n, gAutoLot ? 1.0 : 0.0);
+  }
+
+void LoadEquityGuard()
+  {
+   string n = EquityGuardVarName();
+   if(GlobalVariableCheck(n))
+     {
+      gMaxDailyDrawdownPct = GlobalVariableGet(n);
+      if(gMaxDailyDrawdownPct < 0.0)
+         gMaxDailyDrawdownPct = 0.0;
+      return;
+     }
+   gMaxDailyDrawdownPct = InpMaxDailyDrawdownPct;
+   if(gMaxDailyDrawdownPct < 0.0)
+      gMaxDailyDrawdownPct = 0.0;
+   GlobalVariableSet(n, gMaxDailyDrawdownPct);
+  }
+
 void SetFlipWaitMode(const bool waitMode, const bool announce)
   {
    gFlipWaitMode = waitMode;
@@ -2725,6 +2877,7 @@ void SetFlipWaitMode(const bool waitMode, const bool announce)
                       : "FOLLOW: flat charts / fleet fill the latest signal direction");
      }
    UpdatePanel(g_lastPanelState);
+   GsxUiMarkDirty();
   }
 
 void SetIgnoreSpread(const bool on, const bool announce)
@@ -2755,7 +2908,67 @@ void SetIgnoreSpread(const bool on, const bool announce)
       Notify(on ? "IGN: entries ignore max-spread gate (wider fills allowed)"
                 : "SPREAD: entries respect max-spread limit again");
      }
+   gPanelBlockReason = "";
+   GsxUiMarkDirty();
    UpdatePanel(g_lastPanelState);
+  }
+
+void SetAutoLot(const bool on, const bool announce)
+  {
+   gAutoLot = on;
+   GlobalVariableSet(AutoLotVarName(), on ? 1.0 : 0.0);
+   if(announce)
+     {
+      gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                    (on ? " AUTOLOT - risk% sizing"
+                        : " FIXED - lot " + DoubleToString(InpFixedLot, 2));
+      Notify(on ? "AUTOLOT: entries sized by risk% / stop distance"
+                : "FIXED: entries use fixed lot " + DoubleToString(InpFixedLot, 2));
+     }
+   GsxUiMarkDirty();
+   UpdatePanel(g_lastPanelState);
+  }
+
+void SetEquityGuardPct(const double pct, const bool announce)
+  {
+   gMaxDailyDrawdownPct = (pct < 0.0) ? 0.0 : pct;
+   GlobalVariableSet(EquityGuardVarName(), gMaxDailyDrawdownPct);
+   if(announce)
+     {
+      if(gMaxDailyDrawdownPct <= 0.0)
+        {
+         gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " EQ OFF - equity guard off";
+         Notify("EQ OFF: equity drawdown guard disabled for new entries");
+        }
+      else
+        {
+         gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                       " EQ " + DoubleToString(gMaxDailyDrawdownPct, 0) +
+                       "% - block entries at DD";
+         Notify("EQ " + DoubleToString(gMaxDailyDrawdownPct, 0) +
+                "%: new entries blocked when account DD reaches threshold");
+        }
+     }
+   gPanelBlockReason = "";
+   GsxUiMarkDirty();
+   UpdatePanel(g_lastPanelState);
+  }
+
+//--- chart cycle: OFF → 5% → 10% → 20% → OFF
+void CycleEquityGuardPct(const bool announce)
+  {
+   double next = 0.0;
+   if(gMaxDailyDrawdownPct <= 0.0)
+      next = 5.0;
+   else
+      if(gMaxDailyDrawdownPct < 7.5)
+         next = 10.0;
+      else
+         if(gMaxDailyDrawdownPct < 15.0)
+            next = 20.0;
+         else
+            next = 0.0;
+   SetEquityGuardPct(next, announce);
   }
 
 //--- shared Profit Scouter run-state global (PS<id>_RUN):
@@ -2808,6 +3021,10 @@ void SetRunState(bool on, bool announce)
       Notify(on ? "PLAY: new entries enabled"
                 : "STOP: paused, open trades left running");
      }
+   gPanelBlockReason = "";
+   GsxUiMarkDirty();
+   gUiNeedChartArt = true;
+   UpdatePanel(g_lastPanelState);
   }
 
 void OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam)
@@ -2816,8 +3033,8 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
      {
       if(sparam == gPfx + "BTN_RUN")
         {
-         SetRunState(true, true);
          SetScoutRun(true);   // linked: resume the scouter harvest as well
+         SetRunState(true, true);
         }
       else
          if(sparam == gPfx + "BTN_STOP")
@@ -2830,6 +3047,9 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                              " HALT - operation paused (no closes)";
                Notify("HALT: operation paused (entries + scouting) - open trades left untouched");
+               gPanelBlockReason = "";
+               GsxUiMarkDirty();
+               UpdatePanel(g_lastPanelState);
               }
             else
                if(sparam == gPfx + "BTN_FLIP")
@@ -2838,15 +3058,21 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                   if(sparam == gPfx + "BTN_SPREAD")
                      SetIgnoreSpread(!gIgnoreSpread, true);
                   else
-                     if(sparam == gPfx + "TITLE")
-                       {
-                        g_panelDragging = true;
-                        g_panelDragOffSet = false;
-                        ObjectSetInteger(0, sparam, OBJPROP_STATE, false);
-                        return;
-                       }
+                     if(sparam == gPfx + "BTN_AUTOLOT")
+                        SetAutoLot(!gAutoLot, true);
                      else
-                        return;
+                        if(sparam == gPfx + "BTN_EQGUARD")
+                           CycleEquityGuardPct(true);
+                        else
+                           if(sparam == gPfx + "TITLE")
+                             {
+                              g_panelDragging = true;
+                              g_panelDragOffSet = false;
+                              ObjectSetInteger(0, sparam, OBJPROP_STATE, false);
+                              return;
+                             }
+                           else
+                              return;
 
       ObjectSetInteger(0, sparam, OBJPROP_STATE, false);
       ChartRedraw();
@@ -2867,6 +3093,8 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
             g_panelDragging = false;
             g_panelDragOffSet = false;
             GsxSavePanelPos();
+            gUiNeedChartArt = true;
+            GsxUiMarkDirty();
             UpdatePanel(g_lastPanelState);   // restore levels/arrows
             return;
            }
@@ -2943,6 +3171,17 @@ int OnInit()
                ", offsets will be widened to match");
      }
 
+   if(InpMaxDailyPositions < 0)
+     {
+      Print("GsignalX: 'Max daily positions' must be >= 0");
+      return(INIT_PARAMETERS_INCORRECT);
+     }
+   if(InpMaxDailyDrawdownPct < 0.0)
+     {
+      Print("GsignalX: 'Max daily drawdown %' must be >= 0");
+      return(INIT_PARAMETERS_INCORRECT);
+     }
+
    trade.SetExpertMagicNumber((ulong)InpMagic);
    trade.SetDeviationInPoints(InpSlippage);
    trade.SetTypeFillingBySymbol(_Symbol);
@@ -2956,6 +3195,9 @@ int OnInit()
 
    LoadFlipWaitMode();
    LoadIgnoreSpread();
+   LoadAutoLot();
+   LoadEquityGuard();
+   CheckAndResetDailyCounters();
 
    //--- sweep unfilled brackets left over from a previous session
    CleanupStalePendings();
@@ -3001,6 +3243,9 @@ int OnInit()
          " | flip: ", (gFlipWaitMode ? "WAIT" : "FOLLOW"),
          " | fleet: ", (InpFleetEnable ? IntegerToString(InpFleetTargetPairs) + " pairs" : "off"));
 
+   gUiDirty = true;
+   gUiNeedChartArt = true;
+   UpdatePanel("initialising");
    return(INIT_SUCCEEDED);
   }
 
@@ -3092,6 +3337,8 @@ void OnTick()
         {
          gLastBarTime = barTime;
          gNeedSignalEval = true;
+         gUiNeedChartArt = true;
+         GsxUiMarkDirty();
         }
      }
 
@@ -3100,14 +3347,36 @@ void OnTick()
       string block = "";
       if(!TryRunSignalEval(hours, spread, block))
         {
-         // keep retrying this bar; surface gate on panel occasionally
-         if(block != "" && InpVerboseSignals &&
-            (StringFind(gLastAction, "waiting:") < 0 || StringFind(gLastAction, block) < 0))
-            gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " waiting: " + block;
+         // keep retrying this bar; surface gate on panel
+         if(block != "")
+           {
+            gPanelBlockReason = block;
+            if(InpVerboseSignals &&
+               (StringFind(gLastAction, "waiting:") < 0 || StringFind(gLastAction, block) < 0))
+               gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " waiting: " + block;
+            GsxUiMarkDirty();
+           }
         }
+      else
+         gPanelBlockReason = "";
      }
 
-   UpdatePanel(state);
+   //--- position flat/open edge → refresh chart art
+   int artDir = 0;
+   bool artPos = (FindPosition(artDir) != 0);
+   int artSig = artPos ? artDir : 0;
+   if(artSig != gUiLastPosDir)
+     {
+      gUiLastPosDir = artSig;
+      gUiNeedChartArt = true;
+      GsxUiMarkDirty();
+     }
+
+   if(state != g_lastPanelState)
+      GsxUiMarkDirty();
+
+   if(g_panelDragging || GsxUiShouldRedraw())
+      UpdatePanel(state);
    GsxPublishBusState(state);
   }
 //|                                                                  |
@@ -3156,6 +3425,10 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
 
    if(entry == DEAL_ENTRY_IN || entry == DEAL_ENTRY_INOUT)
      {
+      RecordPositionOpened();
+      gPanelBlockReason = "";
+      gUiNeedChartArt = true;
+      GsxUiMarkDirty();
       gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " FILLED " +
                     DoubleToString(volume, 2) + " @ " + DoubleToString(price, digits);
       Notify("filled " + DoubleToString(volume, 2) + " @ " +
@@ -3198,6 +3471,8 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
              " lots, result " + DoubleToString(profit, 2));
       gIntendedLot = 0.0;
       gOcoRequest  = true;              // clear any bracket left behind
+      gUiNeedChartArt = true;
+      GsxUiMarkDirty();
      }
   }
 //+------------------------------------------------------------------+

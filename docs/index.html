@@ -7,7 +7,8 @@
 <link rel="canonical" href="Gsignalx_Velocity_Users_Manual.html"/>
 <link rel="icon" href="assets/icons/group-icon.svg" type="image/svg+xml"/>
 <meta name="color-scheme" content="dark light"/>
-<title>Gsignalx Velocity — Trader Manual</title>
+<meta name="description" content="Gsignalx Velocity v1.21 trader manual — redirect"/>
+<title>Gsignalx Velocity v1.21 — Trader Manual</title>
 <script>
 (function () {
   try {
@@ -19,8 +20,8 @@
   } catch (e) {
     document.documentElement.setAttribute("data-theme", "dark");
   }
-})();
   location.replace("Gsignalx_Velocity_Users_Manual.html" + (location.hash || ""));
+})();
 </script>
 <style>
 :root, [data-theme="dark"] {
@@ -60,23 +61,40 @@ body {
   text-align: center;
   max-width: 28rem;
   width: 100%;
+  padding: 0 8px;
 }
 a { color: var(--gold); font-weight: 700; text-decoration: none; }
 a:hover { text-decoration: underline; color: var(--brand-blue); }
-p { color: var(--muted); margin: 0.5em 0; }
+p { color: var(--muted); margin: 0.5em 0; line-height: 1.5; }
 strong { color: var(--gold); }
+.ver {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-blue);
+  border: 1px solid color-mix(in srgb, var(--brand-blue) 45%, transparent);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
 img {
   margin: 0 auto 16px;
   display: block;
   max-width: min(160px, 40vw);
   height: auto;
 }
+@media (max-width: 480px) {
+  body { font-size: 15px; }
+  .splash { max-width: 22rem; }
+}
 </style>
 </head>
 <body>
   <div class="splash">
     <img src="assets/icons/group-icon.svg" alt="Gocity Group" width="160" height="88"/>
-    <p>Opening <strong>Gsignalx Velocity</strong> trader manual…</p>
+    <p>Opening <strong>Gsignalx Velocity v1.21</strong> trader manual…</p>
+    <p class="ver">GSignalX v1.21 · ProfitScouter v1.21</p>
     <p><a href="Gsignalx_Velocity_Users_Manual.html">Continue if you are not redirected</a></p>
   </div>
 </body>

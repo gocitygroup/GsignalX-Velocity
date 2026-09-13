@@ -4,6 +4,8 @@ Step-by-step install, compile, run, and verify for the connector bus + opportuni
 
 **Guided deploy with confirmation gates + feedback:** [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md)
 
+**Commercial v1.21 release (AutoLot / EQ / Compact panel):** [docs/RELEASE_v1.21_Commercial_Deploy.md](docs/RELEASE_v1.21_Commercial_Deploy.md)
+
 For protocol/schema details see [ARCHITECTURE_CONNECTOR_BUS.md](ARCHITECTURE_CONNECTOR_BUS.md).  
 For Profit Scouter inputs see [README_ProfitScouter.md](README_ProfitScouter.md).
 

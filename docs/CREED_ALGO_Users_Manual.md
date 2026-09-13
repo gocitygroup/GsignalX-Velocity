@@ -72,7 +72,8 @@ CREED ALGO is the trading umbrella for the Gocity **GSignalX** toolkit on MetaTr
 ## 2. System map
 
 ```
-  Watchlist charts          PLAY / STOP / HALT / FOLLOW|WAIT / SPREAD|IGN
+  Watchlist charts          PLAY / STOP / HALT / FOLLOW|WAIT / SPREAD|IGN / AUTOLOT|FIXED / EQ
+                            Panel: Compact (investor) or Full (trader) via InpPanelDensity
          │                        │
          ▼                        ▼
    ┌─────────────┐         Scalping drill window
@@ -178,6 +179,18 @@ With `InpCryptoAllowWeekend = true`, detected crypto symbols skip FX Saturday/Su
 | **HALT** | One-click full stop: pauses entries **and** the linked Scouter harvest. **Never closes a trade** |
 | **FOLLOW / WAIT** | Fleet fill new direction vs wait until opposite magic exposure is clear |
 | **SPREAD / IGN** | Respect `InpMaxSpreadPt` (default) vs ignore the entry spread gate for instant signal fills |
+| **AUTOLOT / FIXED** | Risk% × stop-distance sizing vs fixed `InpFixedLot` (per chart, persisted) |
+| **EQ OFF / 5% / 10% / 20%** | Account equity drawdown guard cycle (blocks new entries at threshold) |
+| **Panel density** | Input `InpPanelDensity`: **Compact** (investor outcome strip) vs **Full** (trader engines + entry detail) |
+
+### 4.4b Compact vs Full panel (recommended desk)
+
+| Density | Best for | Shows |
+|---|---|---|
+| **Compact** (default) | Watchlist / investor glance | Status (+ wait reason), Scout ON/OFF, Account DD, Session win%, Fleet P/L, Position R/SL distance, Next risk lot, one-line engines, controls |
+| **Full** | 1–2 desk charts | Everything in Compact **plus** PP/ST/SB rows, agreement meter, drill, entry/working orders, last action, flip |
+
+**Public recommendation:** run most charts on **Compact + AUTOLOT + EQ 10%** on **M5**; use **Full** only when diagnosing engine disagreement. Panel redraws are throttled (~250ms) for real-time feel without tick spam.
 
 ### 4.5 Spread limit and SPREAD / IGN
 
@@ -201,6 +214,29 @@ Entries must pass the max-spread gate (`InpMaxSpreadPt`, default **40** points) 
 - As a permanent substitute for tuning `InpMaxSpreadPt` (raise the limit on crypto charts instead of leaving IGN on forever)
 
 **Tuning tip:** keep **SPREAD** on day to day; set a higher `InpMaxSpreadPt` for crypto if wide-but-normal; reserve **IGN** for one-shot unlocks. `InpMaxSpreadPt = 0` always allows any spread (same as IGN, but input-level and not per-button).
+
+### 4.5b Lot sizing and AUTOLOT / FIXED
+
+Entries size through a shared AutoLot calculator (`Include/GSignalX/LotSizing.mqh`). The chart toggle is **per symbol/magic**, persists as `GSX_AUTOLOT_{Symbol}_{Magic}`, and affects **new entries only**.
+
+| Mode | Effect |
+|---|---|
+| **AUTOLOT** (default) | Honor `InpRiskMode`: percent of balance × ATR stop distance, or fixed when mode is Fixed lot. Fail-safe falls back to `InpFixedLot`. |
+| **FIXED** | Always use `InpFixedLot` (clamped by `InpMaxLot` / broker min-step-max). |
+
+Optional guards: `InpMaxDailyPositions` caps new fills per UTC day (`0` = off).
+
+### 4.5c Account DD and EQ OFF / 5% / 10% / 20%
+
+The **equity drawdown guide** blocks **new entries** when floating account drawdown from balance reaches the active threshold. Chart control cycles `EQ OFF → EQ 5% → EQ 10% → EQ 20% → EQ OFF`, persists as `GSX_EQGUARD_{Symbol}_{Magic}`, and seeds from `InpMaxDailyDrawdownPct` when no GV exists.
+
+| Control | Effect |
+|---|---|
+| **EQ OFF** | Guard disabled |
+| **EQ 5% / 10% / 20%** | Block entries when live DD% ≥ threshold |
+| **Account DD** panel row | Live `DD% / guard` (bear when blocked, accent when armed) |
+
+Drawdown math is shared via `GsxAccountDrawdownPct()` in `LotSizing.mqh` (panel + gate, no duplicate formula).
 
 ### 4.6 Preliminary chart: M5
 
@@ -430,10 +466,10 @@ Set `InpScalpAsapAccountOnly = false` and enable per-position / per-pair / accou
 | Trade management | Long/short, reverse, ATR SL/TP, trail |
 | Entry order type | Market / Limit / Stop / Both; offsets 4–20; signal-open anchor |
 | Scalping drill | Window, re-entry, follow-active, march-after-flat |
-| Money management | Fixed lot or % risk, max lot |
+| Money management | Fixed lot or % risk, max lot, chart AUTOLOT/FIXED / EQ DD guard, daily position cap |
 | Sessions & weekend | Sessions, hour filter, Friday, crypto |
 | Execution | Magic, slippage, max spread, ignore-spread default, lookback |
-| Panel & bus | PLAY / SPREAD|IGN buttons, grades, notifications |
+| Panel & bus | PLAY / SPREAD|IGN / AUTOLOT|FIXED / EQ buttons, grades, notifications |
 
 ### 11.2 Opportunity grades (bus)
 
@@ -473,6 +509,8 @@ Full gates: `DEPLOYMENT_RUNBOOK.md`.
 | **Preliminary chart** | **M5** — primary desk TF for GSignalX + Scouter adverse pairing |
 | **PLAY / STOP** | Per-chart arming of new entries |
 | **SPREAD / IGN** | Per-chart toggle: enforce vs bypass entry max-spread gate |
+| **AUTOLOT / FIXED** | Per-chart toggle: risk% sizing vs fixed lot (`GSX_AUTOLOT_*`) |
+| **EQ OFF / 5% / 10% / 20%** | Per-chart equity DD guard cycle (`GSX_EQGUARD_*`) |
 | **Drill** | Timed window after PLAY for active-signal entries |
 | **March-after-flat** | Re-arm entry after Scouter (or close) flats the chart |
 | **ASAP account target** | Bank the target from winners only when total floating P/L hits one minimum |
@@ -516,7 +554,9 @@ Full gates: `DEPLOYMENT_RUNBOOK.md`.
 
 ## Appendix C — Version notes
 
-Manual aligned with toolkit behaviour as of **GSignalX v1.20** / **ProfitScouter v1.21** (scalping drill, fleet fill, FOLLOW/WAIT, **SPREAD/IGN** entry spread toggle, signal-open limit/stop defaults, Scalp ASAP winners-only harvest, adverse-bar Auto, strategic SL, non-closing STOP/HALT).
+Manual aligned with toolkit behaviour as of **GSignalX v1.21** / **ProfitScouter v1.21** (scalping drill, fleet fill, FOLLOW/WAIT, **SPREAD/IGN** entry spread toggle, **AUTOLOT/FIXED** chart lot sizing, **EQ OFF/5/10/20** equity DD guide, Compact/Full outcome panel, signal-open limit/stop defaults, Scalp ASAP winners-only harvest, adverse-bar Auto, strategic SL, non-closing STOP/HALT).
+
+Commercial deploy: [RELEASE_v1.21_Commercial_Deploy.md](RELEASE_v1.21_Commercial_Deploy.md).
 
 ---
 
