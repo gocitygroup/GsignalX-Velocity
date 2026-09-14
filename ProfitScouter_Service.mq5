@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property service
 #property copyright "Profit Scouter"
-#property version   "1.21"
+#property version   "1.22"
 #property description "Profit Scouter - Dollar Target (Service edition)"
 #property description "Scalp ASAP; profit lock; honors chart START/STOP/AUTO via shared Instance ID."
 #property description "Profit harvest: winners-only at set levels. Adverse-bar Auto can close same-symbol losers."
@@ -96,10 +96,12 @@ input double  InpProfitLockKeepPct    = 50.0;    // Lock floor = max(keep-% of p
 input double  InpMinWinProfit         = 5.0;     // Winner close min per ticket (= ASAP floor; target ccy)
 
 input group "=== 7c. Adverse-bar Auto loss exit ==="
-input bool            InpAdverseExitEnable    = true;         // Initial AUTO arm if no saved PS{id}_ADVEN (chart toggles)
-input int             InpAdverseMinBars       = 2;            // Fire when consecutive closed bars > this (2 -> >=3)
-input ENUM_TIMEFRAMES InpAdverseTimeframe     = PERIOD_M15;   // Service has no chart; default M15
-input bool            InpAdverseRequireSignal = true;         // Skip if bus direction missing/0
+input bool            InpAdverseExitEnable       = true;         // Initial AUTO arm if no saved PS{id}_ADVEN (chart toggles)
+input int             InpAdverseMinBars          = 2;            // Fire when consecutive closed bars > this (2 -> >=3)
+input ENUM_TIMEFRAMES InpAdverseTimeframe        = PERIOD_M5;    // Service has no chart; M5 matches Velocity desk
+input bool            InpAdverseRequireSignal    = true;         // Skip if bus direction missing/0
+input int             InpAdverseMinAgeMin        = 15;           // Min hold minutes before adverse may cut (0=off)
+input bool            InpAdverseProtectOnceGreen = true;         // Skip adverse if ticket once peaked green / lock armed
 
 input group "=== 8. Status / Notifications ==="
 input bool    InpLogStatus         = true;

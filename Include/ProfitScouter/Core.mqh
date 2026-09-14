@@ -261,7 +261,7 @@ void Monitor()
    //--- 2. account level ---------------------------------------------
    if(HandleAccount(accProfit, accOldest))
      {
-      // winners-only / losers-only may leave tickets open
+      // winners-only harvest may leave tickets open when MinWin not yet met
       double rem = 0.0;
       for(int i = 0; i < ArraySize(g_live); i++)
          rem += g_live[i].profit;
@@ -319,9 +319,16 @@ bool HandleAccount(double profit, datetime oldest)
          Notify(StringFormat("ACCOUNT target reached: %.2f >= %.2f %s - banking winners to cover the target",
                              profit, target, g_accCcy));
          double banked = HarvestWinners(target, "", "ACC-TARGET");
-         ResetAccountPeak();
-         g_lastAction = StringFormat("Account target banked %.2f", banked);
-         return true;
+         // Only consume the cycle when something was banked. A net float
+         // above target with no floor-qualified winners must not block
+         // pair/position layers for this cycle.
+         if(banked > 0.0)
+           {
+            ResetAccountPeak();
+            g_lastAction = StringFormat("Account target banked %.2f", banked);
+            return true;
+           }
+         g_lastAction = StringFormat("Account target %.2f hit, 0 banked (await MinWin)", target);
         }
      }
 
@@ -341,9 +348,12 @@ bool HandleAccount(double profit, datetime oldest)
          Notify(StringFormat("ACCOUNT trail close: peak %.2f -> %.2f %s - banking current profit",
                              g_accPeak, profit, g_accCcy));
          double banked = HarvestWinners(profit, "", "ACC-TRAIL");
-         ResetAccountPeak();
-         g_lastAction = StringFormat("Account trail banked %.2f", banked);
-         return true;
+         if(banked > 0.0)
+           {
+            ResetAccountPeak();
+            g_lastAction = StringFormat("Account trail banked %.2f", banked);
+            return true;
+           }
         }
      }
 
@@ -353,9 +363,12 @@ bool HandleAccount(double profit, datetime oldest)
      {
       Notify(StringFormat("ACCOUNT window expired with %.2f %s - banking winners", profit, g_accCcy));
       double banked = HarvestWinners(profit, "", "ACC-WINDOW");
-      ResetAccountPeak();
-      g_lastAction = StringFormat("Window end banked %.2f", banked);
-      return true;
+      if(banked > 0.0)
+        {
+         ResetAccountPeak();
+         g_lastAction = StringFormat("Window end banked %.2f", banked);
+         return true;
+        }
      }
 
    return false;
@@ -385,9 +398,13 @@ bool HandleSymbol(int aggIdx)
          Notify(StringFormat("%s basket target reached: %.2f >= %.2f %s - banking this pair's winners",
                              sym, profit, target, g_accCcy));
          double banked = HarvestWinners(target, sym, "SYM-TARGET");
-         ResetSymPeak(r);
-         g_lastAction = StringFormat("%s target banked %.2f", sym, banked);
-         return true;
+         if(banked > 0.0)
+           {
+            ResetSymPeak(r);
+            g_lastAction = StringFormat("%s target banked %.2f", sym, banked);
+            return true;
+           }
+         g_lastAction = StringFormat("%s target %.2f hit, 0 banked (await MinWin)", sym, target);
         }
      }
 
@@ -407,9 +424,12 @@ bool HandleSymbol(int aggIdx)
          Notify(StringFormat("%s basket trail close: peak %.2f -> %.2f %s - banking current profit",
                              sym, g_sym[r].peak, profit, g_accCcy));
          double banked = HarvestWinners(profit, sym, "SYM-TRAIL");
-         ResetSymPeak(r);
-         g_lastAction = StringFormat("%s trail banked %.2f", sym, banked);
-         return true;
+         if(banked > 0.0)
+           {
+            ResetSymPeak(r);
+            g_lastAction = StringFormat("%s trail banked %.2f", sym, banked);
+            return true;
+           }
         }
      }
 
@@ -419,9 +439,12 @@ bool HandleSymbol(int aggIdx)
      {
       Notify(StringFormat("%s window expired with %.2f %s - banking winners", sym, profit, g_accCcy));
       double banked = HarvestWinners(profit, sym, "SYM-WINDOW");
-      ResetSymPeak(r);
-      g_lastAction = StringFormat("%s window banked %.2f", sym, banked);
-      return true;
+      if(banked > 0.0)
+        {
+         ResetSymPeak(r);
+         g_lastAction = StringFormat("%s window banked %.2f", sym, banked);
+         return true;
+        }
      }
 
    return false;
@@ -1043,7 +1066,42 @@ void PsAdvMarkFired(const string canon, const datetime barTime)
    GlobalVariableSet(PsAdvFireVar(canon), (double)barTime);
   }
 
-// Close all red tickets on one symbol (deepest loss first). Winners untouched.
+// True when adverse Auto may cut this live loser (hold age + once-green).
+bool AdverseEligibleLoser(const int liveIdx)
+  {
+   if(liveIdx < 0 || liveIdx >= ArraySize(g_live))
+      return(false);
+   if(g_live[liveIdx].profit >= 0.0)
+      return(false);
+
+   if(InpAdverseMinAgeMin > 0)
+     {
+      int age = AgeMinutes(g_live[liveIdx].opened);
+      if(age < InpAdverseMinAgeMin)
+        {
+         if(InpVerboseLog)
+            PrintFormat("ProfitScouter [ADVERSE-BAR]: skip #%I64u %s age=%d < minAge=%d",
+                        g_live[liveIdx].ticket, g_live[liveIdx].sym, age, InpAdverseMinAgeMin);
+         return(false);
+        }
+     }
+
+   if(InpAdverseProtectOnceGreen)
+     {
+      int r = PosIndex(g_live[liveIdx].ticket, false);
+      if(r >= 0 && (g_pos[r].lockArmed || g_pos[r].peak > 0.0))
+        {
+         if(InpVerboseLog)
+            PrintFormat("ProfitScouter [ADVERSE-BAR]: skip #%I64u %s once-green peak=%.2f lock=%s",
+                        g_live[liveIdx].ticket, g_live[liveIdx].sym, g_pos[r].peak,
+                        (g_pos[r].lockArmed ? "Y" : "N"));
+         return(false);
+        }
+     }
+   return(true);
+  }
+
+// Close eligible red tickets on one symbol (deepest loss first). Winners untouched.
 bool CloseLosersOnSymbol(const string sym, const string tag)
   {
    int idxs[];
@@ -1054,7 +1112,7 @@ bool CloseLosersOnSymbol(const string sym, const string tag)
      {
       if(g_live[i].sym != sym)
          continue;
-      if(g_live[i].profit >= 0.0)
+      if(!AdverseEligibleLoser(i))
          continue;
       idxs[m++] = i;
      }
@@ -1122,10 +1180,25 @@ bool HandleAdverseBarLossCut()
       if(PsAdvAlreadyFiredThisBar(g_adv[ix].canon, g_adv[ix].barTime))
          continue;
 
+      // Claim this bar before closes so a second host (Service+EA) does not
+      // race the same symbol/bar. Claim only when at least one loser is eligible.
+      bool anyEligible = false;
+      for(int li = 0; li < ArraySize(g_live); li++)
+        {
+         if(g_live[li].sym == sym && AdverseEligibleLoser(li))
+           {
+            anyEligible = true;
+            break;
+           }
+        }
+      if(!anyEligible)
+         continue;
+
+      PsAdvMarkFired(g_adv[ix].canon, g_adv[ix].barTime);
+
       int before = g_closedCycle;
       if(CloseLosersOnSymbol(sym, "ADVERSE-BAR"))
         {
-         PsAdvMarkFired(g_adv[ix].canon, g_adv[ix].barTime);
          int closedNow = g_closedCycle - before;
          g_adverseClosedCycle += closedNow;
          g_adverseLastSym     = sym;
@@ -1134,6 +1207,11 @@ bool HandleAdverseBarLossCut()
                                      sym, dir, streak, closedNow);
          Notify(g_lastAction);
          any = true;
+        }
+      else
+        {
+         g_lastAction = StringFormat("ADVERSE-BAR %s dir=%d streak=%d closed=0",
+                                     sym, dir, streak);
         }
      }
    return(any);
@@ -1564,8 +1642,9 @@ void LogStatus(double accProfit, int count)
    string head5 = StringFormat("winners=%d (+%.2f)  losers=%d (%.2f)  |  closed=%d realized=%.2f",
                                g_winCount, g_winSum, g_lossCount, g_lossSum,
                                g_closedSession, g_realizedSession);
-   string head6 = StringFormat("adverse=%s minBars>%d last=%s streak=%d closed=%d",
-                               (gAdverseEnabled ? "ON" : "OFF"), InpAdverseMinBars,
+   string head6 = StringFormat("adverse=%s minBars>%d minAge=%d onceGreen=%s last=%s streak=%d closed=%d",
+                               (gAdverseEnabled ? "ON" : "OFF"), InpAdverseMinBars, InpAdverseMinAgeMin,
+                               (InpAdverseProtectOnceGreen ? "protect" : "cut"),
                                (g_adverseLastSym == "" ? "-" : g_adverseLastSym),
                                g_adverseLastStreak, g_adverseClosedCycle);
 
@@ -1815,8 +1894,9 @@ void DrawPanel(double accProfit, int count)
    PsPanelPushLine(lines, StringFormat("Profit lock         : %s arm>=%.2f keep=%.0f%% locked=%d | win floor %.2f",
                                        (InpProfitLockEnable ? "ON" : "OFF"), Money(InpProfitLockArm),
                                        InpProfitLockKeepPct, LockedPosCount(), Money(InpMinWinProfit)));
-   PsPanelPushLine(lines, StringFormat("Adverse Auto        : %s minBars>%d tf=%d last=%s streak=%d closed=%d",
-                                       (gAdverseEnabled ? "ON" : "OFF"), InpAdverseMinBars,
+   PsPanelPushLine(lines, StringFormat("Adverse Auto        : %s minBars>%d minAge=%d onceGreen=%s tf=%d last=%s streak=%d closed=%d",
+                                       (gAdverseEnabled ? "ON" : "OFF"), InpAdverseMinBars, InpAdverseMinAgeMin,
+                                       (InpAdverseProtectOnceGreen ? "protect" : "cut"),
                                        (int)PsAdverseTf(),
                                        (g_adverseLastSym == "" ? "-" : g_adverseLastSym),
                                        g_adverseLastStreak, g_adverseClosedCycle));
@@ -1981,6 +2061,9 @@ void PsPublishBusSnapshot(double accProfit, int count)
    j += GsxJsonKV_D("loss_profit", g_lossSum);
    j += GsxJsonKV_B("loss_guard", false);      // legacy field; account loss-guard removed
    j += GsxJsonKV_B("adverse_enable", gAdverseEnabled);
+   j += GsxJsonKV_I("adverse_min_bars", InpAdverseMinBars);
+   j += GsxJsonKV_I("adverse_min_age", InpAdverseMinAgeMin);
+   j += GsxJsonKV_B("adverse_protect_once_green", InpAdverseProtectOnceGreen);
    j += GsxJsonKV_S("adverse_last_sym", g_adverseLastSym);
    j += GsxJsonKV_I("adverse_last_streak", g_adverseLastStreak);
    j += GsxJsonKV_I("adverse_closed_cycle", g_adverseClosedCycle);

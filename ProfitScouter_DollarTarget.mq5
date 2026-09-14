@@ -3,7 +3,7 @@
 //|                    Profit monitoring / harvesting engine for MT5 |
 //+------------------------------------------------------------------+
 #property copyright "Profit Scouter"
-#property version   "1.21"
+#property version   "1.22"
 #property description "Profit Scouter - Dollar Target (EA edition)"
 #property description "Standalone START/STOP/AUTO scout; Scalp ASAP; movable on-chart panel."
 #property description "Profit harvest: winners-only at set levels. Adverse-bar Auto can close same-symbol losers."
@@ -93,10 +93,12 @@ input double  InpProfitLockKeepPct    = 50.0;    // Lock floor = max(keep-% of p
 input double  InpMinWinProfit         = 5.0;     // Winner close min per ticket (= ASAP floor; target ccy)
 
 input group "=== 7c. Adverse-bar Auto loss exit ==="
-input bool            InpAdverseExitEnable    = true;            // Initial AUTO arm if no saved PS{id}_ADVEN
-input int             InpAdverseMinBars       = 2;               // Fire when consecutive closed bars > this (2 -> >=3)
-input ENUM_TIMEFRAMES InpAdverseTimeframe     = PERIOD_CURRENT;  // Chart period (CURRENT = this chart)
-input bool            InpAdverseRequireSignal = true;            // Skip if bus direction missing/0
+input bool            InpAdverseExitEnable       = true;            // Initial AUTO arm if no saved PS{id}_ADVEN
+input int             InpAdverseMinBars          = 2;               // Fire when consecutive closed bars > this (2 -> >=3)
+input ENUM_TIMEFRAMES InpAdverseTimeframe        = PERIOD_CURRENT;  // Chart period (CURRENT = this chart)
+input bool            InpAdverseRequireSignal    = true;            // Skip if bus direction missing/0
+input int             InpAdverseMinAgeMin        = 15;              // Min hold minutes before adverse may cut (0=off)
+input bool            InpAdverseProtectOnceGreen = true;            // Skip adverse if ticket once peaked green / lock armed
 
 input group "=== 8. Display / Notifications ==="
 input bool    InpShowPanel         = true;

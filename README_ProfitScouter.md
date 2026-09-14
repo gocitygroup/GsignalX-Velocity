@@ -2,11 +2,13 @@
 
 A money-based profit monitoring and harvesting engine for MetaTrader 5. It does **not** open trades. It watches every open position and closes them when a money target or a peak-profit give-back rule fires.
 
+**v1.22 adverse experience gates:** loser Auto still requires signal + opposing closed-bar streak, plus **min hold age** (`InpAdverseMinAgeMin`, default **15** minutes) and **once-green protect** (`InpAdverseProtectOnceGreen`, default **ON** — skips tickets that already peaked green / lock-armed). Service adverse TF default is **M5**. Account/pair layers no longer early-return when a target is notionally hit but zero winners meet `InpMinWinProfit`. Audit: [docs/AUDIT_ProfitScouter_Loser_Close_2026-09-14.md](docs/AUDIT_ProfitScouter_Loser_Close_2026-09-14.md).
+
 **v1.21 winner floor = ASAP 5:** defaults align so winners do not bank below **5** account currency (USD/EUR when `InpTargetCurrency` is blank): `InpAccTargetMoney=5`, `InpMinWinProfit=5`, `InpProfitLockArm=5`, and profit-lock floor is `max(keep-% of peak, MinWinProfit)`. Re-attach or **Reset** EA inputs if the chart still shows an old floor of 2 / MinWin 0.10.
 
 **v1.18 movable panel:** the EA dashboard is an on-chart object panel (not `Comment`). Drag the title bar (**PROFIT SCOUTER · drag to move**) to reposition. **START / STOP / AUTO** are standalone chart buttons (`InpBtnX` / `InpBtnY`) so they stay visible while the panel moves. Panel position persists in `PS{InstanceID}_PNLX` / `PS{InstanceID}_PNLY`.
 
-**v1.16 / v1.17 adverse-bar Auto loss exit:** when scout is START-armed, each cycle may close **same-symbol losers** if the last GSignalX bus signal conflicts with consecutive closed OHLC bars: BUY + selling bars > `InpAdverseMinBars` (default 2 → fire at ≥3), or SELL + buying bars > N. Winners are left for profit targeting at set levels. Default `CloseTicket` still refuses losses; only the `ADVERSE-BAR` path may pass `allowLoss`. Fire is once per symbol per bar (`PS{id}_ADV_{canon}`). Chart **AUTO** button (v1.17) toggles the feature via `PS{id}_ADVEN`. Plan: [docs/PLAN_V1.18_Adverse_Bar_Auto_Exit.md](docs/PLAN_V1.18_Adverse_Bar_Auto_Exit.md).
+**v1.16 / v1.17 adverse-bar Auto loss exit:** when scout is START-armed, each cycle may close **same-symbol losers** if the last GSignalX bus signal conflicts with consecutive closed OHLC bars: BUY + selling bars > `InpAdverseMinBars` (default 2 → fire at ≥3), or SELL + buying bars > N. Winners are left for profit targeting at set levels. Default `CloseTicket` still refuses losses; only the `ADVERSE-BAR` path may pass `allowLoss`. Fire is once per symbol per bar (`PS{id}_ADV_{canon}`). Chart **AUTO** button (v1.17) toggles the feature via `PS{id}_ADVEN`. **v1.22** adds min hold age + once-green protect. Plan: [docs/PLAN_V1.18_Adverse_Bar_Auto_Exit.md](docs/PLAN_V1.18_Adverse_Bar_Auto_Exit.md).
 
 **v1.15 default close guard:** account loss-guard inputs were removed. `CloseTicket` / `ClosePartial` re-read live profit (incl. swap + commission) and **refuse negatives** unless an explicit Auto path opts in (`allowLoss` — adverse-bar only in v1.16).
 
@@ -124,7 +126,7 @@ A desktop terminal must stay running and logged in. For unattended operation, re
 One floor (`InpAccTargetMoney`) drives **account, pair, and position** hard closes. Raise it in the **2–10** band for larger takes. No trail give-back and no age window in ASAP.
 
 - **Profit hit:** bank the floor from the winners bucket — biggest green tickets first, and only as many as needed to cover the threshold. Losers stay open on the profit path.
-- **Adverse-bar Auto (v1.16, default ON):** BUY signal + selling closed bars > `InpAdverseMinBars` (or SELL + buying bars) closes **same-symbol losers only**; winners continue to set levels. Profit `CloseTicket` still refuses losses unless `allowLoss` (adverse path).
+- **Adverse-bar Auto (v1.16+, default ON):** BUY signal + selling closed bars > `InpAdverseMinBars` (or SELL + buying bars) closes **same-symbol losers only** after **min hold age** and unless **once-green protect** skips them (v1.22); winners continue to set levels. Profit `CloseTicket` still refuses losses unless `allowLoss` (adverse path).
 - Symbol basket targets bank the floor from **that pair's green tickets only** — other pairs are untouched.
 
 GSignalX charts on PLAY then re-enter if the signal still says buy/sell (`InpDrillMarchAfterFlat`).
@@ -268,7 +270,7 @@ A one-shot manual sweep. Drop it on a chart, it evaluates once, closes whatever 
 3. Set `InpDryRun = true` the first time — it reports what it *would* close and sends no orders.
 4. With `InpConfirm = true` it shows a Yes/No box before closing anything.
 
-Priority is the same as the engine: if the account target is met it closes everything; otherwise it closes qualifying pair baskets; otherwise qualifying single positions. Targets here are in account currency only.
+Priority is the same as the engine: if the account target is met it banks **floor-qualified winners only**; otherwise it closes qualifying pair baskets; otherwise qualifying single positions. Losers are never closed by this script. Targets here are in account currency only.
 
 ### Which one to use
 

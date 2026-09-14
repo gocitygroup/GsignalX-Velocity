@@ -338,7 +338,7 @@ It does **not** mean pyramiding (adding ticket after ticket on the same pair). G
 ProfitScouter’s **single account minimum** (`InpAccTargetMoney`) closes **all** floating positions when hit. Plan so that:
 
 - Sum of expected scalp takes ≥ your target, and  
-- Number of PLAY pairs × risk per pair stays within your daily loss tolerance (set `InpAccMaxLossMoney` if you want an emergency flatten).
+- Number of PLAY pairs × risk per pair stays within your daily loss tolerance (use equity DD guide **EQ** and/or catastrophe strategic SL — account loss-guard was removed in v1.17).
 
 ---
 
@@ -404,7 +404,7 @@ On `ProfitScouter_DollarTarget`:
 | `InpWindowEnable` | false (no age gate) |
 | `InpCheckIntervalMs` | 500 |
 
-When **total floating P/L** of monitored positions ≥ target → **close everything**. Fast, simple, session-friendly.
+When **total floating P/L** of monitored positions ≥ target → bank the **minimal set of floor-qualified winners** (tickets ≥ `InpMinWinProfit`). Losers stay open unless **adverse-bar Auto** fires (signal vs opposing closed bars, plus min hold age / once-green protect in v1.22). Fast, session-friendly.
 
 ### 9.2 Automated vs manual scout
 
@@ -420,7 +420,7 @@ Run **one** scouter scope over the same positions (avoid two instances racing).
 
 With GSignalX PLAY + march-after-flat:
 
-1. Scouter closes all at the account min.  
+1. Scouter banks floor-qualified winners at the account min (losers stay unless adverse Auto).  
 2. Chart goes flat.  
 3. If the signal still says buy or sell → EA re-enters that pair.  
 4. Open positions again match the active direction set.
@@ -443,7 +443,8 @@ Set `InpScalpAsapAccountOnly = false` and enable per-position / per-pair / accou
 
 **Advanced safeguards**
 
-- `InpAccMaxLossMoney` — loss-guard threshold; used only when `InpAccLossGuardEnable = true` (default **off** — losers are never auto-closed)  
+- **Adverse-bar Auto** — may close same-symbol losers when bus direction conflicts with ≥3 opposing closed bars; v1.22 also requires min hold age (`InpAdverseMinAgeMin`, default 15) and skips once-green tickets (`InpAdverseProtectOnceGreen`)  
+- Account loss-guard (`InpAccLossGuardEnable` / `InpAccMaxLossMoney`) was **removed** in v1.17 — do not expect it  
 - `InpMaxSpreadPt` — skip entries in wide spreads (chart **IGN** button can bypass this per symbol)  
 - Separate magics per strategy family  
 

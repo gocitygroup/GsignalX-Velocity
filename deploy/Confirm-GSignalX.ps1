@@ -10,7 +10,7 @@
 #>
 [CmdletBinding()]
 param(
-  [ValidateSet("Files", "Compile", "Bus", "Grades", "All")]
+  [ValidateSet("Files", "Compile", "Bus", "Grades", "LoserSafety", "All")]
   [string] $Gate = "All",
 
   [string] $TerminalDataPath = "",
@@ -62,6 +62,106 @@ function Test-PathMark([string] $path, [string] $label) {
   Add-Line "FAIL  $label  (missing: $path)"
   $script:fail++
   return $false
+}
+
+function Confirm-LoserSafety {
+  Add-Line "=== GATE LoserSafety (static) ==="
+  $core = Join-Path $RepoRoot "Include\ProfitScouter\Core.mqh"
+  $gsx  = Join-Path $RepoRoot "GsignalX_GocityGroup.mq5"
+  $svc  = Join-Path $RepoRoot "ProfitScouter_Service.mq5"
+  $ea   = Join-Path $RepoRoot "ProfitScouter_DollarTarget.mq5"
+  $harv = Join-Path $RepoRoot "ProfitHarvest_Now.mq5"
+
+  if (-not (Test-Path $core)) {
+    Add-Line "FAIL  Core.mqh missing at $core"
+    $script:fail++
+    return
+  }
+
+  $coreText = Get-Content $core -Raw
+  $gsxText  = if (Test-Path $gsx)  { Get-Content $gsx  -Raw } else { "" }
+  $svcText  = if (Test-Path $svc)  { Get-Content $svc  -Raw } else { "" }
+  $eaText   = if (Test-Path $ea)   { Get-Content $ea   -Raw } else { "" }
+  $harvText = if (Test-Path $harv) { Get-Content $harv -Raw } else { "" }
+
+  if ($coreText -match 'CutLosersToGuard|InpAccMaxLossMoney|InpAccLossGuardEnable') {
+    Add-Line "FAIL  loss-guard symbols restored in Core.mqh"
+    $script:fail++
+  }
+  else {
+    Add-Line "PASS  no loss-guard symbols in Core.mqh"
+  }
+
+  $adverseTrue = ([regex]::Matches($coreText, 'CloseTicket\([^)]+,\s*true\)')).Count
+  if ($adverseTrue -lt 1) {
+    Add-Line "FAIL  expected CloseTicket(..., true) on adverse path"
+    $script:fail++
+  }
+  else {
+    Add-Line "PASS  adverse allowLoss path present ($adverseTrue CloseTicket true call(s))"
+  }
+
+  if ($coreText -notmatch 'ADVERSE-BAR') {
+    Add-Line "FAIL  ADVERSE-BAR tag missing"
+    $script:fail++
+  }
+  else {
+    Add-Line "PASS  ADVERSE-BAR tag present"
+  }
+
+  if ($coreText -notmatch 'never closes a losing trade') {
+    Add-Line "FAIL  CloseTicket loser hard-guard string missing"
+    $script:fail++
+  }
+  else {
+    Add-Line "PASS  CloseTicket loser hard-guard present"
+  }
+
+  if ($coreText -notmatch 'InpAdverseMinAgeMin' -or $coreText -notmatch 'InpAdverseProtectOnceGreen') {
+    Add-Line "FAIL  adverse min-age / once-green gates missing in Core"
+    $script:fail++
+  }
+  else {
+    Add-Line "PASS  adverse min-age + once-green gates in Core"
+  }
+
+  if ($coreText -notmatch 'AdverseEligibleLoser') {
+    Add-Line "FAIL  AdverseEligibleLoser missing"
+    $script:fail++
+  }
+  else {
+    Add-Line "PASS  AdverseEligibleLoser present"
+  }
+
+  if ($svcText -match 'InpAdverseMinAgeMin' -and $eaText -match 'InpAdverseMinAgeMin') {
+    Add-Line "PASS  host shells expose InpAdverseMinAgeMin"
+  }
+  else {
+    Add-Line "FAIL  host shells missing InpAdverseMinAgeMin"
+    $script:fail++
+  }
+
+  if ($svcText -match 'PERIOD_M5') {
+    Add-Line "PASS  Service adverse TF default mentions PERIOD_M5"
+  }
+  else {
+    Add-Line "WARN  Service default TF may not be M5"
+  }
+
+  if ($harvText -match 'never closes a losing trade') {
+    Add-Line "PASS  ProfitHarvest_Now loser guard present"
+  }
+  else {
+    Add-Line "WARN  ProfitHarvest_Now loser guard string missing"
+  }
+
+  if ($gsxText -match 'exit deferred to Profit Scouter') {
+    Add-Line "PASS  GSignalX Scouter opposite-signal defer present"
+  }
+  else {
+    Add-Line "FAIL  GSignalX Scouter defer string missing"
+    $script:fail++
+  }
 }
 
 function Confirm-Files {
@@ -203,13 +303,15 @@ Add-Line "BusRoot=$busRoot"
 Add-Line ""
 
 switch ($Gate) {
-  "Files"   { Confirm-Files }
-  "Compile" { Confirm-Compile }
-  "Bus"     { Confirm-Bus }
-  "Grades"  { Confirm-Grades }
+  "Files"        { Confirm-Files }
+  "Compile"      { Confirm-Compile }
+  "Bus"          { Confirm-Bus }
+  "Grades"       { Confirm-Grades }
+  "LoserSafety"  { Confirm-LoserSafety }
   "All"     {
     Confirm-Files
     Confirm-Compile
+    Confirm-LoserSafety
     Confirm-Bus
     Confirm-Grades
   }
