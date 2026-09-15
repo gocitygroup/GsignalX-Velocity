@@ -3,22 +3,12 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="description" content="Gsignalx Velocity v1.21 — MetaTrader 5 trader manual for prop desks and small funds. AutoLot, equity guide, Compact panel, dollar-target harvest, fund growth from €10."/>
+<meta name="description" content="Gsignalx Velocity 2.00 — MetaTrader 5 trader &amp; investor manual. Multisymbol Service, Trade Center, Telegram alerts, Prop soft locks, AutoLot, Scouter harvest."/>
 <meta name="color-scheme" content="dark light"/>
-<title>Gsignalx Velocity v1.21 — Trader Manual | Gocity Group</title>
-<script>
-(function () {
-  try {
-    var k = "gsx-velocity-theme";
-    var s = localStorage.getItem(k);
-    var t = s || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-    document.documentElement.setAttribute("data-theme", t);
-    document.documentElement.style.colorScheme = t;
-  } catch (e) {
-    document.documentElement.setAttribute("data-theme", "dark");
-  }
-})();
-</script>
+<title>Gsignalx Velocity 2.00 — Trader Manual | Gocity Group</title>
+<link rel="icon" href="assets/icons/group-icon.svg" type="image/svg+xml"/>
+<link rel="stylesheet" href="assets/css/gsx-docs.css"/>
+<script src="assets/js/gsx-theme.js"></script>
 <style>
 :root, [data-theme="dark"] {
   /* Executive / Gocity brand floor palette */
@@ -704,7 +694,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
   code { word-break: break-word; overflow-wrap: anywhere; }
   th, td { padding: 8px 10px; font-size: 13px; }
   .chapter-nav { gap: 8px; }
-  .chapter-nav a { min-height: 44px; }
+  .chapter-nav button { min-height: 44px; }
 }
 
 @media (max-width: 480px) {
@@ -765,7 +755,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       <img class="brand-mark" src="assets/icons/group-icon.svg" width="120" height="66" alt="Gocity Group"/>
       <div class="brand-text">
         <strong>Gsignalx Velocity</strong>
-        <span>by Gocity Group · MT5 Desk Manual · v1.21</span>
+        <span>by Gocity Group · MT5 Desk Manual · v2.00</span>
       </div>
     </a>
     <nav class="header-tabs" id="headerTabs" aria-label="Manual sections"></nav>
@@ -782,10 +772,14 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       <a class="header-cta gh" href="https://github.com/gocitygroup/GsignalX-Velocity" target="_blank" rel="noopener">
         <span class="gh-full">Clone on GitHub</span><span class="gh-short">GitHub</span>
       </a>
-      <a class="header-cta" href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">
-        Executive <span class="hide-sm">→ gsignalx.cloud</span>
+      <a class="header-cta" href="https://www.gsignalx.cloud/" target="_blank" rel="noopener" title="Executive">
+        <span class="header-cta-label">Executive</span><span class="hide-sm"> → cloud</span>
       </a>
     </div>
+  </div>
+  <div class="mobile-chapter-wrap">
+    <label for="mobileChapterSelect">Chapters</label>
+    <select id="mobileChapterSelect" aria-label="Jump to chapter"></select>
   </div>
 </header>
 
@@ -803,7 +797,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       <h1>Gsignalx Velocity Trader Manual</h1>
       <p class="lede">Fund-manager instructions for running the Velocity MT5 desk: structured session entries, winners-only dollar harvest, and disciplined growth from micro capital through prop-firm and small-fund scale.</p>
       <div class="meta-row">
-        <span class="chip chip-version">GSignalX v1.21 · ProfitScouter v1.21</span>
+        <span class="chip chip-version">Velocity 2.00 · bus schema v1</span>
         <span class="chip chip-prop">Prop &amp; small fund</span>
         <span class="chip chip-beginner">Beginner → Advanced</span>
         <span class="chip chip-perf">Behavioural performance</span>
@@ -811,8 +805,11 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       </div>
 
       <div class="callout gold">
-        <strong class="label">v1.21 commercial desk</strong>
-        Chart <strong>AUTOLOT / FIXED</strong>, <strong>EQ OFF→5→10→20%</strong> equity guide, and <strong>Compact / Full</strong> outcome panel. Recommended watchlist: <strong>M5 · Compact · AUTOLOT · EQ 10% · SPREAD</strong>. Deploy notes: <code>docs/RELEASE_v1.21_Commercial_Deploy.md</code>.
+        <strong class="label">Velocity 2.00 prop desk · best use</strong>
+        Production topology: <strong>GsignalX_Service</strong> owns entries, <strong>Multisymbol Trade Center</strong> owns roster / categories / pair state / events / PROP / Telegram / practice coach, <strong>ProfitScouter</strong> owns exits.
+        Recommended prop book: <strong>M5 · fleet 4 · AUTOLOT · EQ 10% · SPREAD · ASAP ≈1% balance · Event SKIP on FX news · START only London–NY FX (+ metals) · CR SUSPEND</strong>.
+        Micro practice ($20 / $50 / $100 · Raw or Standard): load matching <code>Practice_*.set</code> pairs, restart Services, then Trade Center <strong>20/50/100 · RAW/STD · SCALP/DAY/SWING</strong> for coach tips (fleet/cat soft-apply only).
+        Deploy: <code>docs/RELEASE_v2.00_Prop_Desk_Deploy.md</code> · Practice: <code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code>.
       </div>
 
       <p style="margin:0 0 1.2em">
@@ -845,11 +842,11 @@ tr:nth-child(even) td { background: var(--row-stripe); }
 
       <h2>Who this manual is for</h2>
       <table>
-        <thead><tr><th>Desk</th><th>How to use Velocity</th></tr></thead>
+        <thead><tr><th>Desk</th><th>How to use Velocity</th><th>Telegram posture</th></tr></thead>
         <tbody>
-          <tr><td>Beginner / funded challenge</td><td>One Scouter Service, 1–2 majors, hour filter ON, STOP at session end.</td></tr>
-          <tr><td>Prop trader (small–medium firm)</td><td>Fleet 2–4 pairs, ASAP floor ≈ 1% of balance, adverse Auto ON, daily loss budget outside the bot.</td></tr>
-          <tr><td>Fund / desk lead</td><td>Standardise presets, match Instance IDs, VPS + Confirm gates, grade bus advisory only.</td></tr>
+          <tr><td>Beginner / funded challenge</td><td>Service + Scouter Service, Trade Center PropRisk soft locks, FX tab only (1–2 majors START), Event SKIP, hour filter ON, STOP at session end. Micro accounts: Practice packs $20/$50/$100 (Raw preferred for scalp).</td><td>Investor-quiet: Dashboard TG · DAILY + PROP · silent overnight · <a href="#telegram">recipe</a></td></tr>
+          <tr><td>Prop trader (small–medium firm)</td><td>Fleet 2–4, FX+CMD on START during London–NY; SUSPEND crypto overnight; ASAP ≈ 1% balance. Use Trade Center practice coach when sizing a small live/demo book.</td><td>Trader-live: Service + Dashboard · EVENT + PROP + deals · <a href="#telegram">recipe</a></td></tr>
+          <tr><td>Fund / desk lead / investor monitor</td><td>One magic, Service OWN, category capacity ≥4, Confirm gates, grades advisory; Compact strip OK.</td><td>Investor: Dashboard (or Chart failover) · summaries + PROP · VERIFY green · <a href="#telegram">recipe</a></td></tr>
         </tbody>
       </table>
 
@@ -873,36 +870,38 @@ tr:nth-child(even) td { background: var(--row-stripe); }
     <section class="panel" id="system" data-title="System Map" data-short="System">
       <div class="kicker">Architecture</div>
       <h1>System map</h1>
-      <p class="lede">Two independent engines: GSignalX opens risk; ProfitScouter banks winners. Chart buttons never close trades.</p>
+      <p class="lede">Two independent engines: GSignalX opens risk; ProfitScouter banks winners. Trade Center and chart buttons never close trades. Bus JSON schema stays <strong>v1</strong>.</p>
 
       <div class="callout gold">
         <strong class="label">Preliminary desk = M5</strong>
-        Attach GSignalX on <strong>M5</strong> charts and set Scouter adverse TF to <strong>M5</strong>. That pairing is the primary (preliminary) standard for best signal + harvest performance — drill pace, bus direction, and loser cuts stay aligned.
+        Prefer <strong>GsignalX_Service</strong> for entries (or M5 charts). Set Scouter adverse TF to <strong>M5</strong>. Drill pace, bus direction, and loser cuts stay aligned.
       </div>
 
-      <pre>Watchlist charts      PLAY / STOP / HALT / FOLLOW|WAIT
-                      SPREAD|IGN / AUTOLOT|FIXED / EQ %
-       │                         │
-       ▼                         ▼
- ┌─────────────┐         Scalping drill (5–15 min)
- │  GSignalX   │◄─────── after PLAY · Compact panel
- │  entries    │
- └──────┬──────┘
-        │ positions / pendings
-        ▼
- ┌─────────────┐   optional    ┌─────────────┐
+      <pre>GsignalX_Service (OWN=1)     Multisymbol Dashboard (v1.26)
+ roster scan + fleet fill      categories · START/STOP/SUSPEND · events · PROP/TG
+       │                              │ soft STOP (RUN=0) / pair SKIP blocks
+       ▼                              ▼
+  new entries only              never closes tickets
+       │
+       ▼
+ optional M5 chart EAs (UI/strip; defer entries when Service owns)
+       │ positions / pendings
+       ▼
+ ┌─────────────┐   advisory    ┌─────────────┐
  │ ProfitScout │◄──────────────┤   Grader    │
- │ ASAP / lock │  (advisory)   │  ranks only │
+ │ ASAP / lock │               │  ranks only │
  └──────┬──────┘               └─────────────┘
         │ bank winners at money floor
         ▼
- Flat → march-after-flat re-entry if PLAY + signal still valid</pre>
+ Flat → Service/chart re-entry if RUN + signal still valid</pre>
 
       <table>
         <thead><tr><th>Component</th><th>Opens?</th><th>Closes?</th><th>Needs chart?</th></tr></thead>
         <tbody>
-          <tr><td><code>GsignalX_GocityGroup</code></td><td>Yes (PLAY)</td><td>No in Scouter mode; STOP/HALT never close</td><td>Yes</td></tr>
-          <tr><td><code>ProfitScouter_Service</code></td><td>No</td><td>Yes (money rules)</td><td>No</td></tr>
+          <tr><td><code>GsignalX_Service</code></td><td>Yes (RUN/OWN)</td><td><strong>Never</strong></td><td>No</td></tr>
+          <tr><td><code>GsignalX_GocityGroup</code></td><td>Yes (PLAY; defer if Service OWN)</td><td>No in Scouter mode</td><td>Yes</td></tr>
+          <tr><td><code>GsignalX_Multisymbol_Dashboard</code></td><td>No</td><td><strong>Never</strong> (soft STOP only)</td><td>Yes (panel host)</td></tr>
+          <tr><td><code>ProfitScouter_Service</code></td><td>No</td><td>Yes (money + adverse)</td><td>No</td></tr>
           <tr><td><code>ProfitScouter_DollarTarget</code></td><td>No</td><td>Yes</td><td>Yes (panel host)</td></tr>
           <tr><td><code>ProfitOpportunity_Grader</code></td><td>No</td><td>No</td><td>No</td></tr>
           <tr><td><code>ProfitHarvest_Now</code></td><td>No</td><td>Yes (one-shot)</td><td>Drop on any chart</td></tr>
@@ -913,7 +912,9 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       <table>
         <thead><tr><th>Velocity desk name</th><th>What you see in MT5</th></tr></thead>
         <tbody>
-          <tr><td>Velocity entry engine</td><td><code>GsignalX_GocityGroup</code> (Expert)</td></tr>
+          <tr><td>Multisymbol entry Service</td><td><code>GsignalX_Service</code></td></tr>
+          <tr><td>Velocity chart entry / strip</td><td><code>GsignalX_GocityGroup</code> (Expert)</td></tr>
+          <tr><td>Prop Firm Trade Center</td><td><code>GsignalX_Multisymbol_Dashboard</code></td></tr>
           <tr><td>Profit scouting (chart)</td><td><code>ProfitScouter_DollarTarget</code></td></tr>
           <tr><td>Profit scouting (24/7)</td><td><code>ProfitScouter_Service</code></td></tr>
           <tr><td>Opportunity ranks</td><td><code>ProfitOpportunity_Grader</code></td></tr>
@@ -935,6 +936,8 @@ tr:nth-child(even) td { background: var(--row-stripe); }
         <li><strong>Compact panel</strong> (default input): investor outcome strip; <strong>Full</strong> adds engine rows + entry detail (<code>InpPanelDensity</code>).</li>
         <li>Profit path closes <strong>winners only</strong> (minimal set, biggest green first). Losers exit via adverse-bar Auto or catastrophe SL — not via ASAP floors.</li>
         <li>One Scouter instance for “All symbols” — two harvest engines on the same book race.</li>
+        <li><strong>Trade Center / PropRisk</strong> soft STOP never closes tickets; only Scouter (or Harvest script) may close.</li>
+        <li><strong>Service OWN</strong> and chart entries must not double-fill the same magic.</li>
       </ul>
 
       <div class="callout bear">
@@ -945,66 +948,87 @@ tr:nth-child(even) td { background: var(--row-stripe); }
 
     <!-- DEPLOY -->
     <section class="panel" id="deploy" data-title="Windows Deploy" data-short="Deploy">
-      <div class="kicker">Clone → MT5</div>
+      <div class="kicker">ZIP / clone → double-click → MT5</div>
       <h1>Windows deploy (easy path)</h1>
-      <p class="lede">Any Windows machine with MetaTrader 5 can host Velocity after a git clone. Prefer the batch scripts; confirm with the gated runbook.</p>
+      <p class="lede">You do not need to be a programmer. Download the toolkit, double-click one installer script, then turn a few switches on inside MetaTrader 5.</p>
 
       <div class="meta-row">
-        <span class="chip chip-beginner">Beginner path</span>
-        <span class="chip chip-prop">GitHub Pages ready</span>
+        <span class="chip chip-beginner">Non-tech friendly</span>
+        <span class="chip chip-prop">Velocity 2.00</span>
+      </div>
+
+      <div class="callout gold">
+        <strong class="label">Plain guide (print this)</strong>
+        Full checklist + error table:
+        <code>docs/WINDOWS_DEPLOY_SIMPLE.md</code>
+        (same folder as this manual on GitHub / after clone). Technical depth stays in <code>DEPLOYMENT.md</code>.
       </div>
 
       <h2>Prerequisites</h2>
       <ul>
         <li>Windows 10/11</li>
-        <li>MetaTrader 5 build <strong>3000+</strong></li>
+        <li>MetaTrader 5 installed and opened at least once (creates the Data Folder)</li>
         <li>Demo account first</li>
-        <li>Git (optional but recommended for updates)</li>
+        <li>Git optional — ZIP download is enough</li>
       </ul>
 
-      <h2>Step 1 — Get the toolkit from GitHub</h2>
+      <h2>Step 1 — Get the toolkit</h2>
       <p>Repository: <a href="https://github.com/gocitygroup/GsignalX-Velocity" target="_blank" rel="noopener">gocitygroup/GsignalX-Velocity</a></p>
-      <pre>git clone https://github.com/gocitygroup/GsignalX-Velocity.git
-cd GsignalX-Velocity</pre>
-      <p><strong>SSH:</strong></p>
-      <pre>git clone git@github.com:gocitygroup/GsignalX-Velocity.git
-cd GsignalX-Velocity</pre>
-      <p>Or download the ZIP: <a href="https://github.com/gocitygroup/GsignalX-Velocity/archive/refs/heads/main.zip" target="_blank" rel="noopener">main.zip</a> → Extract → open the folder that contains <code>deploy\</code> and the <code>.mq5</code> files.</p>
-
-      <div class="callout">
-        <strong class="label">Contribute &amp; feedback</strong>
-        Bug reports, prop-desk session notes, and doc fixes are welcome via
-        <a href="https://github.com/gocitygroup/GsignalX-Velocity/issues" target="_blank" rel="noopener">GitHub Issues</a>
-        and <a href="https://github.com/gocitygroup/GsignalX-Velocity/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>.
-        Noncommercial source-available license — see Appendix.
-      </div>
-
-      <h2>Step 2 — Deploy into MT5</h2>
       <div class="day-card">
         <header>
-          <h3>Fastest (fresh install)</h3>
+          <h3>A) Download ZIP (easiest)</h3>
           <span class="chip chip-beginner">Recommended</span>
         </header>
         <ol>
-          <li>Double-click <code>deploy\Click-and-Run-Deploy.bat</code></li>
-          <li>When prompted, select / confirm your terminal data path</li>
-          <li>Allow compile if the script offers it</li>
+          <li>GitHub → green <strong>Code</strong> → <strong>Download ZIP</strong> (or <a href="https://github.com/gocitygroup/GsignalX-Velocity/archive/refs/heads/main.zip" target="_blank" rel="noopener">main.zip</a>)</li>
+          <li>Unzip to a simple path, e.g. <code>C:\GSignalX\GsignalX-Velocity</code></li>
+          <li>Open folders until you see <strong>both</strong> a <code>deploy</code> folder and many <code>.mq5</code> files — that folder is the toolkit root</li>
         </ol>
-        <p><strong>Upgrade wipe:</strong> use <code>deploy\Clean-and-Deploy.bat</code> instead.</p>
       </div>
+      <p><strong>B) Git (optional):</strong></p>
+      <pre>git clone https://github.com/gocitygroup/GsignalX-Velocity.git
+cd GsignalX-Velocity</pre>
 
-      <p>PowerShell alternative:</p>
-      <pre>powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 -ListTerminals
-powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
-  -TerminalDataPath "$env:APPDATA\MetaQuotes\Terminal\&lt;HASH&gt;" -Compile</pre>
+      <h2>Step 2 — Install into MT5 (one double-click)</h2>
+      <div class="day-card">
+        <header>
+          <h3>Fastest</h3>
+          <span class="chip chip-beginner">No coding</span>
+        </header>
+        <ol>
+          <li>Open the toolkit’s <code>deploy</code> folder in File Explorer</li>
+          <li><strong>First install:</strong> double-click <code>Click-and-Run-Deploy.bat</code></li>
+          <li><strong>Upgrade:</strong> double-click <code>Clean-and-Deploy.bat</code> instead</li>
+          <li>If Windows SmartScreen appears → More info → Run anyway</li>
+          <li>Wait until the black window finishes — healthy lines say <code>Result: 0 errors, 0 warnings</code></li>
+        </ol>
+      </div>
+      <p>PowerShell alternative (advanced):</p>
+      <pre>powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 -AllTerminals -Compile</pre>
 
-      <h2>Step 3 — File map (what landed where)</h2>
+      <h2>Step 3 — Turn it on in MetaTrader 5</h2>
+      <p>The installer <strong>cannot</strong> press these buttons for you:</p>
+      <ol class="checklist">
+        <li>Toolbar <strong>Algo Trading</strong> = green / ON</li>
+        <li>Tools → Options → Expert Advisors → allow algorithmic trading</li>
+        <li>Navigator → Services → start <code>GsignalX_Service</code></li>
+        <li>Start <code>ProfitScouter_Service</code> (this one closes winners)</li>
+        <li>Start <code>ProfitOpportunity_Grader</code></li>
+        <li>Attach <code>GsignalX_Multisymbol_Dashboard</code> (same magic as Service)</li>
+        <li>Optional: attach <code>GsignalX_GocityGroup</code> on <strong>M5</strong> for the chart strip</li>
+        <li>Double-click <code>deploy\Confirm-After-Start.bat</code></li>
+      </ol>
+      <p>Telegram later: allow WebRequest URL <code>https://api.telegram.org</code> in Expert Advisors options.</p>
+
+      <h2>Step 4 — What landed where</h2>
       <table>
         <thead><tr><th>Source in repo</th><th>MT5 Data Folder destination</th></tr></thead>
         <tbody>
           <tr><td><code>Include/GSignalX/*.mqh</code></td><td><code>MQL5\Include\GSignalX\</code></td></tr>
           <tr><td><code>Include/ProfitScouter/*.mqh</code></td><td><code>MQL5\Include\ProfitScouter\</code></td></tr>
           <tr><td><code>GsignalX_GocityGroup.mq5</code></td><td><code>MQL5\Experts\</code></td></tr>
+          <tr><td><code>GsignalX_Multisymbol_Dashboard.mq5</code></td><td><code>MQL5\Experts\</code></td></tr>
+          <tr><td><code>GsignalX_Service.mq5</code></td><td><code>MQL5\Services\</code></td></tr>
           <tr><td><code>ProfitScouter_DollarTarget.mq5</code></td><td><code>MQL5\Experts\</code></td></tr>
           <tr><td><code>ProfitScouter_Service.mq5</code></td><td><code>MQL5\Services\</code></td></tr>
           <tr><td><code>ProfitOpportunity_Grader.mq5</code></td><td><code>MQL5\Services\</code></td></tr>
@@ -1013,21 +1037,27 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
       </table>
       <p>Data folder: MT5 → <strong>File → Open Data Folder</strong> → typically <code>%APPDATA%\MetaQuotes\Terminal\&lt;HASH&gt;\</code>.</p>
 
-      <h2>Step 4 — First-run checklist</h2>
-      <ol class="checklist">
-        <li>Tools → Options → Expert Advisors → allow automated trading</li>
-        <li>Toolbar <strong>Algo Trading</strong> = green / ON</li>
-        <li>Navigator → Services → Add / Start <code>ProfitScouter_Service</code> (Bus ON)</li>
-        <li>Start <code>ProfitOpportunity_Grader</code> (one instance)</li>
-        <li>Open roster charts; attach <code>GsignalX_GocityGroup</code>; Common → Allow Algo Trading</li>
-        <li>Match <code>InpScoutInstanceID</code> (EA) = <code>InpInstanceID</code> (Service), default <strong>1</strong></li>
-        <li>Run <code>deploy\Confirm-After-Start.bat</code> (or Confirm script Gate All)</li>
-      </ol>
-
       <div class="callout warn">
         <strong class="label">Services do not hot-reload</strong>
-        After loading a <code>.set</code> preset or changing Service inputs, stop and restart the Service from Navigator. Chart EAs: remove and re-attach (or Reset inputs) if the panel still shows stale floors.
+        After changing Service inputs or loading a <code>.set</code> preset, stop and restart the Service from Navigator. Chart EAs: remove and re-attach (or Reset inputs) if the panel still shows stale floors.
       </div>
+
+      <h2>Problems and fixes (most common)</h2>
+      <table>
+        <thead><tr><th>What you see</th><th>What to do</th></tr></thead>
+        <tbody>
+          <tr><td>No <code>deploy</code> folder after ZIP</td><td>Open the nested inner folder until <code>deploy</code> + <code>.mq5</code> appear</td></tr>
+          <tr><td>No MT5 terminal folders found</td><td>Open MT5 once under the same Windows user, then re-run the <code>.bat</code></td></tr>
+          <tr><td>MetaEditor not found</td><td>Search Start for <code>MetaEditor64.exe</code>; set <code>METAEDITOR=...</code> near the top of the <code>.bat</code></td></tr>
+          <tr><td>Compile errors (not 0/0)</td><td>Run <code>Clean-and-Deploy.bat</code>; read the <code>.log</code> next to the program in the Data Folder</td></tr>
+          <tr><td>Expert/Service missing in Navigator</td><td>Re-deploy → Navigator → Refresh</td></tr>
+          <tr><td>Smiley with X / no trading</td><td>Algo Trading ON + Common tab allow trading</td></tr>
+          <tr><td>Positions never close</td><td>Start <strong>one</strong> <code>ProfitScouter_Service</code> (or DollarTarget START)</td></tr>
+          <tr><td>Telegram WebRequest error</td><td>Allow <code>https://api.telegram.org</code> in Expert Advisors options</td></tr>
+          <tr><td>Confirm WARN stale bus</td><td>Start Services; wait ~60s; run Confirm-After-Start again</td></tr>
+        </tbody>
+      </table>
+      <p>Longer table: <code>docs/WINDOWS_DEPLOY_SIMPLE.md</code> · Gates: <code>DEPLOYMENT_RUNBOOK.md</code> · Sign-off: <code>docs/RELEASE_v2.00_Prop_Desk_Deploy.md</code>.</p>
 
       <h2>Host this manual on GitHub Pages</h2>
       <ol>
@@ -1133,6 +1163,14 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
         <strong class="label">Advanced</strong>
         Keep <code>InpIncludeCommission</code> and <code>InpIncludeSwap</code> <strong>true</strong> on raw accounts so ASAP floors are net. Percent-of-balance on the account layer only <em>lowers</em> the floor when combined with a fixed target — ladder fixed money manually.
       </div>
+
+      <h2>Practice live packs — $20 / $50 / $100 (Standard + Raw)</h2>
+      <p>Trade Center buttons <strong>20 · 50 · 100 · RAW · STD · SCALP · DAY · SWING</strong> show coach tips (pairs, sessions, loss budget). Soft-apply updates fleet + category only. Load matching Service + Scouter presets, then restart Services:</p>
+      <ul>
+        <li><code>deploy/presets/GSignalX_Service_Practice_{20|50|100}_{Raw|Standard}.set</code></li>
+        <li><code>deploy/presets/ProfitScouter_Practice_{20|50|100}_{Raw|Standard}.set</code></li>
+      </ul>
+      <p>Full maths (expectancy, Kelly proxy, Standard vs Raw floors): <code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code> · plan <code>docs/PLAN_V2.02_Practice_Live_Simulation.md</code>. Demo first; no virtual balance — use a real funded demo near the band.</p>
     </section>
 
     <!-- SESSIONS -->
@@ -1173,6 +1211,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
       </div>
 
       <h2>Sample session clock (illustrative)</h2>
+      <p>Trade Center draws an illustrative GMT strip (Asia · London · NY · Sydney). It does <strong>not</strong> replace broker session gates above — use it as a desk awareness aid only.</p>
       <table>
         <thead><tr><th>Server hour</th><th>Desk action</th></tr></thead>
         <tbody>
@@ -1318,11 +1357,189 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
       </div>
     </section>
 
+    <!-- DESK 2.00 -->
+    <section class="panel" id="desk200" data-title="Multisymbol Desk 2.00" data-short="Desk 2.00">
+      <div class="kicker">Velocity 2.00 · production topology</div>
+      <h1>Multisymbol Service + Trade Center</h1>
+      <p class="lede">Best production use: one magic, Service owns entries, Dashboard owns roster / categories / pair state / events / prop soft locks, Scouter owns exits. Chart EAs are optional UI.</p>
+
+      <h2>Best use case (prop / small fund)</h2>
+      <div class="callout gold">
+        <strong class="label">Senior desk recipe</strong>
+        Run a <strong>London–NY FX book</strong> with metals on the side; keep crypto on the roster but SUSPENDed until you intentionally trade it. One magic, fleet 4, Event SKIP for high-impact FX news, PropRisk soft locks matched to the challenge.
+        For <strong>$20 / $50 / $100</strong> (or €) books — Standard or Raw — load the Practice Service+Scouter <code>.set</code> pair, then use Trade Center <strong>20 · 50 · 100 · RAW · STD · SCALP · DAY · SWING</strong> for pairs/session tips (soft fleet/cat only; money knobs stay in presets).
+      </div>
+      <ol>
+        <li><strong>Seed</strong> multi-class list (4 FX + metals/oils + crypto). Service + Dashboard + Scouter share one <code>InpMagic</code>. Micro practice: seed the preset symbol list (often EURUSD or EURUSD+GBPUSD only).</li>
+        <li><strong>FX tab</strong> — START only the 2–4 pairs you will trade this session (e.g. EURUSD, GBPUSD, USDJPY, XAUUSD on CMD). STOP the rest; SUSPEND crypto overnight. At $20–$50 keep CMD/CRYPTO SUSPEND.</li>
+        <li><strong>Fleet target = 4</strong> (or 2 on funded challenge / $100 practice; <strong>1</strong> on $20). M5 Service; Scouter adverse TF = M5; ASAP ≈ 1% balance (demo often $5; practice packs scale ASAP — see playbook).</li>
+        <li><strong>Events = SKIP</strong> while calendar is enabled; Telegram <code>[EVENT]</code> on. Flip to TRADE only when the desk is watching and will hold through the print.</li>
+        <li><strong>Session clock</strong> is awareness only — still use broker hour filter / Friday stop for hard gates. PLAY into London–NY (scalp: LDN·NY overlap; swing: grade band 12–17); fleet STOP at your cut-off (Scouter keeps managing open risk).</li>
+        <li><strong>Practice coach</strong> — after loading the matching Raw/Standard <code>.set</code>, restart Services; panel buttons refresh coach + tip lines (expectancy / loss budget / secondary pairs). Do not expect buttons to hot-load Prop money inputs.</li>
+        <li><strong>Never</strong> use Dashboard to flatten. PROP / HALT / pair STOP only pause new entries.</li>
+      </ol>
+      <table>
+        <thead><tr><th>Mode</th><th>Roster posture</th><th>Events</th><th>When</th></tr></thead>
+        <tbody>
+          <tr><td>Practice $20/$50</td><td>FX only, 1–2 START · CR/CMD SUSPEND</td><td>SKIP</td><td>Demo micro; Raw preferred for scalp</td></tr>
+          <tr><td>Challenge / risk-off</td><td>FX only, 1–2 START</td><td>SKIP</td><td>Eval / funded daily loss tight</td></tr>
+          <tr><td>Standard prop desk</td><td>FX+CMD START overlap; CR SUSPEND</td><td>SKIP</td><td>Default London–NY session</td></tr>
+          <tr><td>Event scalp desk</td><td>Relevant FX START</td><td>TRADE + watch</td><td>Only with eyes on chart + TG</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Production attach order</h2>
+      <ol>
+        <li>Deploy / compile (<code>Clean-and-Deploy.bat</code> or <code>Deploy-GSignalX.ps1 -Compile</code>).</li>
+        <li>Algo Trading ON. Allow WebRequest <code>https://api.telegram.org</code> if Telegram is enabled.</li>
+        <li>Start <strong>GsignalX_Service</strong>, <strong>ProfitScouter_Service</strong>, <strong>ProfitOpportunity_Grader</strong>.</li>
+        <li>Attach <strong>GsignalX_Multisymbol_Dashboard</strong> with seed list + shared magic.</li>
+        <li>Optional: M5 chart GSignalX with <code>InpChartEntriesWhenService=false</code> for strip/UI.</li>
+        <li>Run <code>Confirm-After-Start.bat</code> — expect version <strong>2.00</strong> hosts + bus schema <strong>1</strong>.</li>
+      </ol>
+
+      <h2>Multisymbol Service</h2>
+      <ul>
+        <li>Chart-free roster scan + fleet fill; publishes live roster CSV under <code>GSignalX/bus/v1/roster/{magic}.csv</code>.</li>
+        <li>Sets <code>GSX_SVC_OWN_{magic}=1</code> so chart EAs defer fleet/auto-entries.</li>
+        <li><strong>Never</strong> reverse-closes — Scouter owns exits.</li>
+        <li>Hot-reloads roster when Dashboard ADD/REMOVE advances <code>GSX_SVC_ROSTER_SEQ_{magic}</code>.</li>
+      </ul>
+
+      <h2>Trade Center UI</h2>
+      <ul>
+        <li>Category tabs: <strong>ALL / FX / CMD / CRYPTO</strong> — capacity ≥4 per class (soft max 8). Seed supports 4 majors + metals/oils + crypto.</li>
+        <li>Practice row (Full panel): <strong>20 / 50 / 100 · RAW / STD · SCALP / DAY / SWING</strong> — coach + pairs/session tips; soft-applies fleet target and category. Load matching <code>Practice_*.set</code> for ASAP/Prop money knobs (<code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code>).</li>
+        <li>Per-pair <strong>START / STOP / SUSPEND</strong> (cycles on click): START = fills on; STOP = no new fills (still scanned); SUSPEND = no fills / not a fleet candidate. Does not close positions.</li>
+        <li>Illustrative GMT <strong>session clock</strong> (Asia · London · NY · Sydney) — broker <code>MarketGates</code> still gate real trades.</li>
+        <li>Events row: hybrid MT5 Calendar + desk CSV; toggle <strong>TRADE</strong> (notify only) / <strong>SKIP</strong> (block new fills on affected active pairs). Telegram tag <code>[EVENT]</code> ahead of relevant events.</li>
+        <li>ADD / REMOVE symbols; fleet target; paging; PROP / TG status. Objects use <code>GSXMS_</code> prefix; chart compact roster strip optional (<code>InpShowRosterStrip</code>).</li>
+        <li>See <code>docs/PLAN_V1.26_Trade_Center_Categories_Events.md</code>.</li>
+      </ul>
+
+      <h2>Telegram notifier</h2>
+      <p>WebRequest Telegram alerts (deals, PROP, EVENT, summaries, engine WARN). Status <strong>NotCfg / Connected / Verified / Error</strong>; Trade Center <strong>VERIFY</strong> button. Full trader vs investor recipes: <a href="#telegram">Telegram Alerts</a>.</p>
+
+      <h2>PropRisk soft locks</h2>
+      <p>Challenge pack trips sticky STOP (entries paused via RUN=0). <strong>Positions stay open</strong> for Scouter. Resume with PLAY after the rule condition clears or you intentionally override per firm policy.</p>
+      <table>
+        <thead><tr><th>Gate</th><th>Typical use</th></tr></thead>
+        <tbody>
+          <tr><td>Daily loss $ / %</td><td>Challenge daily max loss</td></tr>
+          <tr><td>Equity drawdown %</td><td>Floating DD ceiling</td></tr>
+          <tr><td>Max trades / day</td><td>Overtrading brake</td></tr>
+          <tr><td>Consistency share</td><td>Cap one-day P/L share of target</td></tr>
+          <tr><td>Daily profit target</td><td>Stop hunting after target</td></tr>
+          <tr><td>Friday hour / news CSV</td><td>Blackout windows</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout bear">
+        <strong class="label">Invariant</strong>
+        Dashboard, Service, and PropRisk never close tickets. If you need flatten, use Scouter rules, Harvest script, or manual close — not PROP STOP.
+      </div>
+    </section>
+
+    <!-- TELEGRAM ALERTS -->
+    <section class="panel" id="telegram" data-title="Telegram Alerts" data-short="Telegram">
+      <div class="kicker">Notifications · Velocity 2.00 / v1.27</div>
+      <h1>Telegram alerts for traders and investors</h1>
+      <p class="lede">Know when the book goes online, when risk trips, and when the day is banked — without staring at the terminal. WebRequest-only (Market compliant, no DLLs).</p>
+
+      <div class="callout gold">
+        <strong class="label">Two postures</strong>
+        <strong>Trader / prop desk</strong> wants live deals + news + engine WARN. <strong>Investor / monitor</strong> wants daily summaries + PROP + online/offline — quieter chat, Compact strip is enough.
+      </div>
+
+      <h2>What you get</h2>
+      <table>
+        <thead><tr><th>Capability</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><td>Deal alerts</td><td><code>[OPEN]</code> / <code>[CLOSE]</code> / <code>[MODIFY]</code> with entry, SL, TP, and P/L</td></tr>
+          <tr><td>Summaries</td><td><code>[DAILY]</code> / <code>[WEEKLY]</code> with win rate, drawdown, balance</td></tr>
+          <tr><td>Lifecycle</td><td><code>[START]</code> / <code>[STOP]</code> — EA online / offline + session P/L</td></tr>
+          <tr><td>Risk &amp; news</td><td><code>[PROP]</code> soft lock · <code>[EVENT]</code> calendar/desk ahead · <code>[WARN]</code> / <code>[ERROR]</code></td></tr>
+          <tr><td>Delivery</td><td>Up to 3 chat IDs · queue 10 · 3 retries · rate 20/min · silent hours GMT · Markdown tags</td></tr>
+          <tr><td>Health</td><td>Status <strong>NotCfg</strong> / <strong>Connected</strong> / <strong>Verified</strong> / <strong>Error</strong> · Trade Center <strong>VERIFY</strong> (getMe)</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Where it runs</h2>
+      <table>
+        <thead><tr><th>Host</th><th>Sends</th><th>Best for</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Trade Center</strong> (Dashboard)</td><td>OPEN/CLOSE/MODIFY, PROP, EVENT, DAILY/WEEKLY, desk START/STOP</td><td>Primary desk — keep attached while trading</td></tr>
+          <tr><td><strong>GsignalX_Service</strong></td><td>svc START/STOP, WARN (fill fail / empty roster / OWN lost), ERROR</td><td>Trader reliability when Dashboard is closed</td></tr>
+          <tr><td><strong>Chart EA</strong></td><td>chart START/STOP; deals only if desk heartbeat is stale (failover)</td><td>Single-chart attach or investor monitor</td></tr>
+        </tbody>
+      </table>
+      <p>One bot token can be shared. Desk owns deal alerts while its heartbeat is fresh — Chart does not duplicate CLOSE. Service never sends OPEN/CLOSE.</p>
+
+      <h2>Setup (5 steps)</h2>
+      <ol>
+        <li>Create a bot with <strong>BotFather</strong>; copy the token.</li>
+        <li>Open a chat with the bot (or add it to a group); copy up to <strong>3 chat IDs</strong>.</li>
+        <li>In MT5: Tools → Options → Expert Advisors → allow WebRequest URL <code>https://api.telegram.org</code>.</li>
+        <li>Enable Telegram inputs on the host(s) you need (Dashboard and/or Service and/or Chart).</li>
+        <li>On Trade Center press <strong>VERIFY</strong> until status shows <strong>Verified</strong> (you should get a test + START message).</li>
+      </ol>
+
+      <h2>Trader best use (active prop desk)</h2>
+      <div class="day-card">
+        <header>
+          <h3>London–NY live book</h3>
+          <span class="chip chip-advanced">Full alerts</span>
+        </header>
+        <ol>
+          <li>Enable TG on <strong>Service + Dashboard</strong> (same token/chats).</li>
+          <li>Expect OPEN/CLOSE/MODIFY, PROP, EVENT, and Service WARN in the chat.</li>
+          <li>Keep Event mode <strong>SKIP</strong> with <code>[EVENT]</code> ahead; flip to TRADE only when you are watching the print.</li>
+          <li>Silent hours: off or narrow during the session; widen overnight if you sleep.</li>
+          <li>Press <strong>VERIFY</strong> after every token change, VPS move, or WebRequest allowlist edit.</li>
+          <li>Micro / practice book: pick band + Raw/Std on Trade Center after loading the matching presets; Scalp → LDN·NY; Day → 07–20; Swing → M15 grades 12–17.</li>
+        </ol>
+      </div>
+
+      <h2>Investor best use (monitor / Compact)</h2>
+      <div class="day-card">
+        <header>
+          <h3>Quiet oversight</h3>
+          <span class="chip chip-beginner">Summaries first</span>
+        </header>
+        <ol>
+          <li>Enable TG on <strong>Dashboard only</strong> — or Chart alone for a single-symbol book.</li>
+          <li>Lean on <code>[DAILY]</code> / <code>[WEEKLY]</code>, <code>[PROP]</code>, and <code>[START]</code>/<code>[STOP]</code>. Leave Service TG off unless you are debugging fills.</li>
+          <li>Set silent hours for overnight GMT; keep default rate 20/min; one personal chat ID is enough.</li>
+          <li>Watch Compact roster strip <code>TG:Verified</code> — you do not need Full engine panels.</li>
+          <li>If Trade Center is closed, Chart failover can still report closes — attach Chart TG only when you want that backup.</li>
+        </ol>
+      </div>
+
+      <h2>What each tag means</h2>
+      <table>
+        <thead><tr><th>Tag</th><th>Meaning</th><th>What to do</th></tr></thead>
+        <tbody>
+          <tr><td><code>[OPEN]</code> / <code>[MODIFY]</code> / <code>[CLOSE]</code></td><td>New or changed risk; close includes P/L</td><td>Confirm size and SL/TP match plan</td></tr>
+          <tr><td><code>[PROP]</code></td><td>Challenge soft STOP — no new entries</td><td>Do not revenge PLAY; Scouter still owns exits</td></tr>
+          <tr><td><code>[EVENT]</code></td><td>Upcoming news relevant to START pairs</td><td>Confirm SKIP vs TRADE; watch the print if TRADE</td></tr>
+          <tr><td><code>[WARN]</code> fill fail</td><td>Service could not fill (spread/gates/busy)</td><td>Check spread, sessions, pair START state</td></tr>
+          <tr><td><code>[START]</code> / <code>[STOP]</code></td><td>Host online / offline</td><td>Investor: confirm desk is live; trader: confirm intended host</td></tr>
+          <tr><td><code>[DAILY]</code> / <code>[WEEKLY]</code></td><td>Win rate, DD, balance snapshot</td><td>Investor review; adjust ASAP / roster next session</td></tr>
+          <tr><td><code>[ERROR]</code> / status Error</td><td>Token, allowlist, or WebRequest failed</td><td>Fix allowlist → VERIFY again</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <strong class="label">Engineering note</strong>
+        Provenance and dual-host ownership table: <code>docs/PLAN_V1.27_Telegram_Dual_Host.md</code>.
+      </div>
+    </section>
+
     <!-- PROP -->
     <section class="panel" id="prop" data-title="Prop Behaviour" data-short="Prop">
       <div class="kicker">Small &amp; medium prop firms</div>
       <h1>Prop-firm behavioural playbook</h1>
-      <p class="lede">Velocity optimises harvest process. Prop survival optimises drawdown, consistency, and session hygiene. Own both.</p>
+      <p class="lede">Velocity optimises harvest process. Prop survival optimises drawdown, consistency, and session hygiene. Own both — and wire PropRisk soft locks to your challenge numbers.</p>
 
       <div class="card-grid">
         <div class="card">
@@ -1342,16 +1559,17 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
         </div>
       </div>
 
-      <h2>Daily loss budget (trader-owned)</h2>
-      <p>Current builds do <strong>not</strong> auto-flatten on account loss. Set a personal / firm daily max (example: 2–3% for challenges). When hit: <strong>HALT</strong>, Algo Trading OFF, walk away. Log it.</p>
+      <h2>Daily loss budget (PropRisk + trader)</h2>
+      <p>Configure Trade Center <strong>PropRisk</strong> daily loss $/% and equity DD to match the challenge. Breach → sticky soft STOP (no flatten). Still set a personal walk-away: when soft STOP fires, do not revenge PLAY. Log it.</p>
 
       <h2>Consistency habits</h2>
       <ul>
-        <li>Same session hours every trading day (hour filter).</li>
-        <li>Same roster size unless laddering capital.</li>
+        <li>Same session hours every trading day (hour filter + Prop Friday/news windows).</li>
+        <li>Same roster size unless laddering capital; manage roster from Trade Center.</li>
         <li>Include commission + swap so floors match closed P/L reporting.</li>
-        <li>News: STOP 5–10 minutes before high-impact prints; WAIT if mixed book.</li>
-        <li>Friday: respect Friday stop; do not “squeeze one more.”</li>
+        <li>News: PropRisk CSV blackout and/or STOP 5–10 minutes before high-impact prints; WAIT if mixed book.</li>
+        <li>Friday: respect Prop Friday hour and chart Friday stop; do not “squeeze one more.”</li>
+        <li>Telegram: alert on PROP trips; investors use silent hours overnight — see <a href="#telegram">Telegram Alerts</a>.</li>
       </ul>
 
       <h2>Link integrity</h2>
@@ -1431,10 +1649,23 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
           <span class="chip chip-beginner">Prop starter</span>
         </header>
         <ul>
-          <li>Load EUR100 RawSpread presets; M5 EURUSD + GBPUSD</li>
+          <li>Load EUR100 RawSpread presets <em>or</em> <code>GSignalX_Service_Practice_100_Raw.set</code> + <code>ProfitScouter_Practice_100_Raw.set</code></li>
           <li>ASAP 1.00 · MinWin 0.50 · Fleet 2 · Hour 7–20 · Adverse M5</li>
-          <li>PLAY both at session open; STOP at end</li>
+          <li>Trade Center: <strong>100 · RAW · SCALP/DAY</strong> for coach tips; PLAY at session open; STOP at end</li>
           <li>Expect: many small banked cycles; cut losers via Auto, not ASAP</li>
+        </ul>
+      </div>
+
+      <div class="day-card">
+        <header>
+          <h3>A2 — $20 / $50 practice live (Standard or Raw)</h3>
+          <span class="chip chip-beginner">Micro discipline</span>
+        </header>
+        <ul>
+          <li>Fund a real demo near the band; load matching <code>Practice_20_*</code> or <code>Practice_50_*</code> Service + Scouter presets; restart Services</li>
+          <li>Trade Center: <strong>20 or 50 · RAW or STD · SCALP/DAY/SWING</strong> — soft fleet 1–2; FX only; CMD/CRYPTO SUSPEND</li>
+          <li>Raw preferred for scalp (tighter spread gate + commission-aware ASAP); Standard → prefer Day/Swing, higher ASAP floors</li>
+          <li>Stop at Prop day loss / profit bank / loss-budget tip — demo first; see <code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code></li>
         </ul>
       </div>
 
@@ -1495,7 +1726,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
         </tbody>
       </table>
 
-      <h2>Key GSignalX defaults (v1.21)</h2>
+      <h2>Key GSignalX defaults (Velocity 2.00)</h2>
       <table>
         <thead><tr><th>Input</th><th>Default</th></tr></thead>
         <tbody>
@@ -1515,10 +1746,12 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
           <tr><td><code>InpMagic</code></td><td>20260904</td></tr>
           <tr><td><code>InpMaxSpreadPt</code></td><td>40</td></tr>
           <tr><td><code>InpIgnoreSpreadDefault</code></td><td>false (SPREAD; chart IGN persists)</td></tr>
+          <tr><td><code>InpShowRosterStrip</code></td><td>true (chart compact roster)</td></tr>
+          <tr><td><code>InpChartEntriesWhenService</code></td><td>false (defer while Service OWN)</td></tr>
         </tbody>
       </table>
 
-      <h2>Key ProfitScouter defaults (v1.21)</h2>
+      <h2>Key ProfitScouter defaults (Velocity 2.00)</h2>
       <table>
         <thead><tr><th>Input</th><th>Default</th></tr></thead>
         <tbody>
@@ -1528,7 +1761,9 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
           <tr><td><code>InpProfitLockKeepPct</code></td><td>50</td></tr>
           <tr><td><code>InpAdverseExitEnable</code></td><td>true</td></tr>
           <tr><td><code>InpAdverseMinBars</code></td><td>2 (fires at streak &gt;2 → ≥3 bars)</td></tr>
-          <tr><td><code>InpAdverseTimeframe</code></td><td>Stock Service <strong>M15</strong> — set to <strong>M5</strong> for the preliminary M5 desk; EA = CURRENT (host on M5)</td></tr>
+          <tr><td><code>InpAdverseMinAgeMin</code></td><td>15</td></tr>
+          <tr><td><code>InpAdverseProtectOnceGreen</code></td><td>true</td></tr>
+          <tr><td><code>InpAdverseTimeframe</code></td><td>Stock Service often <strong>M15</strong> — set to <strong>M5</strong> for the preliminary M5 desk; EA = CURRENT (host on M5)</td></tr>
           <tr><td><code>InpCheckIntervalMs</code></td><td>100</td></tr>
           <tr><td><code>InpIncludeCommission</code> / Swap</td><td>true / true</td></tr>
         </tbody>
@@ -1550,8 +1785,17 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
           <tr><td><code>README_ProfitScouter.md</code></td><td>Harvest depth</td></tr>
           <tr><td><code>DEPLOYMENT.md</code></td><td>Install &amp; verify</td></tr>
           <tr><td><code>DEPLOYMENT_RUNBOOK.md</code></td><td>Gates G0–G7 with feedback</td></tr>
-          <tr><td><code>docs/RELEASE_v1.21_Commercial_Deploy.md</code></td><td>v1.21 commercial deploy + checklist</td></tr>
+          <tr><td><code>docs/WINDOWS_DEPLOY_SIMPLE.md</code></td><td>Non-tech Windows ZIP → double-click → MT5 + error fixes</td></tr>
+          <tr><td><code>docs/RELEASE_v2.00_Prop_Desk_Deploy.md</code></td><td>Velocity 2.00 prop desk deploy + checklist</td></tr>
+          <tr><td><code>docs/RELEASE_v1.21_Commercial_Deploy.md</code></td><td>Historical v1.21 commercial cut</td></tr>
+          <tr><td><code>docs/PLAN_V1.23_Multisymbol_Signal_Service.md</code></td><td>Service provenance</td></tr>
+          <tr><td><code>docs/PLAN_V1.24_Multisymbol_Dashboard_UI.md</code></td><td>Dashboard UI provenance</td></tr>
+          <tr><td><code>docs/PLAN_V1.25_Prop_Firm_Trade_Center.md</code></td><td>Telegram + PropRisk provenance</td></tr>
+          <tr><td><code>docs/PLAN_V1.26_Trade_Center_Categories_Events.md</code></td><td>Categories, pair state, sessions, events</td></tr>
+          <tr><td><code>docs/PLAN_V1.27_Telegram_Dual_Host.md</code></td><td>Telegram dual/tri-host + feature contract</td></tr>
           <tr><td><code>docs/PRESET_100EUR_RawSpread.md</code></td><td>Micro capital preset rationale</td></tr>
+          <tr><td><code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code></td><td>Practice packs $20/$50/$100 Standard+Raw</td></tr>
+          <tr><td><code>docs/PLAN_V2.02_Practice_Live_Simulation.md</code></td><td>Practice sim decision lock</td></tr>
           <tr><td><code>ARCHITECTURE_CONNECTOR_BUS.md</code></td><td>Bus protocol</td></tr>
           <tr><td><code>docs/CREED_ALGO_Users_Manual.md</code></td><td>Legacy umbrella manual</td></tr>
         </tbody>
@@ -1593,13 +1837,18 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
           <tr><td><strong>ASAP floor</strong></td><td>Bank winners when floating P/L hits account minimum</td></tr>
           <tr><td><strong>Fleet</strong></td><td>Max concurrent pairs (open or pending)</td></tr>
           <tr><td><strong>Strategic SL</strong></td><td>Catastrophe broker stop (default 4×ATR)</td></tr>
-          <tr><td><strong>Adverse Auto</strong></td><td>Close same-symbol losers after ≥3 opposing bars</td></tr>
-          <tr><td><strong>FILE_COMMON bus</strong></td><td>Shared JSON across terminals on one Windows user</td></tr>
+          <tr><td><strong>Trade Center</strong></td><td>Multisymbol Dashboard — roster, PROP, Telegram desk</td></tr>
+          <tr><td><strong>VERIFY</strong></td><td>Trade Center button — Telegram getMe health check → Verified or Error</td></tr>
+          <tr><td><strong>Deal failover</strong></td><td>Chart sends OPEN/CLOSE only when Trade Center desk heartbeat is stale</td></tr>
+          <tr><td><strong>TG host tags</strong></td><td><code>svc</code> Service · <code>desk</code> Trade Center · <code>chart</code> Chart EA</td></tr>
+          <tr><td><strong>Soft STOP</strong></td><td>PropRisk / operator pause entries; never closes</td></tr>
+          <tr><td><strong>Adverse Auto</strong></td><td>Close same-symbol losers after ≥3 opposing bars (+ age / once-green)</td></tr>
+          <tr><td><strong>FILE_COMMON bus</strong></td><td>Shared JSON across terminals on one Windows user (schema v1)</td></tr>
         </tbody>
       </table>
 
       <h2>Version alignment</h2>
-      <p>This manual matches toolkit behaviour as of <strong>GSignalX v1.21</strong> / <strong>ProfitScouter v1.21</strong> (entry sanctity, winners-only ASAP, adverse-bar Auto, strategic SL, FOLLOW/WAIT, <strong>SPREAD/IGN</strong>, <strong>AUTOLOT/FIXED</strong>, <strong>EQ</strong> equity guide, <strong>Compact/Full</strong> panel, fleet pending-complete, <strong>preliminary M5 desk</strong>). Prefer these defaults over older CREED appendix notes that still mention account loss-guard.</p>
+      <p>This manual matches toolkit behaviour as of <strong>Gsignalx Velocity 2.00</strong> (hosts <code>#property version "2.00"</code>; FILE_COMMON bus schema still <strong>1</strong>). Includes Multisymbol Service, Trade Center, <a href="#telegram">Telegram Alerts</a> (trader + investor recipes), PropRisk soft STOP, entry sanctity, winners-only ASAP, adverse-bar Auto (min age + once-green), strategic SL, FOLLOW/WAIT, SPREAD/IGN, AUTOLOT/FIXED, EQ guide, Compact/Full, fleet pending-complete, preliminary M5 desk. Prefer these defaults over older CREED notes that still mention account loss-guard flatten.</p>
 
       <div class="callout gold">
         <strong class="label">Executive signals</strong>
@@ -1607,7 +1856,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
         <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">https://www.gsignalx.cloud/</a>.
       </div>
 
-      <p class="footer-note">© Gocity Group — Gsignalx Velocity <strong>v1.21</strong> / GSignalX. For research and educational use with MetaTrader 5. Trade responsibly. Past performance is not indicative of future results. Commercial desk deploy: <code>docs/RELEASE_v1.21_Commercial_Deploy.md</code>.</p>
+      <p class="footer-note">© Gocity Group — Gsignalx Velocity <strong>2.00</strong> / GSignalX. For research and educational use with MetaTrader 5. Trade responsibly. Past performance is not indicative of future results. Prop desk deploy: <code>docs/RELEASE_v2.00_Prop_Desk_Deploy.md</code>.</p>
     </section>
 
     <nav class="chapter-nav" aria-label="Chapter navigation">
@@ -1696,6 +1945,19 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
     railNav.appendChild(r);
   });
 
+  var mobileSelect = document.getElementById("mobileChapterSelect");
+  if (mobileSelect) {
+    panels.forEach(function (p) {
+      var opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = titleOf(p);
+      mobileSelect.appendChild(opt);
+    });
+    mobileSelect.addEventListener("change", function () {
+      activate(mobileSelect.value);
+    });
+  }
+
   function updateChapterNav(id) {
     var cur = ids.indexOf(id);
     if (cur < 0) cur = 0;
@@ -1726,6 +1988,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
       }
     });
     updateChapterNav(id);
+    if (mobileSelect) mobileSelect.value = id;
     if (push !== false) {
       history.replaceState(null, "", "#" + id);
     }

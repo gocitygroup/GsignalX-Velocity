@@ -1,0 +1,100 @@
+/* Gsignalx Velocity docs — shared theme tokens + mobile utilities (v2.01) */
+:root, [data-theme="dark"] {
+  --bg: #0A121E;
+  --bg-mid: #0D2D48;
+  --bg-elev: #0D2D48;
+  --bg-card: #144064;
+  --bg-soft: #103A5C;
+  --edge: #2D6EA0;
+  --edge-soft: #1E4F78;
+  --text: #F2F7FC;
+  --muted: #A8C4DB;
+  --heading-sub: #E8ECF5;
+  --gold: #FBA927;
+  --gold-dim: #D99212;
+  --brand-blue: #469AD4;
+  --bull: #16A34A;
+  --bear: #DC2626;
+  --link: #7EBFE8;
+  --header-bg: rgba(10, 18, 30, 0.94);
+  --header-edge: rgba(70, 154, 212, 0.35);
+  --rail-bg: rgba(18, 22, 30, 0.55);
+  --radius: 10px;
+  --font: "Segoe UI", "Candara", system-ui, sans-serif;
+  --mono: Consolas, "Cascadia Mono", monospace;
+  color-scheme: dark;
+}
+[data-theme="light"] {
+  --bg: #F4F8FC;
+  --bg-mid: #E8F0F8;
+  --bg-elev: #FFFFFF;
+  --bg-card: #EEF4FA;
+  --bg-soft: #E4EDF6;
+  --edge: #8BB4D4;
+  --edge-soft: #C5D8E8;
+  --text: #0A1F33;
+  --muted: #3D5A72;
+  --heading-sub: #16324A;
+  --gold: #D99212;
+  --gold-dim: #B87A0E;
+  --brand-blue: #2E7BB0;
+  --bull: #15803D;
+  --bear: #B91C1C;
+  --link: #1E6FA8;
+  --header-bg: rgba(244, 248, 252, 0.92);
+  --header-edge: rgba(46, 123, 176, 0.28);
+  --rail-bg: rgba(255, 255, 255, 0.72);
+  color-scheme: light;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0.75rem 0;
+}
+.table-scroll table { min-width: 0; }
+
+.mobile-chapter-wrap {
+  display: none;
+  width: 100%;
+  padding: 0 12px 8px;
+}
+.mobile-chapter-wrap label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.mobile-chapter-wrap select {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 8px;
+  border: 1px solid var(--edge);
+  background: var(--bg-elev);
+  color: var(--text);
+  font: inherit;
+  padding: 8px 12px;
+}
+
+@media (max-width: 900px) {
+  .mobile-chapter-wrap { display: block; }
+  .brand-text-keep { display: inline !important; font-size: 13px; }
+  .header-cta-label { display: none; }
+  .header-actions .header-cta { min-width: 44px; min-height: 44px; padding: 8px; }
+}
+@media (max-width: 480px) {
+  .header-actions { gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+  .callout.gold code { display: inline-block; max-width: 100%; word-break: break-word; }
+  .flow { flex-direction: column; align-items: stretch; }
+  .flow .flow-node { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

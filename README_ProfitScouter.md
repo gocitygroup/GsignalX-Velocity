@@ -2,9 +2,11 @@
 
 A money-based profit monitoring and harvesting engine for MetaTrader 5. It does **not** open trades. It watches every open position and closes them when a money target or a peak-profit give-back rule fires.
 
-**v1.22 adverse experience gates:** loser Auto still requires signal + opposing closed-bar streak, plus **min hold age** (`InpAdverseMinAgeMin`, default **15** minutes) and **once-green protect** (`InpAdverseProtectOnceGreen`, default **ON** — skips tickets that already peaked green / lock-armed). Service adverse TF default is **M5**. Account/pair layers no longer early-return when a target is notionally hit but zero winners meet `InpMinWinProfit`. Audit: [docs/AUDIT_ProfitScouter_Loser_Close_2026-09-14.md](docs/AUDIT_ProfitScouter_Loser_Close_2026-09-14.md).
+**Velocity 2.00 host version:** `ProfitScouter_DollarTarget` / `ProfitScouter_Service` ship as `#property version "2.00"` (bus schema remains `"version":1`). Prop desk topology: [docs/RELEASE_v2.00_Prop_Desk_Deploy.md](docs/RELEASE_v2.00_Prop_Desk_Deploy.md).
 
-**v1.21 winner floor = ASAP 5:** defaults align so winners do not bank below **5** account currency (USD/EUR when `InpTargetCurrency` is blank): `InpAccTargetMoney=5`, `InpMinWinProfit=5`, `InpProfitLockArm=5`, and profit-lock floor is `max(keep-% of peak, MinWinProfit)`. Re-attach or **Reset** EA inputs if the chart still shows an old floor of 2 / MinWin 0.10.
+**Adverse experience gates (shipped in prior 1.22, retained in 2.00):** loser Auto still requires signal + opposing closed-bar streak, plus **min hold age** (`InpAdverseMinAgeMin`, default **15** minutes) and **once-green protect** (`InpAdverseProtectOnceGreen`, default **ON** — skips tickets that already peaked green / lock-armed). Service adverse TF default is **M5**. Account/pair layers no longer early-return when a target is notionally hit but zero winners meet `InpMinWinProfit`. Audit: [docs/AUDIT_ProfitScouter_Loser_Close_2026-09-14.md](docs/AUDIT_ProfitScouter_Loser_Close_2026-09-14.md).
+
+**Winner floor = ASAP 5:** defaults align so winners do not bank below **5** account currency (USD/EUR when `InpTargetCurrency` is blank): `InpAccTargetMoney=5`, `InpMinWinProfit=5`, `InpProfitLockArm=5`, and profit-lock floor is `max(keep-% of peak, MinWinProfit)`. Re-attach or **Reset** EA inputs if the chart still shows an old floor of 2 / MinWin 0.10.
 
 **v1.18 movable panel:** the EA dashboard is an on-chart object panel (not `Comment`). Drag the title bar (**PROFIT SCOUTER · drag to move**) to reposition. **START / STOP / AUTO** are standalone chart buttons (`InpBtnX` / `InpBtnY`) so they stay visible while the panel moves. Panel position persists in `PS{InstanceID}_PNLX` / `PS{InstanceID}_PNLY`.
 

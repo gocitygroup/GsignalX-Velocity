@@ -1,0 +1,54 @@
+; GSignalX Service — multisymbol roster (entry-only; Scouter closes)
+; Attach: Navigator → Services → GsignalX_Service
+; Seed aligns with Trade Center v1.26 multi-class example (FX+CMD+CR).
+; Match ProfitScouter InpSymbolList / All symbols to this roster.
+; Unresolved broker names are skipped by GsxRosterResolve.
+
+InpSymbolList=EURUSD,GBPUSD,USDJPY,AUDUSD,XAUUSD,XAGUSD,USOIL,UKOIL,BTCUSD,ETHUSD,XRPUSD,LTCUSD
+InpTimeframe=5
+InpCycleMs=200
+InpRespectChartRunState=true
+InpEngineBudgetPerCycle=4
+InpFleetEnable=true
+InpFleetTargetPairs=4
+InpFleetFillCooldownSec=10
+InpMode=0
+InpTrigPP=true
+InpTrigST=false
+InpTrigSBT=true
+InpMinAgree=2
+InpEvalClosedBar=true
+InpEntryMode=3
+InpOffsetUnit=0
+InpLimitOffset=5
+InpStopOffset=5
+InpPendFromSignalOpen=true
+InpPendMaxAgeMin=240
+InpStrategicStopEnable=true
+InpStrategicStopMult=4.0
+InpFlipWaitDefault=false
+InpRiskMode=1
+InpRiskPct=1.0
+InpFixedLot=0.10
+InpMaxLot=5.0
+InpAutoLotDefault=true
+InpMaxSpreadPt=40
+InpMagic=20260904
+InpLookback=400
+InpComment=GsignalX-Svc
+InpBusEnable=true
+InpBusFullSyncSec=10
+InpVerboseSignals=true
+InpPropEnable=true
+InpPropMaxEquityDdPct=5.0
+
+; Telegram (Service engine alerts — WARN/ERROR/START/STOP). Default off.
+; InpTgEnable=false
+; InpTgBotToken=
+; InpTgChatId1=
+; InpTgChatId2=
+; InpTgChatId3=
+; InpTgSilentStartHourGMT=-1
+; InpTgSilentEndHourGMT=-1
+; InpTgRatePerMin=20
+; InpTgMaxRetries=3

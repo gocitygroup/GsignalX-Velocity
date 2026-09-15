@@ -1,0 +1,605 @@
+//+------------------------------------------------------------------+
+//|                                                   EntryExec.mqh   |
+//|  Symbol-parameterized entry helpers for GSignalX Service path.    |
+//|  Scouter exits only — NEVER reverse-close. Catastrophe SL + TP=0. |
+//+------------------------------------------------------------------+
+#ifndef GSX_ENTRY_EXEC_MQH
+#define GSX_ENTRY_EXEC_MQH
+
+#include <Trade\Trade.mqh>
+#include <GSignalX/Engines.mqh>
+#include <GSignalX/LotSizing.mqh>
+#include <GSignalX/Fleet.mqh>
+
+#define GSX_ENTRY_MARKET 0
+#define GSX_ENTRY_LIMIT  1
+#define GSX_ENTRY_STOP   2
+#define GSX_ENTRY_BOTH   3
+
+#define GSX_UNIT_PIPS   0
+#define GSX_UNIT_POINTS 1
+
+//+------------------------------------------------------------------+
+struct GsxEntryParams
+  {
+   long   magic;
+   int    slippage;
+   string comment;
+   int    entryMode;              // 0 market 1 limit 2 stop 3 both
+   int    offsetUnit;             // 0 pips 1 points
+   int    limitOffset;
+   int    stopOffset;
+   bool   pendFromSignalOpen;
+   bool   useStop;
+   double stopMult;
+   bool   strategicStopEnable;
+   double strategicStopMult;
+   bool   useTarget;              // ignored on Service/Scouter path (TP forced 0)
+   double targetMult;             // ignored on Service/Scouter path
+   bool   autoLot;
+   int    riskMode;
+   double riskPct;
+   double fixedLot;
+   double maxLot;
+   bool   verbose;
+   bool   allowLong;
+   bool   allowShort;
+   // exit always scouter for service path
+  };
+
+//+------------------------------------------------------------------+
+double GsxPipSize(const string symbol)
+  {
+   double point = SymbolInfoDouble(symbol, SYMBOL_POINT);
+   int digits = (int)SymbolInfoInteger(symbol, SYMBOL_DIGITS);
+   if(digits == 3 || digits == 5)
+      return(point * 10.0);
+   return(point);
+  }
+
+int GsxClampOffset(int v)
+  {
+   if(v < 4)  v = 4;
+   if(v > 20) v = 20;
+   return(v);
+  }
+
+double GsxOffsetPrice(const string symbol, const int offsetUnit, const int units)
+  {
+   double point = SymbolInfoDouble(symbol, SYMBOL_POINT);
+   double one = (offsetUnit == GSX_UNIT_PIPS) ? GsxPipSize(symbol) : point;
+   return(GsxClampOffset(units) * one);
+  }
+
+double GsxBrokerMinDistance(const string symbol)
+  {
+   double point  = SymbolInfoDouble(symbol, SYMBOL_POINT);
+   double stops  = (double)SymbolInfoInteger(symbol, SYMBOL_TRADE_STOPS_LEVEL)  * point;
+   double freeze = (double)SymbolInfoInteger(symbol, SYMBOL_TRADE_FREEZE_LEVEL) * point;
+   return(MathMax(stops, freeze));
+  }
+
+double GsxMinStopDistance(const string symbol)
+  {
+   double point = SymbolInfoDouble(symbol, SYMBOL_POINT);
+   long level = SymbolInfoInteger(symbol, SYMBOL_TRADE_STOPS_LEVEL);
+   return((double)level * point);
+  }
+
+// Strategic catastrophe stop distance (wider than sizing ATR span).
+double GsxStrategicStopDistance(const string symbol,
+                                const double atr,
+                                const bool enable,
+                                const double mult)
+  {
+   if(!enable || atr <= 0.0)
+      return(0.0);
+   double d = mult * atr;
+   double minD = GsxMinStopDistance(symbol);
+   if(d < minD)
+      d = minD;
+   return(d);
+  }
+
+double GsxNormalizePendingPrice(const string symbol,
+                                const int dir,
+                                const bool isStop,
+                                double price)
+  {
+   int    digits = (int)SymbolInfoInteger(symbol, SYMBOL_DIGITS);
+   double ask    = SymbolInfoDouble(symbol, SYMBOL_ASK);
+   double bid    = SymbolInfoDouble(symbol, SYMBOL_BID);
+   double point  = SymbolInfoDouble(symbol, SYMBOL_POINT);
+   double minD   = GsxBrokerMinDistance(symbol);
+   if(minD <= 0.0)
+      minD = point;
+
+   if(dir == 1)
+     {
+      if(isStop)
+        {
+         if(price <= ask)
+            price = ask + minD;
+         if(price - ask < minD)
+            price = ask + minD;
+        }
+      else
+        {
+         if(price >= ask)
+            price = ask - minD;
+         if(ask - price < minD)
+            price = ask - minD;
+        }
+     }
+   else
+     {
+      if(isStop)
+        {
+         if(price >= bid)
+            price = bid - minD;
+         if(bid - price < minD)
+            price = bid - minD;
+        }
+      else
+        {
+         if(price <= bid)
+            price = bid + minD;
+         if(price - bid < minD)
+            price = bid + minD;
+        }
+     }
+   return(NormalizeDouble(price, digits));
+  }
+
+double GsxSignalAnchorOpen(const string symbol,
+                           const GsxEngineState &st,
+                           const bool pendFromSignalOpen,
+                           const int fallbackIdx)
+  {
+   if(pendFromSignalOpen)
+     {
+      if(st.lastSigIdx >= 0 && st.lastSigIdx < st.n && st.open[st.lastSigIdx] > 0.0)
+         return(st.open[st.lastSigIdx]);
+     }
+   if(fallbackIdx >= 0 && fallbackIdx < st.n && st.open[fallbackIdx] > 0.0)
+      return(st.open[fallbackIdx]);
+   return((SymbolInfoDouble(symbol, SYMBOL_ASK) + SymbolInfoDouble(symbol, SYMBOL_BID)) * 0.5);
+  }
+
+//+------------------------------------------------------------------+
+ulong GsxFindPosition(const string symbol, const long magic, int &dir)
+  {
+   dir = 0;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+     {
+      ulong ticket = PositionGetTicket(i);
+      if(ticket == 0 || !PositionSelectByTicket(ticket))
+         continue;
+      if(PositionGetString(POSITION_SYMBOL) != symbol)
+         continue;
+      if(PositionGetInteger(POSITION_MAGIC) != magic)
+         continue;
+      long ptype = PositionGetInteger(POSITION_TYPE);
+      dir = (ptype == POSITION_TYPE_BUY) ? 1 : -1;
+      return(ticket);
+     }
+   return(0);
+  }
+
+int GsxCountPendings(const string symbol, const long magic)
+  {
+   int c = 0;
+   for(int i = OrdersTotal() - 1; i >= 0; i--)
+     {
+      ulong ticket = OrderGetTicket(i);
+      if(ticket == 0)
+         continue;
+      if(OrderGetInteger(ORDER_MAGIC) != magic)
+         continue;
+      if(OrderGetString(ORDER_SYMBOL) != symbol)
+         continue;
+      c++;
+     }
+   return(c);
+  }
+
+void GsxDeletePendings(CTrade &trade, const string symbol, const long magic, const string why)
+  {
+   for(int i = OrdersTotal() - 1; i >= 0; i--)
+     {
+      ulong ticket = OrderGetTicket(i);
+      if(ticket == 0)
+         continue;
+      if(OrderGetInteger(ORDER_MAGIC) != magic)
+         continue;
+      if(OrderGetString(ORDER_SYMBOL) != symbol)
+         continue;
+      if(trade.OrderDelete(ticket))
+         Print("GsignalX EntryExec: pending #", ticket, " deleted (", why, ")");
+      else
+         Print("GsignalX EntryExec: delete failed #", ticket,
+               " retcode=", trade.ResultRetcode());
+     }
+  }
+
+void GsxCleanupStalePendings(CTrade &trade, const long magic, const int maxAgeMin)
+  {
+   if(maxAgeMin <= 0)
+      return;
+   long maxAge = (long)maxAgeMin * 60;
+   for(int i = OrdersTotal() - 1; i >= 0; i--)
+     {
+      ulong ticket = OrderGetTicket(i);
+      if(ticket == 0)
+         continue;
+      if(OrderGetInteger(ORDER_MAGIC) != magic)
+         continue;
+      datetime setup = (datetime)OrderGetInteger(ORDER_TIME_SETUP);
+      if((long)(TimeCurrent() - setup) >= maxAge)
+        {
+         if(trade.OrderDelete(ticket))
+            Print("GsignalX EntryExec: stale pending #", ticket, " cancelled (age ",
+                  (long)((TimeCurrent() - setup) / 60), " min >= ", maxAgeMin, ")");
+         else
+            Print("GsignalX EntryExec: stale pending #", ticket,
+                  " delete failed retcode=", trade.ResultRetcode());
+        }
+     }
+  }
+
+void GsxCleanupStalePendings(CTrade &trade,
+                             const string symbol,
+                             const long magic,
+                             const int maxAgeMin)
+  {
+   if(maxAgeMin <= 0 || symbol == "")
+      return;
+   long maxAge = (long)maxAgeMin * 60;
+   for(int i = OrdersTotal() - 1; i >= 0; i--)
+     {
+      ulong ticket = OrderGetTicket(i);
+      if(ticket == 0)
+         continue;
+      if(OrderGetInteger(ORDER_MAGIC) != magic)
+         continue;
+      if(OrderGetString(ORDER_SYMBOL) != symbol)
+         continue;
+      datetime setup = (datetime)OrderGetInteger(ORDER_TIME_SETUP);
+      if((long)(TimeCurrent() - setup) >= maxAge)
+        {
+         if(trade.OrderDelete(ticket))
+            Print("GsignalX EntryExec: stale pending #", ticket, " on ", symbol,
+                  " cancelled (age ", (long)((TimeCurrent() - setup) / 60),
+                  " min >= ", maxAgeMin, ")");
+         else
+            Print("GsignalX EntryExec: stale pending #", ticket,
+                  " delete failed retcode=", trade.ResultRetcode());
+        }
+     }
+  }
+
+bool GsxMagicHasOppositeDir(const long magic, const int wanted)
+  {
+   if(wanted == 0)
+      return(false);
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+     {
+      ulong ticket = PositionGetTicket(i);
+      if(ticket == 0 || !PositionSelectByTicket(ticket))
+         continue;
+      if(PositionGetInteger(POSITION_MAGIC) != magic)
+         continue;
+      long ptype = PositionGetInteger(POSITION_TYPE);
+      int  dir   = (ptype == POSITION_TYPE_BUY) ? 1 : -1;
+      if(dir != wanted)
+         return(true);
+     }
+   return(false);
+  }
+
+bool GsxAllowNewDirEntry(const int wanted, const bool flipWaitMode, const long magic)
+  {
+   if(wanted == 0)
+      return(false);
+   if(!flipWaitMode)
+      return(true);                 // FOLLOW
+   return(!GsxMagicHasOppositeDir(magic, wanted));
+  }
+
+bool GsxTradeAllowedNow(const string symbol, const bool tradingEnabled, string &reason)
+  {
+   if(!tradingEnabled)
+     { reason = "PLAY off"; return(false); }
+   if(!MQLInfoInteger(MQL_TRADE_ALLOWED))
+     { reason = "AutoTrading off"; return(false); }
+   if(!AccountInfoInteger(ACCOUNT_TRADE_ALLOWED))
+     { reason = "account trade disabled"; return(false); }
+   if(!AccountInfoInteger(ACCOUNT_TRADE_EXPERT))
+     { reason = "expert trading disabled"; return(false); }
+   if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED))
+     { reason = "terminal trade disabled"; return(false); }
+   long tmode = SymbolInfoInteger(symbol, SYMBOL_TRADE_MODE);
+   if(tmode == SYMBOL_TRADE_MODE_DISABLED)
+     { reason = "symbol trading disabled"; return(false); }
+   if(tmode == SYMBOL_TRADE_MODE_CLOSEONLY)
+     { reason = "close-only mode"; return(false); }
+   return(true);
+  }
+
+//+------------------------------------------------------------------+
+//| Scouter path: close requests are always blocked in this module.   |
+//+------------------------------------------------------------------+
+void GsxCloseCurrentBlocked(const string why)
+  {
+   Print("GsignalX EntryExec: close request '", why,
+         "' BLOCKED - exits are owned by Profit Scouter");
+  }
+
+bool GsxTrySetFilling(CTrade &trade, const ENUM_ORDER_TYPE_FILLING fill)
+  {
+   trade.SetTypeFilling(fill);
+   return(true);
+  }
+
+bool GsxOrderSendFailedInvalidFill(CTrade &trade)
+  {
+   uint rc = trade.ResultRetcode();
+   return(rc == TRADE_RETCODE_INVALID_FILL);
+  }
+
+//+------------------------------------------------------------------+
+bool GsxOpenMarket(CTrade &trade,
+                   const string symbol,
+                   const int dir,
+                   const GsxEngineState &st,
+                   const GsxEntryParams &p,
+                   string &action)
+  {
+   action = "";
+   if(dir == 0)
+      return(false);
+   if(dir > 0 && !p.allowLong)
+     { action = "longs disabled"; return(false); }
+   if(dir < 0 && !p.allowShort)
+     { action = "shorts disabled"; return(false); }
+
+   string gate = "";
+   if(!GsxTradeAllowedNow(symbol, true, gate))
+     { action = gate; return(false); }
+
+   if(!st.ready || st.n < 1)
+     { action = "engines not ready"; return(false); }
+
+   double atr = st.atrRisk[st.n - 1];
+   double ask = SymbolInfoDouble(symbol, SYMBOL_ASK);
+   double bid = SymbolInfoDouble(symbol, SYMBOL_BID);
+   double price = (dir == 1) ? ask : bid;
+   int    digits = (int)SymbolInfoInteger(symbol, SYMBOL_DIGITS);
+
+   // sizing distance from ATR; broker SL is catastrophe only (Scouter)
+   double stopDist = 0.0;
+   if(atr > 0.0 && p.useStop)
+      stopDist = p.stopMult * atr;
+   double minDist = GsxMinStopDistance(symbol);
+   if(stopDist > 0.0 && stopDist < minDist)
+      stopDist = minDist;
+
+   double sl = 0.0;
+   double tp = 0.0; // Scouter path: TP always 0
+   double stratDist = GsxStrategicStopDistance(symbol, atr,
+                                               p.strategicStopEnable,
+                                               p.strategicStopMult);
+   if(stratDist > 0.0)
+      sl = (dir == 1) ? price - stratDist : price + stratDist;
+   sl = (sl > 0.0) ? NormalizeDouble(sl, digits) : 0.0;
+
+   double lot = GsxCalcLot(symbol, stopDist, p.autoLot, p.riskMode,
+                           p.riskPct, p.fixedLot, p.maxLot, p.verbose);
+   if(lot <= 0.0)
+     { action = "computed lot is zero"; return(false); }
+
+   double margin = 0.0;
+   ENUM_ORDER_TYPE otype = (dir == 1) ? ORDER_TYPE_BUY : ORDER_TYPE_SELL;
+   if(OrderCalcMargin(otype, symbol, lot, price, margin))
+     {
+      if(margin > AccountInfoDouble(ACCOUNT_MARGIN_FREE))
+        { action = "not enough free margin"; return(false); }
+     }
+
+   trade.SetExpertMagicNumber(p.magic);
+   trade.SetDeviationInPoints(p.slippage);
+   trade.SetTypeFillingBySymbol(symbol);
+
+   bool ok = (dir == 1)
+             ? trade.Buy(lot, symbol, 0.0, sl, tp, p.comment)
+             : trade.Sell(lot, symbol, 0.0, sl, tp, p.comment);
+
+   if(!ok && GsxOrderSendFailedInvalidFill(trade))
+     {
+      ENUM_ORDER_TYPE_FILLING alts[3] = {ORDER_FILLING_FOK, ORDER_FILLING_IOC, ORDER_FILLING_RETURN};
+      for(int a = 0; a < 3 && !ok; a++)
+        {
+         GsxTrySetFilling(trade, alts[a]);
+         ok = (dir == 1)
+              ? trade.Buy(lot, symbol, 0.0, sl, tp, p.comment)
+              : trade.Sell(lot, symbol, 0.0, sl, tp, p.comment);
+        }
+     }
+
+   if(!ok)
+     {
+      action = "order failed: " + IntegerToString((int)trade.ResultRetcode()) +
+               " " + trade.ResultRetcodeDescription();
+      return(false);
+     }
+
+   action = ((dir == 1) ? "BUY " : "SELL ") + DoubleToString(lot, 2) +
+            " @ " + DoubleToString(price, digits);
+   return(true);
+  }
+
+//+------------------------------------------------------------------+
+bool GsxPlacePending(CTrade &trade,
+                     const string symbol,
+                     const int dir,
+                     const bool isStop,
+                     double price,
+                     const double atr,
+                     const GsxEntryParams &p,
+                     string &action)
+  {
+   action = "";
+   string gate = "";
+   if(!GsxTradeAllowedNow(symbol, true, gate))
+     { action = gate; return(false); }
+
+   int    digits = (int)SymbolInfoInteger(symbol, SYMBOL_DIGITS);
+   double minD   = GsxBrokerMinDistance(symbol);
+   price = GsxNormalizePendingPrice(symbol, dir, isStop, price);
+
+   double stopDist = 0.0;
+   if(atr > 0.0 && p.useStop)
+      stopDist = p.stopMult * atr;
+   if(stopDist > 0.0 && stopDist < minD)
+      stopDist = minD;
+
+   double sl = 0.0;
+   double tp = 0.0; // Scouter: TP always 0
+   double stratDist = GsxStrategicStopDistance(symbol, atr,
+                                               p.strategicStopEnable,
+                                               p.strategicStopMult);
+   if(stratDist > 0.0)
+      sl = (dir == 1) ? price - stratDist : price + stratDist;
+   sl = (sl > 0.0) ? NormalizeDouble(sl, digits) : 0.0;
+
+   double lot = GsxCalcLot(symbol, stopDist, p.autoLot, p.riskMode,
+                           p.riskPct, p.fixedLot, p.maxLot, p.verbose);
+   if(lot <= 0.0)
+     { action = "computed lot is zero"; return(false); }
+
+   string cmt = p.comment + (isStop ? " STP" : " LMT");
+   bool   ok  = false;
+
+   trade.SetExpertMagicNumber(p.magic);
+   trade.SetDeviationInPoints(p.slippage);
+
+   ENUM_ORDER_TYPE_FILLING fills[3] = {ORDER_FILLING_RETURN, ORDER_FILLING_IOC, ORDER_FILLING_FOK};
+   for(int attempt = 0; attempt < 2 && !ok; attempt++)
+     {
+      if(attempt == 1)
+        {
+         price = GsxNormalizePendingPrice(symbol, dir, isStop, price);
+         if(sl > 0.0 && stratDist > 0.0)
+            sl = NormalizeDouble((dir == 1) ? price - stratDist : price + stratDist, digits);
+        }
+
+      for(int a = 0; a < 3 && !ok; a++)
+        {
+         GsxTrySetFilling(trade, fills[a]);
+         if(dir == 1)
+            ok = isStop ? trade.BuyStop(lot, price, symbol, sl, tp, ORDER_TIME_GTC, 0, cmt)
+                        : trade.BuyLimit(lot, price, symbol, sl, tp, ORDER_TIME_GTC, 0, cmt);
+         else
+            ok = isStop ? trade.SellStop(lot, price, symbol, sl, tp, ORDER_TIME_GTC, 0, cmt)
+                        : trade.SellLimit(lot, price, symbol, sl, tp, ORDER_TIME_GTC, 0, cmt);
+        }
+     }
+
+   if(!ok)
+     {
+      action = "pending failed: " + IntegerToString((int)trade.ResultRetcode()) +
+               " " + trade.ResultRetcodeDescription();
+      return(false);
+     }
+
+   action = ((dir == 1) ? "BUY " : "SELL ") + (isStop ? "STOP " : "LIMIT ") +
+            DoubleToString(lot, 2) + " @ " + DoubleToString(price, digits);
+   return(true);
+  }
+
+//+------------------------------------------------------------------+
+//| Market or bracket entry. Scouter SL only (catastrophe), TP=0.     |
+//+------------------------------------------------------------------+
+bool GsxPlaceEntry(CTrade &trade,
+                   const string symbol,
+                   const int dir,
+                   const GsxEngineState &st,
+                   const GsxEntryParams &p,
+                   string &action)
+  {
+   action = "";
+   if(dir == 0)
+      return(false);
+   if(dir > 0 && !p.allowLong)
+     { action = "longs disabled"; return(false); }
+   if(dir < 0 && !p.allowShort)
+     { action = "shorts disabled"; return(false); }
+
+   if(p.entryMode == GSX_ENTRY_MARKET)
+      return(GsxOpenMarket(trade, symbol, dir, st, p, action));
+
+   if(!st.ready || st.n < 1)
+     { action = "engines not ready"; return(false); }
+
+   double atr    = st.atrRisk[st.n - 1];
+   int    digits = (int)SymbolInfoInteger(symbol, SYMBOL_DIGITS);
+   double point  = SymbolInfoDouble(symbol, SYMBOL_POINT);
+   double minD   = GsxBrokerMinDistance(symbol);
+
+   double limOff = GsxOffsetPrice(symbol, p.offsetUnit, p.limitOffset);
+   double stpOff = GsxOffsetPrice(symbol, p.offsetUnit, p.stopOffset);
+   if(limOff <= minD)
+      limOff = minD + point;
+   if(stpOff <= minD)
+      stpOff = minD + point;
+
+   double base = GsxSignalAnchorOpen(symbol, st, p.pendFromSignalOpen, st.n - 1);
+   bool placed = false;
+   string lastAct = "";
+
+   if(p.entryMode == GSX_ENTRY_LIMIT || p.entryMode == GSX_ENTRY_BOTH)
+     {
+      double px = (dir == 1) ? (base - limOff) : (base + limOff);
+      px = GsxNormalizePendingPrice(symbol, dir, false, px);
+      string act = "";
+      if(GsxPlacePending(trade, symbol, dir, false, px, atr, p, act))
+        {
+         placed = true;
+         lastAct = act;
+        }
+      else
+         if(p.verbose)
+            Print("GsignalX EntryExec: Limit failed on ", symbol, " @ ",
+                  DoubleToString(px, digits), " (", act, ")");
+     }
+
+   if(p.entryMode == GSX_ENTRY_STOP || p.entryMode == GSX_ENTRY_BOTH)
+     {
+      double px = (dir == 1) ? (base + stpOff) : (base - stpOff);
+      px = GsxNormalizePendingPrice(symbol, dir, true, px);
+      string act = "";
+      if(GsxPlacePending(trade, symbol, dir, true, px, atr, p, act))
+        {
+         placed = true;
+         lastAct = act;
+        }
+      else
+         if(p.verbose)
+            Print("GsignalX EntryExec: Stop failed on ", symbol, " @ ",
+                  DoubleToString(px, digits), " (", act, ")");
+     }
+
+   if(placed)
+     {
+      action = (lastAct != "") ? lastAct :
+               (((dir == 1) ? "BUY" : "SELL") + " bracket @ sig " +
+                DoubleToString(base, digits));
+      return(true);
+     }
+
+   action = "limit/stop not placed";
+   return(false);
+  }
+
+#endif // GSX_ENTRY_EXEC_MQH
+//+------------------------------------------------------------------+

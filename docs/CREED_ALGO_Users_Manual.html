@@ -1,1025 +1,125 @@
 ﻿<!DOCTYPE html>
-<html lang="en"><head><meta charset='utf-8'/>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<title>CREED ALGO Users Manual (legacy) — see Velocity v1.21</title>
+<meta name="description" content="CREED ALGO Users Manual — legacy archive. Prefer Gsignalx Velocity 2.00."/>
+<link rel="icon" href="assets/icons/group-icon.svg" type="image/svg+xml"/>
+<link rel="stylesheet" href="assets/css/gsx-docs.css"/>
+<script src="assets/js/gsx-theme.js"></script>
+<title>CREED ALGO Users Manual (legacy) | Gocity Group</title>
 <style>
-@page { margin: 18mm 16mm; }
-body { font-family: 'Segoe UI', Calibri, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 900px; margin: 0 auto; padding: 16px; box-sizing: border-box; }
-h1 { font-size: 22pt; color: #0b3d5c; border-bottom: 2px solid #c9a227; padding-bottom: 6px; page-break-before: avoid; overflow-wrap: anywhere; }
-h2 { font-size: 14pt; color: #0b3d5c; margin-top: 1.4em; page-break-after: avoid; }
-h3 { font-size: 12pt; color: #245671; page-break-after: avoid; }
-table { border-collapse: collapse; width: 100%; margin: 0.8em 0; font-size: 9.5pt; page-break-inside: avoid; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-th, td { border: 1px solid #c5cdd4; padding: 6px 8px; vertical-align: top; }
-th { background: #e8eef3; text-align: left; }
-blockquote { border-left: 4px solid #c9a227; margin: 1em 0; padding: 0.4em 1em; background: #faf7ef; }
-code { font-family: Consolas, monospace; font-size: 9pt; background: #f2f4f6; padding: 1px 4px; word-break: break-word; }
-pre { background: #f2f4f6; padding: 10px; overflow-x: auto; font-size: 8.5pt; page-break-inside: avoid; max-width: 100%; }
-hr { border: none; border-top: 1px solid #ccc; margin: 1.5em 0; }
-a { color: #0b3d5c; }
-.banner-v21 {
-  background: #0b3d5c; color: #f2f7fc; padding: 14px 16px; border-radius: 8px; margin: 0 0 1.5em;
-  font-size: 11pt; line-height: 1.4;
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.55;
+  padding:
+    max(20px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
 }
-.banner-v21 a { color: #FBA927; font-weight: 700; }
-.banner-v21 .ver { opacity: 0.9; font-size: 0.9em; }
+.wrap { max-width: 820px; margin: 0 auto; }
+.banner {
+  background: var(--bg-card, #144064);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.banner a { color: var(--gold); font-weight: 700; }
+h1 { font-size: clamp(1.4rem, 4vw, 2rem); color: var(--gold); }
+h2 { margin-top: 1.6em; font-size: 1.2rem; }
+.muted { color: var(--muted); }
+.table-scroll table { width: 100%; border-collapse: collapse; }
+.table-scroll th, .table-scroll td {
+  border: 1px solid var(--edge-soft);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+pre {
+  overflow-x: auto;
+  background: var(--bg-elev, #0D2D48);
+  border: 1px solid var(--edge-soft);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 12px;
+}
 @media (max-width: 640px) {
-  body { font-size: 11pt; padding: 12px; }
-  h1 { font-size: 18pt; }
-  h2 { font-size: 13pt; }
-  table { font-size: 9pt; }
+  body { font-size: 16px; }
 }
-</style></head><body>
-<div class="banner-v21" role="note">
-  <strong>Publishing note:</strong> Prefer the current public manual —
-  <a href="Gsignalx_Velocity_Users_Manual.html">Gsignalx Velocity v1.21 Trader Manual</a>
-  (AUTOLOT / EQ / Compact panel). This CREED HTML export is a legacy snapshot.
-  <div class="ver">GSignalX v1.21 · ProfitScouter v1.21 · Markdown source: CREED_ALGO_Users_Manual.md</div>
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="banner">
+    <strong>Legacy archive.</strong>
+    Prefer the production manual:
+    <a href="Gsignalx_Velocity_Users_Manual.html">Gsignalx Velocity 2.00 Trader Manual</a>
+    · UTF-8 re-export from markdown (v2.01).
+  </div>
+  <p class="muted">Gocity Group — GSignalX Toolkit · CREED ALGO</p>
+  <h1>CREED ALGO Users Manual</h1>
+  <p><strong>Daily Session Trading · Scaling Program · Profit Scouting</strong><br/>
+  For beginner and advanced traders — manual and automated workflows</p>
+  <p><em>Product umbrella:</em> CREED ALGO · <em>Technical stack (MT5):</em> GSignalX · ProfitScouter · Opportunity Grader · ProfitHarvest_Now</p>
+  <blockquote>
+    <strong>Important:</strong> Trading involves risk of loss. This manual describes software behaviour. It is not investment advice. Always practise on a demo account before live capital.
+  </blockquote>
+
+  <h2>How to use this manual</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>If you are…</th><th>Start here</th></tr></thead>
+    <tbody>
+      <tr><td><strong>New to CREED ALGO / MT5</strong></td><td>Install &amp; first run → Beginner automated day (see Velocity manual)</td></tr>
+      <tr><td><strong>Trading a daily session</strong></td><td>Daily Session trading</td></tr>
+      <tr><td><strong>Scaling across pairs</strong></td><td>Scaling program</td></tr>
+      <tr><td><strong>Banking profit</strong></td><td>Profit Scouting / Scouter</td></tr>
+      <tr><td><strong>Advanced / multi-terminal</strong></td><td>Advanced reference · bus v1</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>1. Welcome to CREED ALGO</h2>
+  <p>CREED ALGO is the trading umbrella for the Gocity <strong>GSignalX</strong> toolkit on MetaTrader 5. It combines signal-driven entries, profit scouting, and advisory opportunity grades.</p>
+  <h3>MT5 names vs CREED branding</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>CREED ALGO name</th><th>What you see in MT5 Navigator</th></tr></thead>
+    <tbody>
+      <tr><td>Signal / entry engine</td><td><code>GsignalX_GocityGroup</code> / <code>GsignalX_Service</code></td></tr>
+      <tr><td>Trade Center</td><td><code>GsignalX_Multisymbol_Dashboard</code></td></tr>
+      <tr><td>Profit scouting (chart)</td><td><code>ProfitScouter_DollarTarget</code></td></tr>
+      <tr><td>Profit scouting (24/7)</td><td><code>ProfitScouter_Service</code></td></tr>
+      <tr><td>Opportunity ranks</td><td><code>ProfitOpportunity_Grader</code></td></tr>
+      <tr><td>Manual take-profit sweep</td><td><code>ProfitHarvest_Now</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>2. System map</h2>
+  <pre>Watchlist / Service roster → GSignalX entries (OWN)
+         │
+         ├── FILE_COMMON bus v1 → Grader
+         ├── Trade Center (Prop / Events / Telegram)
+         └── ProfitScouter (exits only)</pre>
+
+  <h2>Production note (Velocity 2.01)</h2>
+  <p>For commercial prop-desk operations (20–30 symbols, multi-terminal bus), use the <a href="Gsignalx_Velocity_Users_Manual.html">Velocity manual</a> and <code>docs/RELEASE_v2.01_Production_Hardening.md</code>.</p>
+  <p class="muted">Full narrative content remains in <code>CREED_ALGO_Users_Manual.md</code>. This HTML replaces the prior mojibake print export.</p>
 </div>
-<h1 id="creed-algo-users-manual">CREED ALGO Users Manual</h1>
-<p><strong>Daily Session Trading Â· Scaling Program Â· Profit
-Scouting</strong><br />
-<em>For beginner and advanced traders â€” manual and automated
-workflows</em></p>
-<p><strong>Product umbrella:</strong> CREED ALGO<br />
-<strong>Technical stack (MetaTrader 5):</strong> GSignalX Â·
-ProfitScouter Â· Opportunity Grader Â· ProfitHarvest_Now<br />
-<strong>Publisher:</strong> Gocity Group</p>
-<blockquote>
-<p><strong>Important:</strong> Trading involves risk of loss. This
-manual describes software behaviour. It is not investment advice. Always
-practise on a demo account before live capital.</p>
-</blockquote>
-<hr />
-<h2 id="how-to-use-this-manual">How to use this manual</h2>
-<table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
-<thead>
-<tr>
-<th>If you areâ€¦</th>
-<th>Start here</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>New to CREED ALGO / MT5</strong></td>
-<td><a href="#3-install--first-run">Chapter 3 â€” Install &amp; first
-run</a> â†’ <a href="#5-beginner-automated-day">Chapter 5 â€” Beginner
-automated day</a></td>
-</tr>
-<tr>
-<td><strong>Trading a daily session</strong></td>
-<td><a href="#4-daily-session-trading">Chapter 4 â€” Daily Session
-trading</a></td>
-</tr>
-<tr>
-<td><strong>Scaling across pairs</strong></td>
-<td><a href="#7-scaling-program-multi-pair-swing-entries">Chapter 7 â€”
-Scaling program</a></td>
-</tr>
-<tr>
-<td><strong>Banking profit (scout)</strong></td>
-<td><a href="#9-creed-algo-profit-scouting">Chapter 9 â€” Profit
-Scouting</a></td>
-</tr>
-<tr>
-<td><strong>Advanced / multi-terminal</strong></td>
-<td><a href="#11-advanced-reference">Chapter 11 â€” Advanced
-reference</a></td>
-</tr>
-</tbody>
-</table>
-<p>Callouts used in this guide:</p>
-<ul>
-<li><strong>Beginner</strong> â€” do this first; safe defaults.</li>
-<li><strong>Advanced</strong> â€” optional power settings; change only
-when you understand the effect.</li>
-</ul>
-<hr />
-<h2 id="welcome-to-creed-algo">1. Welcome to CREED ALGO</h2>
-<p>CREED ALGO is the trading umbrella for the Gocity
-<strong>GSignalX</strong> toolkit on MetaTrader 5. It combines:</p>
-<ol type="1">
-<li><strong>Signal-driven entries</strong> â€” follow multi-engine trend
-direction on each chart you enable (PLAY).</li>
-<li><strong>Profit scouting</strong> â€” watch floating P/L and close
-positions when a money target is reached (default: one account-wide
-minimum).</li>
-<li><strong>Opportunity grades</strong> (optional) â€” rank setups across
-terminals; grades are <strong>advisory only</strong>.</li>
-</ol>
-<h3 id="what-creed-algo-does">What CREED ALGO does</h3>
-<ul>
-<li>Attaches to charts you choose; each chart trades <strong>its own
-symbol</strong>.</li>
-<li>Opens (or places pending) trades when PLAY is on and entry rules
-agree.</li>
-<li>Closes profit according to ProfitScouter (automated) or
-ProfitHarvest_Now (manual one-shot).</li>
-<li>After an account harvest closes everything, charts still on PLAY can
-<strong>re-enter</strong> if the signal still says buy or sell
-(march-after-flat).</li>
-</ul>
-<h3 id="what-creed-algo-does-not-do">What CREED ALGO does not do</h3>
-<ul>
-<li>Guarantee profit or remove market risk.</li>
-<li>Pyramid / add multiple lots on the <strong>same</strong> symbol
-ticket (one intended position per chart magic).</li>
-<li>Remotely force other terminals to open or close (grades do not
-execute trades).</li>
-<li>Replace your brokerâ€™s risk controls or your own money
-management.</li>
-</ul>
-<h3 id="mt5-names-vs-creed-branding">MT5 names vs CREED branding</h3>
-<table>
-<thead>
-<tr>
-<th>CREED ALGO name</th>
-<th>What you see in MT5 Navigator</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Signal / entry engine</td>
-<td><code>GsignalX_GocityGroup</code> (Expert)</td>
-</tr>
-<tr>
-<td>Profit scouting (chart)</td>
-<td><code>ProfitScouter_DollarTarget</code> (Expert)</td>
-</tr>
-<tr>
-<td>Profit scouting (24/7)</td>
-<td><code>ProfitScouter_Service</code> (Service)</td>
-</tr>
-<tr>
-<td>Opportunity ranks</td>
-<td><code>ProfitOpportunity_Grader</code> (Service)</td>
-</tr>
-<tr>
-<td>Manual take-profit sweep</td>
-<td><code>ProfitHarvest_Now</code> (Script)</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="system-map">2. System map</h2>
-<pre><code>  Watchlist charts          PLAY / STOP / CLOSE
-         â”‚                        â”‚
-         â–¼                        â–¼
-   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”         Scalping drill window
-   â”‚  GSignalX   â”‚â—„â”€â”€â”€â”€â”€â”€â”€â”€ (5â€“15 min after PLAY)
-   â”‚  entries    â”‚
-   â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜
-          â”‚ positions open
-          â–¼
-   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”     optional     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-   â”‚ ProfitScout â”‚â—„â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤   Grader    â”‚
-   â”‚ ASAP / trailâ”‚   (advisory)    â”‚  ranks only â”‚
-   â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜                 â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-          â”‚ close all at account min
-          â–¼
-   Flat â†’ GSignalX re-arms (march) if signal still active</code></pre>
-<table>
-<colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-</colgroup>
-<thead>
-<tr>
-<th>Component</th>
-<th>Opens trades?</th>
-<th>Closes trades?</th>
-<th>Needs a chart?</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>GSignalX</td>
-<td>Yes (when PLAY)</td>
-<td>Opposite signal / CLOSE / optional STOP</td>
-<td>Yes</td>
-</tr>
-<tr>
-<td>ProfitScouter Service</td>
-<td>No</td>
-<td>Yes (money rules)</td>
-<td>No</td>
-</tr>
-<tr>
-<td>ProfitScouter EA</td>
-<td>No</td>
-<td>Yes</td>
-<td>Yes (host chart)</td>
-</tr>
-<tr>
-<td>Grader</td>
-<td>No</td>
-<td>No</td>
-<td>No</td>
-</tr>
-<tr>
-<td>ProfitHarvest_Now</td>
-<td>No</td>
-<td>Yes (one shot)</td>
-<td>Drop on any chart</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Beginner layout:</strong> one ProfitScouter
-<strong>Service</strong> + Grader + GSignalX on each pair you want to
-trade.<br />
-<strong>Advanced layout:</strong> same, plus bus grades on the panel;
-optional second terminal for research.</p>
-<hr />
-<h2 id="install-first-run">3. Install &amp; first run</h2>
-<h3 id="deploy-files">3.1 Deploy files</h3>
-<p>From the toolkit folder:</p>
-<ol type="1">
-<li>Run <code>deploy\Click-and-Run-Deploy.bat</code> (fresh) or
-<code>deploy\Clean-and-Deploy.bat</code> (upgrade).</li>
-<li>Or PowerShell: <code>Deploy-GSignalX.ps1</code> with your terminal
-data path and <code>-Compile</code>.</li>
-</ol>
-<p>Confirm steps are documented in <code>DEPLOYMENT_RUNBOOK.md</code>
-(gates G0â€“G7).</p>
-<h3 id="metatrader-checklist">3.2 MetaTrader checklist</h3>
-<p><strong>Beginner â€” do these before any PLAY:</strong></p>
-<ol type="1">
-<li><strong>Tools â†’ Options â†’ Expert Advisors</strong> â€” allow automated
-trading; allow DLL imports only if your broker/docs require it.</li>
-<li>Toolbar <strong>Algo Trading</strong> button = <strong>green /
-ON</strong>.</li>
-<li><strong>Navigator â†’ Services</strong> â€” Add / Start:
-<ul>
-<li><code>ProfitScouter_Service</code> (<code>InpBusEnable = true</code>
-recommended)</li>
-<li><code>ProfitOpportunity_Grader</code> (one instance)</li>
-</ul></li>
-<li>Open charts for your daily roster; attach
-<code>GsignalX_GocityGroup</code> on each.</li>
-<li>On each EA: Common tab â†’ <strong>Allow Algo Trading</strong>.</li>
-<li>Run <code>deploy\Confirm-After-Start.bat</code> (or Confirm script
-Gate All).</li>
-</ol>
-<h3 id="first-run-defaults-that-matter">3.3 First-run defaults that
-matter</h3>
-<table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
-<thead>
-<tr>
-<th>Area</th>
-<th>Suggested first setting</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>GSignalX entry</td>
-<td>Limit+Stop bracket, offsets <strong>5</strong> pips (range
-4â€“20)</td>
-</tr>
-<tr>
-<td>Drill</td>
-<td>Enabled, <strong>10</strong> minutes</td>
-</tr>
-<tr>
-<td>ProfitScouter</td>
-<td><strong>Scalp ASAP</strong> on; <code>InpAccTargetMoney</code> =
-your minimum take (e.g.Â 10 account currency)</td>
-</tr>
-<tr>
-<td>Scope</td>
-<td>All symbols (one Service instance)</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="daily-session-trading">4. Daily Session trading</h2>
-<p>CREED ALGO is built to work cleanly inside a <strong>defined daily
-window</strong>, not â€œalways on every hour.â€</p>
-<h3 id="broker-session-vs-your-hour-filter">4.1 Broker session vs your
-hour filter</h3>
-<table>
-<thead>
-<tr>
-<th>Control</th>
-<th>Default</th>
-<th>Role</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>InpUseSessions</code></td>
-<td>true</td>
-<td>Obey broker market session calendar</td>
-</tr>
-<tr>
-<td><code>InpUseHourFilter</code></td>
-<td>false</td>
-<td>Optional hard gate on server hours</td>
-</tr>
-<tr>
-<td><code>InpStartHour</code> / <code>InpEndHour</code></td>
-<td>7 / 20</td>
-<td>Used when hour filter is ON</td>
-</tr>
-<tr>
-<td><code>InpFridayStop</code> / hour</td>
-<td>true / 20</td>
-<td>No new FX entries late Friday</td>
-</tr>
-<tr>
-<td><code>InpBlockWeekend</code></td>
-<td>true</td>
-<td>No Sat/Sun FX (crypto can be exempt)</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Beginner daily session recipe</strong></p>
-<ol type="1">
-<li>Decide your session (example: Londonâ€“NY overlap on your broker
-<strong>server</strong> clock).</li>
-<li>Set <code>InpUseHourFilter = true</code>, <code>InpStartHour</code>
-/ <code>InpEndHour</code> to that band.</li>
-<li>Only press <strong>PLAY</strong> when you are watching the session;
-press <strong>STOP</strong> when done.</li>
-<li>Keep Friday stop on for FX.</li>
-</ol>
-<p><strong>Advanced:</strong> leave hour filter off and rely on broker
-sessions + manual PLAY discipline; use swing band (below) for grade
-timing only.</p>
-<h3 id="swing-band-grades-not-a-hard-block">4.2 Swing band (grades, not
-a hard block)</h3>
-<p><code>InpSwingStartHour</code> / <code>InpSwingEndHour</code>
-(default <strong>12â€“17</strong> server time) mark a preferred window for
-<strong>opportunity grades</strong>. They do <strong>not</strong> by
-themselves block entries. For a hard block, use the hour filter or
-STOP.</p>
-<h3 id="crypto-vs-fx">4.3 Crypto vs FX</h3>
-<p>With <code>InpCryptoAllowWeekend = true</code>, detected crypto
-symbols skip FX Saturday/Sunday blocks and Friday flatten rules. Add odd
-broker symbol names to <code>InpCryptoExtraList</code> if needed.</p>
-<h3 id="when-to-play-and-stop">4.4 When to PLAY and STOP</h3>
-<table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
-<thead>
-<tr>
-<th>Action</th>
-<th>Effect</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>PLAY</strong></td>
-<td>New entries allowed; starts the <strong>scalping drill</strong>
-window (if enabled)</td>
-</tr>
-<tr>
-<td><strong>STOP</strong></td>
-<td>Pauses new entries; pendings cancelled; optional close-all if
-<code>InpStopClosesAll</code></td>
-</tr>
-<tr>
-<td><strong>CLOSE</strong></td>
-<td>Flat this chartâ€™s GSignalX position/pendings now; does not change
-PLAY/STOP</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="beginner-automated-day">5. Beginner automated day</h2>
-<p>Follow this once on <strong>demo</strong>:</p>
-<ol type="1">
-<li>Start <strong>ProfitScouter_Service</strong> (ASAP account target
-set to a small demo amount, e.g.Â 5â€“10).</li>
-<li>Start <strong>ProfitOpportunity_Grader</strong>.</li>
-<li>Attach <strong>GSignalX</strong> on 1â€“3 liquid pairs; Algo Trading
-ON.</li>
-<li>At session open, press <strong>PLAY</strong> on each chart you want
-live.</li>
-<li>Watch panel: Status RUNNING, Drill countdown, Working pendings or
-Position.</li>
-<li>When combined floating profit hits the Scouter account target â†’
-<strong>all</strong> monitored positions close.</li>
-<li>If PLAY is still on and the signal still agrees â†’ chart may
-<strong>re-open</strong> (march-after-flat / drill).</li>
-<li>At session end â†’ <strong>STOP</strong> on each chart (or leave STOP
-and let Friday/weekend rules protect FX).</li>
-</ol>
-<p>You have just run the full CREED loop: <strong>signal â†’ entry â†’ scout
-â†’ harvest â†’ optional re-entry</strong>.</p>
-<hr />
-<h2 id="manual-trading-with-creed-tools">6. Manual trading with CREED
-tools</h2>
-<p>You can use CREED as a <strong>decision aid</strong> without full
-automation.</p>
-<h3 id="discretionary-entries">6.1 Discretionary entries</h3>
-<ol type="1">
-<li>Attach GSignalX with Algo Trading allowed <strong>or</strong> use it
-mainly for panel bias.</li>
-<li>Read <strong>Last signal</strong>, engine agreement, and <strong>Opp
-grades</strong>.</li>
-<li>Place your own market/pending orders if you prefer full manual
-control.</li>
-<li>Keep ProfitScouter running so floating profits are still scouted,
-<strong>or</strong> harvest yourself.</li>
-</ol>
-<h3 id="manual-profit-take-profitharvest_now">6.2 Manual profit take â€”
-ProfitHarvest_Now</h3>
-<ol type="1">
-<li>Drag script <code>ProfitHarvest_Now</code> onto any chart.</li>
-<li>Set account target (default focuses on <strong>account
-total</strong>).</li>
-<li>Confirm; script closes what already meets the target and exits.</li>
-<li>No trailing and no background loop â€” ideal for â€œbank it now.â€</li>
-</ol>
-<h3 id="close-vs-stop-manual-discipline">6.3 CLOSE vs STOP (manual
-discipline)</h3>
-<ul>
-<li>Use <strong>CLOSE</strong> to flatten one symbol without ending the
-session plan.</li>
-<li>Use <strong>STOP</strong> when you leave the desk so the EA does not
-arm new drill entries.</li>
-</ul>
-<hr />
-<h2 id="scaling-program-multi-pair-swing-entries">7. Scaling program
-(multi-pair swing entries)</h2>
-<h3 id="what-scaling-means-in-creed-algo">7.1 What â€œscalingâ€ means in
-CREED ALGO</h3>
-<p>Scaling here means <strong>growing or shrinking how many pairs are
-live</strong>, and <strong>how large each position is</strong>, during
-the daily session â€” aligned with swing-quality hours and your account
-profit target.</p>
-<p>It does <strong>not</strong> mean pyramiding (adding ticket after
-ticket on the same pair). GSignalX keeps <strong>one intended position
-per symbol/magic</strong>.</p>
-<h3 id="build-a-daily-roster">7.2 Build a daily roster</h3>
-<ol type="1">
-<li>Choose a short list of liquid pairs (example: majors + one
-metal).</li>
-<li>Open one chart per pair; attach GSignalX with the <strong>same
-magic</strong> only if you intend one strategy family (or different
-magics to separate strategies).</li>
-<li>Use <strong>one</strong> ProfitScouter instance with scope
-<strong>All symbols</strong> (or a symbol list that matches the
-roster).</li>
-</ol>
-<h3 id="position-sizing">7.3 Position sizing</h3>
-<table>
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
-</colgroup>
-<thead>
-<tr>
-<th>Mode</th>
-<th>Input</th>
-<th>Use when</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Fixed lot</td>
-<td><code>InpRiskMode = Fixed lot</code>, <code>InpFixedLot</code></td>
-<td>Beginners; constant size</td>
-</tr>
-<tr>
-<td>Percent risk</td>
-<td><code>InpRiskMode = % of balance</code>, <code>InpRiskPct</code>,
-ATR stop ON</td>
-<td>Scaling risk with account</td>
-</tr>
-<tr>
-<td>Cap</td>
-<td><code>InpMaxLot</code></td>
-<td>Hard ceiling per trade</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Beginner:</strong> fixed small lot.<br />
-<strong>Advanced:</strong> 0.5â€“1% risk per trade with ATR stop; raise
-PLAY pair count only when grades/session are strong.</p>
-<h3 id="scale-the-program-with-the-session">7.4 Scale the program with
-the session</h3>
-<table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
-<thead>
-<tr>
-<th>Session quality</th>
-<th>Action</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Strong (liquid, swing band, high grades)</td>
-<td>PLAY more roster pairs; normal risk %</td>
-</tr>
-<tr>
-<td>Average</td>
-<td>PLAY core pairs only</td>
-</tr>
-<tr>
-<td>Poor / news / late Friday</td>
-<td>STOP; reduce or zero new risk</td>
-</tr>
-<tr>
-<td>After ASAP harvest</td>
-<td>Let march re-enter only on pairs still PLAY + valid signal</td>
-</tr>
-</tbody>
-</table>
-<h3 id="account-target-vs-open-risk">7.5 Account target vs open
-risk</h3>
-<p>ProfitScouterâ€™s <strong>single account minimum</strong>
-(<code>InpAccTargetMoney</code>) closes <strong>all</strong> floating
-positions when hit. Plan so that:</p>
-<ul>
-<li>Sum of expected scalp takes â‰¥ your target, and<br />
-</li>
-<li>Number of PLAY pairs Ã— risk per pair stays within your daily loss
-tolerance (set <code>InpAccMaxLossMoney</code> if you want an emergency
-flatten).</li>
-</ul>
-<hr />
-<h2 id="order-entry-rules">8. Order entry rules</h2>
-<h3 id="entry-modes">8.1 Entry modes</h3>
-<table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
-<thead>
-<tr>
-<th>Mode</th>
-<th>Behaviour</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Market</strong></td>
-<td>Immediate fill</td>
-</tr>
-<tr>
-<td><strong>Limit</strong></td>
-<td>Pullback from <strong>signal bar open</strong></td>
-</tr>
-<tr>
-<td><strong>Stop</strong></td>
-<td>Breakout from signal bar open</td>
-</tr>
-<tr>
-<td><strong>Both</strong> (default)</td>
-<td>Limit + Stop bracket (OCO: one fill cancels the other)</td>
-</tr>
-</tbody>
-</table>
-<p>Offsets: default <strong>5</strong> (typical scalp
-<strong>4â€“6</strong>); absolute clamp <strong>4â€“20</strong> (pips or
-points per <code>InpOffsetUnit</code>).<br />
-<code>InpPendFromSignalOpen = true</code> anchors levels to the active
-signal opening bar, then adjusts for broker minimum distance.</p>
-<h3 id="scalping-drill">8.2 Scalping drill</h3>
-<table>
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
-</colgroup>
-<thead>
-<tr>
-<th>Input</th>
-<th>Default</th>
-<th>Meaning</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>InpDrillEnable</code></td>
-<td>true</td>
-<td>Drill on PLAY</td>
-</tr>
-<tr>
-<td><code>InpDrillMinutes</code></td>
-<td>10</td>
-<td>Window length (5â€“15)</td>
-</tr>
-<tr>
-<td><code>InpDrillFollowActive</code></td>
-<td>true</td>
-<td>Follow active direction under bot filters</td>
-</tr>
-<tr>
-<td><code>InpDrillAllowReentry</code></td>
-<td>true</td>
-<td>Re-enter while drill / flat rules allow</td>
-</tr>
-<tr>
-<td><code>InpDrillMarchAfterFlat</code></td>
-<td>true</td>
-<td>After harvest flat, one re-arm if signal still valid</td>
-</tr>
-</tbody>
-</table>
-<p>After the window expires, behaviour returns to flip-based entries
-until the next PLAY.</p>
-<h3 id="signal-filters-custom-bot-rules">8.3 Signal filters (custom bot
-rules)</h3>
-<p>Entries respect:</p>
-<ul>
-<li>Enabled engines (PP SuperTrend, ATR SuperTrend,
-SuperBollingerTrend)</li>
-<li>Simple vs Advanced agreement (<code>InpMinAgree</code>)</li>
-<li>Optional MA filter</li>
-<li>Allow Long / Allow Short</li>
-<li>Spread, sessions, hour filter, PLAY state</li>
-</ul>
-<hr />
-<h2 id="creed-algo-profit-scouting">9. CREED ALGO Profit Scouting</h2>
-<p>Profit scouting is the <strong>exit brain</strong>. It does not open
-trades.</p>
-<h3 id="scalp-asap-default-recommended-for-daily-sessions">9.1 Scalp
-ASAP (default â€” recommended for daily sessions)</h3>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Typical value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>InpScalpAsapAccountOnly</code></td>
-<td>true</td>
-</tr>
-<tr>
-<td><code>InpAccTargetEnable</code></td>
-<td>true</td>
-</tr>
-<tr>
-<td><code>InpAccTargetMoney</code></td>
-<td>Your minimum take (e.g.Â 10)</td>
-</tr>
-<tr>
-<td>Pos / Sym targets &amp; trails</td>
-<td>off</td>
-</tr>
-<tr>
-<td><code>InpWindowEnable</code></td>
-<td>false (no age gate)</td>
-</tr>
-<tr>
-<td><code>InpCheckIntervalMs</code></td>
-<td>500</td>
-</tr>
-</tbody>
-</table>
-<p>When <strong>total floating P/L</strong> of monitored positions â‰¥
-target â†’ <strong>close everything</strong>. Fast, simple,
-session-friendly.</p>
-<h3 id="automated-vs-manual-scout">9.2 Automated vs manual scout</h3>
-<table>
-<thead>
-<tr>
-<th>Method</th>
-<th>Best for</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>ProfitScouter_Service</strong></td>
-<td>Unattended daily / VPS</td>
-</tr>
-<tr>
-<td><strong>ProfitScouter_DollarTarget</strong> EA</td>
-<td>Visual dashboard on a host chart</td>
-</tr>
-<tr>
-<td><strong>ProfitHarvest_Now</strong></td>
-<td>Manual â€œtake it nowâ€</td>
-</tr>
-</tbody>
-</table>
-<p>Run <strong>one</strong> scouter scope over the same positions (avoid
-two instances racing).</p>
-<h3 id="after-harvest-keep-the-set-marching">9.3 After harvest â€” keep
-the set marching</h3>
-<p>With GSignalX PLAY + march-after-flat:</p>
-<ol type="1">
-<li>Scouter closes all at the account min.<br />
-</li>
-<li>Chart goes flat.<br />
-</li>
-<li>If the signal still says buy or sell â†’ EA re-enters that pair.<br />
-</li>
-<li>Open positions again match the active direction set.</li>
-</ol>
-<h3 id="advanced-layered-trail-harvest">9.4 Advanced â€” layered trail
-harvest</h3>
-<p>Set <code>InpScalpAsapAccountOnly = false</code> and enable
-per-position / per-pair / account trails if you want give-back logic and
-age windows (classic 30â€“60 minute trail band). See
-<code>README_ProfitScouter.md</code>.</p>
-<hr />
-<h2 id="safety-risk">10. Safety &amp; risk</h2>
-<p><strong>Beginner checklist</strong></p>
-<ul class="task-list">
-<li><label><input type="checkbox" />Demo first until you trust PLAY /
-harvest / STOP behaviour<br />
-</label></li>
-<li><label><input type="checkbox" />Algo Trading ON only when you intend
-automation<br />
-</label></li>
-<li><label><input type="checkbox" />STOP when you leave the screen<br />
-</label></li>
-<li><label><input type="checkbox" />Account target sized for your
-account (not vanity numbers)<br />
-</label></li>
-<li><label><input type="checkbox" />One Scouter instance for â€œAll
-symbolsâ€</label></li>
-</ul>
-<p><strong>Advanced safeguards</strong></p>
-<ul>
-<li><code>InpAccMaxLossMoney</code> â€” emergency close-all on floating
-loss<br />
-</li>
-<li><code>InpMaxSpreadPt</code> â€” skip entries in wide spreads<br />
-</li>
-<li><code>InpStopClosesAll</code> â€” STOP also flats (optional; default
-off)<br />
-</li>
-<li>Separate magics per strategy family</li>
-</ul>
-<p><strong>Honest limits</strong></p>
-<ul>
-<li>Slippage, requotes, and broker stops can change fills.<br />
-</li>
-<li>Grades are scores, not orders.<br />
-</li>
-<li>Weekend / Friday rules protect FX; verify crypto detection for your
-symbols.</li>
-</ul>
-<hr />
-<h2 id="advanced-reference">11. Advanced reference</h2>
-<h3 id="gsignalx-input-groups-cheat-sheet">11.1 GSignalX input groups
-(cheat sheet)</h3>
-<table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
-<thead>
-<tr>
-<th>Group</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Mode &amp; routing</td>
-<td>Simple/Advanced, triggers, start next vs current</td>
-</tr>
-<tr>
-<td>Engines</td>
-<td>PP / ATR ST / SuperBollinger parameters</td>
-</tr>
-<tr>
-<td>Trade management</td>
-<td>Long/short, reverse, ATR SL/TP, trail</td>
-</tr>
-<tr>
-<td>Entry order type</td>
-<td>Market / Limit / Stop / Both; offsets 4â€“20; signal-open anchor</td>
-</tr>
-<tr>
-<td>Scalping drill</td>
-<td>Window, re-entry, follow-active, march-after-flat</td>
-</tr>
-<tr>
-<td>Money management</td>
-<td>Fixed lot or % risk, max lot</td>
-</tr>
-<tr>
-<td>Sessions &amp; weekend</td>
-<td>Sessions, hour filter, Friday, crypto</td>
-</tr>
-<tr>
-<td>Execution</td>
-<td>Magic, slippage, max spread, lookback</td>
-</tr>
-<tr>
-<td>Panel &amp; bus</td>
-<td>PLAY buttons, grades, notifications</td>
-</tr>
-</tbody>
-</table>
-<h3 id="opportunity-grades-bus">11.2 Opportunity grades (bus)</h3>
-<p>Published under Common Files: <code>GSignalX\bus\v1\</code>.<br />
-Grader writes <code>grades/latest.json</code>. Panel <strong>Opp
-grades</strong> summarises top ideas.<br />
-Scoring rewards agreement, session, swing window, spread health â€”
-<strong>advisory</strong>.</p>
-<h3 id="verify-after-deploy">11.3 Verify after deploy</h3>
-<ol type="1">
-<li>Files compiled (0 errors).<br />
-</li>
-<li>Services running.<br />
-</li>
-<li>GSignalX smiley / panel visible; PLAY works.<br />
-</li>
-<li>Bus heartbeats / signal JSON when bus enabled.<br />
-</li>
-<li>Scouter closes at target on demo.<br />
-</li>
-<li>After close, PLAY chart re-enters if signal still active.</li>
-</ol>
-<p>Full gates: <code>DEPLOYMENT_RUNBOOK.md</code>.</p>
-<h3 id="troubleshooting">11.4 Troubleshooting</h3>
-<table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
-<thead>
-<tr>
-<th>Symptom</th>
-<th>Check</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>No entries</td>
-<td>PLAY? Algo Trading? Hour/session/spread? Drill expired waiting for
-flip?</td>
-</tr>
-<tr>
-<td>Limit/Stop rejected</td>
-<td>Offset vs stops level; panel Last action; try 5â€“6 pips; filling
-RETURN</td>
-</tr>
-<tr>
-<td>No harvest</td>
-<td>Scouter running? Scope/magic filter? ASAP target too high?</td>
-</tr>
-<tr>
-<td>Double closes</td>
-<td>Two Scouters on same positions â€” keep one</td>
-</tr>
-<tr>
-<td>Grades empty</td>
-<td>Bus enable + Grader started + Common Files path</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="glossary">12. Glossary</h2>
-<table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
-<thead>
-<tr>
-<th>Term</th>
-<th>Meaning</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>CREED ALGO</strong></td>
-<td>Product umbrella for this GSignalX + ProfitScouter toolkit</td>
-</tr>
-<tr>
-<td><strong>PLAY / STOP</strong></td>
-<td>Per-chart arming of new entries</td>
-</tr>
-<tr>
-<td><strong>Drill</strong></td>
-<td>Timed window after PLAY for active-signal entries</td>
-</tr>
-<tr>
-<td><strong>March-after-flat</strong></td>
-<td>Re-arm entry after Scouter (or close) flats the chart</td>
-</tr>
-<tr>
-<td><strong>ASAP account target</strong></td>
-<td>Close all when total floating P/L hits one minimum</td>
-</tr>
-<tr>
-<td><strong>Scaling program</strong></td>
-<td>Multi-pair roster + risk sizing; not pyramiding</td>
-</tr>
-<tr>
-<td><strong>Swing window</strong></td>
-<td>Hour band that boosts opportunity grades (default 12â€“17)</td>
-</tr>
-<tr>
-<td><strong>Magic</strong></td>
-<td>EA order ID used to own positions/orders</td>
-</tr>
-<tr>
-<td><strong>FILE_COMMON bus</strong></td>
-<td>Shared JSON fabric across terminals on one Windows user</td>
-</tr>
-<tr>
-<td><strong>OCO bracket</strong></td>
-<td>Limit + Stop; one fill cancels the other</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="appendix-a-recommended-daily-session-template">Appendix A â€”
-Recommended daily session template</h2>
-<p><strong>FX majors, server roughly aligned to Londonâ€“NY</strong></p>
-<table>
-<thead>
-<tr>
-<th>Item</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Hour filter</td>
-<td>ON Â· Start 8 Â· End 17 (adjust to your broker server)</td>
-</tr>
-<tr>
-<td>Swing grades</td>
-<td>12â€“17</td>
-</tr>
-<tr>
-<td>Drill</td>
-<td>10 minutes</td>
-</tr>
-<tr>
-<td>Entry</td>
-<td>Both Â· Limit 5 Â· Stop 5</td>
-</tr>
-<tr>
-<td>Risk</td>
-<td>Fixed 0.01â€“0.10 lot on demo; then % risk live</td>
-</tr>
-<tr>
-<td>Scouter</td>
-<td>ASAP Â· Acc target sized to account Â· Interval 500 ms</td>
-</tr>
-<tr>
-<td>End of day</td>
-<td>STOP all charts; optional Friday flatten</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="appendix-b-related-documents">Appendix B â€” Related
-documents</h2>
-<table>
-<thead>
-<tr>
-<th>Document</th>
-<th>Topic</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>README.md</code></td>
-<td>Toolkit overview</td>
-</tr>
-<tr>
-<td><code>README_ProfitScouter.md</code></td>
-<td>Harvest presets in depth</td>
-</tr>
-<tr>
-<td><code>DEPLOYMENT.md</code></td>
-<td>Install &amp; verify</td>
-</tr>
-<tr>
-<td><code>DEPLOYMENT_RUNBOOK.md</code></td>
-<td>Gated go-live with feedback</td>
-</tr>
-<tr>
-<td><code>ARCHITECTURE_CONNECTOR_BUS.md</code></td>
-<td>Bus protocol &amp; scoring</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="appendix-c-version-notes">Appendix C â€” Version notes</h2>
-<p>Manual aligned with toolkit behaviour as of <strong>GSignalX
-v1.14</strong> / <strong>ProfitScouter v1.11</strong> (scalping drill,
-signal-open limit/stop defaults, Scalp ASAP account target).</p>
-<hr />
-<p><em>Â© Gocity Group â€” CREED ALGO / GSignalX. For research and
-educational use with MetaTrader 5. Trade responsibly.</em></p>
-</body></html>
+<script>
+document.querySelectorAll("table").forEach(function (table) {
+  if (table.parentElement && table.parentElement.classList.contains("table-scroll")) return;
+  var wrap = document.createElement("div");
+  wrap.className = "table-scroll";
+  table.parentNode.insertBefore(wrap, table);
+  wrap.appendChild(table);
+});
+</script>
+</body>
+</html>

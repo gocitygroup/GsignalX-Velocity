@@ -1,0 +1,50 @@
+; GSignalX Service — Practice Live Sim $100 RAW (Day default)
+; Coach: Trade Center 100·RAW — docs/PRACTICE_LIVE_SIM_20_50_100.md
+; Aligns with EUR100 raw ladder geometry; pair ProfitScouter_Practice_100_Raw.set.
+; XAU/crypto = secondary watch only until ~$250 ladder rung.
+
+InpSymbolList=EURUSD,GBPUSD
+InpTimeframe=5
+InpCycleMs=200
+InpRespectChartRunState=true
+InpEngineBudgetPerCycle=4
+InpFleetEnable=true
+InpFleetTargetPairs=2
+InpFleetFillCooldownSec=10
+InpMode=0
+InpTrigPP=true
+InpTrigST=false
+InpTrigSBT=true
+InpMinAgree=2
+InpEvalClosedBar=true
+InpEntryMode=3
+InpOffsetUnit=0
+InpLimitOffset=5
+InpStopOffset=5
+InpPendFromSignalOpen=true
+InpPendMaxAgeMin=60
+InpStrategicStopEnable=true
+InpStrategicStopMult=4.0
+InpFlipWaitDefault=false
+InpRiskMode=1
+InpRiskPct=1.0
+InpFixedLot=0.01
+InpMaxLot=0.10
+InpAutoLotDefault=true
+InpMaxSpreadPt=25
+InpMagic=20260904
+InpLookback=400
+InpComment=GsignalX-Prac100R
+InpBusEnable=true
+InpBusFullSyncSec=10
+InpVerboseSignals=false
+InpPropEnable=true
+InpPropDailyLossMoney=3.50
+InpPropDailyLossPct=0.0
+InpPropMaxEquityDdPct=5.0
+InpPropMaxTradesDay=4
+InpPropMaxDaySharePct=0.0
+InpPropDailyProfitTarget=1.50
+InpPropBlockFridayHour=20
+InpPropNewsBlackoutMin=0
+InpPropNewsTimes=

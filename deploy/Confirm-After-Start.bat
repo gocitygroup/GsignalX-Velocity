@@ -7,11 +7,15 @@ echo ============================================================
 echo  GSignalX - Confirm Bus + Grades ^(after Services are running^)
 echo ============================================================
 echo.
-echo Make sure in MT5:
-echo   - Algo Trading ON
+echo Make sure in MetaTrader 5 first:
+echo   - Algo Trading ON ^(toolbar green^)
+echo   - GsignalX_Service started
 echo   - ProfitScouter_Service started ^(bus ON^)
 echo   - ProfitOpportunity_Grader started
-echo   - Optional: GsignalX attached with bus ON
+echo   - Optional: Multisymbol Dashboard + chart GsignalX attached
+echo.
+echo If something failed earlier, open:
+echo   docs\WINDOWS_DEPLOY_SIMPLE.md  ^(Problems and fixes^)
 echo.
 pause
 
@@ -23,9 +27,10 @@ echo.
 echo Feedback saved under deploy\feedback\
 echo.
 if %EXITCODE% NEQ 0 (
-  echo RESULT: FAIL - paste the CONFIRM_*.md contents in chat for help.
+  echo RESULT: FAIL - open deploy\feedback\CONFIRM_*.md
+  echo Stale bus often means Services are not running yet - wait 60s and retry.
 ) else (
-  echo RESULT: PASS - paste GATE G4/G5 feedback in chat to continue the runbook.
+  echo RESULT: PASS - desk bus/grades look healthy.
 )
 echo.
 pause

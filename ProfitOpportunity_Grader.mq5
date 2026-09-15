@@ -4,8 +4,8 @@
 //+------------------------------------------------------------------+
 #property service
 #property copyright "Gocity Group - GSignalX"
-#property version   "1.00"
-#property description "Opportunity Grader — ranks signals and harvest candidates across terminals."
+#property version   "2.00"
+#property description "Gsignalx Velocity 2.00 — Opportunity Grader ranks signals and harvest candidates."
 
 #include <GSignalX/BusProtocol.mqh>
 #include <GSignalX/BusIO.mqh>
@@ -62,7 +62,7 @@ bool HeartbeatFresh(const string tid, double &freeMargin, double &floating)
   {
    freeMargin = 0.0;
    floating = 0.0;
-   string hb = GsxBusReadAll(GsxBusHeartbeatPath(tid));
+   string hb = GsxBusReadAllRetry(GsxBusHeartbeatPath(tid));
    if(hb == "" || !GsxJsonVersionOk(hb))
       return false;
    long ts = GsxJsonGetLong(hb, "ts", 0);
@@ -81,7 +81,7 @@ void GradeSignalsForTid(const string tid, const double freeMargin, const double 
    int n = GsxBusListSignals(tid, files);
    for(int i = 0; i < n; i++)
      {
-      string j = GsxBusReadAll(files[i]);
+      string j = GsxBusReadAllRetry(files[i]);
       if(j == "" || !GsxJsonVersionOk(j))
          continue;
 
@@ -118,7 +118,7 @@ void GradeSignalsForTid(const string tid, const double freeMargin, const double 
 
 void GradeScouterForTid(const string tid, const double freeMargin, const double floating)
   {
-   string j = GsxBusReadAll(GsxBusScouterPath(tid));
+   string j = GsxBusReadAllRetry(GsxBusScouterPath(tid));
    if(j == "" || !GsxJsonVersionOk(j))
       return;
 

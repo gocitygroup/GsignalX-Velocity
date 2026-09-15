@@ -11,6 +11,8 @@ Broker-agnostic publish/grade fabric for every MT5 terminal on the same PC via *
 | `Include/GSignalX/*.mqh` | `<Terminal>\MQL5\Include\GSignalX\` |
 | `Include/ProfitScouter/*.mqh` | `<Terminal>\MQL5\Include\ProfitScouter\` |
 | `GsignalX_GocityGroup.mq5` | `MQL5\Experts\` |
+| `GsignalX_Multisymbol_Dashboard.mq5` | `MQL5\Experts\` |
+| `GsignalX_Service.mq5` | `MQL5\Services\` |
 | `ProfitScouter_DollarTarget.mq5` | `MQL5\Experts\` |
 | `ProfitScouter_Service.mq5` | `MQL5\Services\` |
 | `ProfitOpportunity_Grader.mq5` | `MQL5\Services\` |

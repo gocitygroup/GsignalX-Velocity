@@ -11,6 +11,9 @@
 #include <GSignalX/SymbolCanon.mqh>
 #include <GSignalX/TerminalIdentity.mqh>
 #include <GSignalX/BarDirection.mqh>
+#ifdef PS_HOST_EA
+#include <GSignalX/ChartPanel.mqh>
+#endif
 
 #ifndef PS_HOST_SERVICE
 #ifndef PS_HOST_EA
@@ -122,6 +125,22 @@ bool           g_panelDragOffSet = false;
 int            g_panelDragOffX = 0;
 int            g_panelDragOffY = 0;
 int            g_panelLinesUsed = 0;
+// Runtime layout (scaled + vision-aware)
+int            g_psW = 460;
+int            g_psTitleH = 22;
+int            g_psLineH = 13;
+int            g_psPad = 8;
+int            g_psFont = 8;
+int            g_psTitleFont = 9;
+color          g_psColBg     = C'14,18,26';
+color          g_psColEdge   = C'72,84,108';
+color          g_psColTitle  = C'24,30,42';
+color          g_psColText   = C'230,238,250';
+color          g_psColMuted  = C'178,188,210';
+color          g_psColAccent = C'255,196,72';
+color          g_psColBull   = C'52,220,140';
+color          g_psColBear   = C'245,90,88';
+color          g_psColBand   = C'22,28,40';
 #endif
 
 //+------------------------------------------------------------------+
@@ -1729,16 +1748,67 @@ void Notify(string msg)
 
 #ifdef PS_HOST_EA
 //+------------------------------------------------------------------+
-//| Movable on-chart info panel (drag title bar)                     |
+//| Movable on-chart info panel (drag title · scale · vision)        |
 //+------------------------------------------------------------------+
-#define PS_PANEL_W        460
-#define PS_PANEL_TITLE_H  22
-#define PS_PANEL_LINE_H   13
-#define PS_PANEL_MAX_LINES 36
-#define PS_PANEL_PAD      8
+#define PS_PANEL_W_BASE        575   // +25% vs prior 460 for text balance
+#define PS_PANEL_TITLE_H_BASE  22
+#define PS_PANEL_LINE_H_BASE   13
+#define PS_PANEL_MAX_LINES     36
+#define PS_PANEL_PAD_BASE      8
 
 string PsPanelPosXVar() { return(StringFormat("PS%d_PNLX", InpInstanceID)); }
 string PsPanelPosYVar() { return(StringFormat("PS%d_PNLY", InpInstanceID)); }
+
+void PsApplyUiChrome()
+  {
+   GsxPanelSetVision((int)InpUiVision);
+   int baseW = PS_PANEL_W_BASE;
+   if(GsxPanelGetVision() == GSX_VISION_FAR)
+      baseW = 520;
+   else if(GsxPanelGetVision() == GSX_VISION_COMFORT)
+      baseW = 490;
+
+   double eff = GsxPanelFitScale(InpUiScale, baseW, 24);
+   GsxPanelSetScale(eff);
+
+   int bump = GsxPanelFontBump();
+   int lead = GsxPanelLead();
+   int vision = GsxPanelGetVision();
+
+   g_psW = GsxSx(baseW);
+   g_psTitleH = GsxSx(PS_PANEL_TITLE_H_BASE + (vision == GSX_VISION_FAR ? 8 :
+                                               (vision == GSX_VISION_COMFORT ? 4 : 0)));
+   g_psLineH = GsxSx(PS_PANEL_LINE_H_BASE + (lead - 7) +
+                     (vision == GSX_VISION_FAR ? 2 : 0));
+   if(g_psLineH < GsxSx(12))
+      g_psLineH = GsxSx(12);
+   g_psPad = GsxSx(PS_PANEL_PAD_BASE + (vision == GSX_VISION_FAR ? 2 : 0));
+   g_psFont = GsxSf(8 + bump);
+   g_psTitleFont = GsxSf(9 + bump + (vision == GSX_VISION_FAR ? 1 : 0));
+
+   if(vision == GSX_VISION_NEAR)
+     {
+      g_psColBg = C'10,12,18'; g_psColText = C'248,250,255';
+      g_psColMuted = C'190,198,216'; g_psColEdge = C'90,104,130';
+      g_psColTitle = C'18,22,32'; g_psColBand = C'16,20,28';
+     }
+   else if(vision == GSX_VISION_FAR)
+     {
+      g_psColBg = C'16,20,28'; g_psColText = C'255,255,255';
+      g_psColMuted = C'198,206,224'; g_psColEdge = C'96,110,138';
+      g_psColTitle = C'26,32,44'; g_psColBand = C'22,28,38';
+      g_psColAccent = C'255,204,90';
+     }
+   else
+     {
+      g_psColBg = C'14,18,26'; g_psColText = C'230,238,250';
+      g_psColMuted = C'178,188,210'; g_psColEdge = C'72,84,108';
+      g_psColTitle = C'24,30,42'; g_psColBand = C'22,28,40';
+      g_psColAccent = C'255,196,72';
+     }
+
+   GsxPanelClampPos(g_panelX, g_panelY, g_psW, GsxSx(220));
+  }
 
 void PsLoadPanelPos()
   {
@@ -1752,6 +1822,7 @@ void PsLoadPanelPos()
       g_panelY = (int)GlobalVariableGet(ny);
    if(g_panelX < 0) g_panelX = 0;
    if(g_panelY < 0) g_panelY = 0;
+   PsApplyUiChrome();
   }
 
 void PsSavePanelPos()
@@ -1812,12 +1883,53 @@ void PsDeletePanel()
    g_panelDragOffSet = false;
   }
 
+color PsPanelLineColor(const string text)
+  {
+   if(StringFind(text, "——") == 0)
+      return(g_psColMuted);
+   if(StringFind(text, "BLOCKED") >= 0 || StringFind(text, "paused") >= 0)
+      return(g_psColBear);
+   if(StringFind(text, "Losers") >= 0 && StringFind(text, "Winners") < 0)
+      return(g_psColBear);
+   if(StringFind(text, "Scout RUNNING") >= 0 || StringFind(text, "[ARMED]") >= 0)
+      return(g_psColBull);
+   if(StringFind(text, "Winners") >= 0)
+      return(g_psColText);
+   if(StringFind(text, "Floating profit") >= 0 || StringFind(text, "Account target") >= 0)
+      return(g_psColAccent);
+   if(StringFind(text, "P/L") >= 0)
+     {
+      if(StringFind(text, "P/L -") >= 0 || StringFind(text, "P/L −") >= 0)
+         return(g_psColBear);
+      if(StringFind(text, "P/L +") >= 0)
+         return(g_psColBull);
+     }
+   return(g_psColText);
+  }
+
 void PsPanelSetLine(const int idx, const string text, const color clr)
   {
    if(idx < 0 || idx >= PS_PANEL_MAX_LINES)
       return;
-   int y = g_panelY + PS_PANEL_TITLE_H + 4 + idx * PS_PANEL_LINE_H;
-   PsPanelLabel(StringFormat("L%d", idx), g_panelX + PS_PANEL_PAD, y, text, clr, 8, false);
+   int y = g_panelY + g_psTitleH + GsxSx(4) + idx * g_psLineH;
+   // Full-width exclusive line slot (clipped to panel content)
+   GsxLaySlot lineSlot;
+   lineSlot.x = g_panelX;
+   lineSlot.y = y;
+   lineSlot.w = g_psW;
+   lineSlot.h = g_psLineH;
+
+   // Zebra band behind every other row for scanning
+   if((idx % 2) == 1)
+      PsPanelRect(StringFormat("ZB%d", idx), g_panelX + GsxSx(2), y - GsxSx(1),
+                  g_psW - GsxSx(4), g_psLineH, g_psColBand, g_psColBand, false);
+   else
+      ObjectDelete(0, g_pnlPfx + StringFormat("ZB%d", idx));
+
+   // Draw via ChartPanel slot clip (prefix still Profit's via PsPanelLabel)
+   PsPanelLabel(StringFormat("L%d", idx), lineSlot.x + g_psPad, lineSlot.y,
+                GsxPanelClip(text, GsxPanelCharsFit(MathMax(4, lineSlot.w - 2 * g_psPad), g_psFont)),
+                clr, g_psFont, false);
    if(idx + 1 > g_panelLinesUsed)
       g_panelLinesUsed = idx + 1;
   }
@@ -1825,21 +1937,31 @@ void PsPanelSetLine(const int idx, const string text, const color clr)
 void PsPanelTrimLines(const int keep)
   {
    for(int i = keep; i < g_panelLinesUsed; i++)
+     {
       ObjectDelete(0, g_pnlPfx + StringFormat("L%d", i));
+      ObjectDelete(0, g_pnlPfx + StringFormat("ZB%d", i));
+     }
    g_panelLinesUsed = keep;
   }
 
 void PsPanelApplyLayout(const int bodyLines)
   {
-   int bodyH = MathMax(1, bodyLines) * PS_PANEL_LINE_H + 10;
-   int totalH = PS_PANEL_TITLE_H + bodyH;
-   PsPanelRect("BG", g_panelX, g_panelY, PS_PANEL_W, totalH,
-               C'22,26,34', C'70,78,92', false);
-   // Title bar is the drag handle
-   PsPanelRect("TITLE", g_panelX, g_panelY, PS_PANEL_W, PS_PANEL_TITLE_H,
-               C'36,42,54', C'90,110,140', true);
-   PsPanelLabel("TITLE_TX", g_panelX + PS_PANEL_PAD, g_panelY + 3,
-                "PROFIT SCOUTER  ·  drag to move", C'200,210,230', 9, true);
+   PsApplyUiChrome();
+   int inset = GsxSx(GsxPanelGetVision() == GSX_VISION_FAR ? 10 : 8);
+   int bodyH = MathMax(1, bodyLines) * g_psLineH + GsxSx(12);
+   int totalH = g_psTitleH + bodyH;
+   int boxW = g_psW + 2 * inset;
+   PsPanelRect("BG", g_panelX - inset, g_panelY - inset, boxW, totalH,
+               g_psColBg, g_psColEdge, false);
+   PsPanelRect("TITLE", g_panelX - inset, g_panelY - inset, boxW, g_psTitleH,
+               g_psColTitle, g_psColEdge, true);
+
+   string visionHint = (GsxPanelGetVision() == GSX_VISION_FAR ? "Far view" :
+                        (GsxPanelGetVision() == GSX_VISION_NEAR ? "Near view" : "Comfort"));
+   string title = GsxPanelClip("Profit Scouter · " + visionHint + " · drag",
+                               GsxPanelCharsFit(g_psW - g_psPad, g_psTitleFont));
+   PsPanelLabel("TITLE_TX", g_panelX + g_psPad, g_panelY + GsxSx(3),
+                title, g_psColAccent, g_psTitleFont, true);
   }
 
 void PsPanelPushLine(string &lines[], const string text)
@@ -1859,66 +1981,69 @@ void DrawPanel(double accProfit, int count)
       return;
      }
 
-   // While dragging, chrome is repositioned by the mouse handler
    if(g_panelDragging)
      {
       PsUpdateButtons();
       return;
      }
 
-   Comment("");   // clear legacy Comment dashboard
+   Comment("");
+   PsApplyUiChrome();
 
    string ccy = TargetCcy();
    string lines[];
    ArrayResize(lines, 0);
 
-   PsPanelPushLine(lines, StringFormat("Instance %d | %s | targets in %s (x%.5f)",
+   PsPanelPushLine(lines, StringFormat("Instance %d · Account %s · Targets in %s (x%.5f)",
                                        InpInstanceID, g_accCcy, ccy, g_ccyFactor));
-   PsPanelPushLine(lines, StringFormat("Scout: %s | Mode: %s | Scope: %s | Magic: %s | %d ms",
-                                       (gScoutEnabled ? "START" : "STOP"),
-                                       (InpScalpAsapAccountOnly ? "Scalp ASAP" : "layered"),
+   PsPanelPushLine(lines, StringFormat("Scout %s · Mode %s · Scope %s · Magic %s · Refresh %d ms",
+                                       (gScoutEnabled ? "RUNNING" : "paused"),
+                                       (InpScalpAsapAccountOnly ? "Scalp ASAP" : "Layered"),
                                        ScopeText(), (InpUseMagicFilter ? (string)InpMagicNumber : "any"),
                                        (int)MathMax(100, InpCheckIntervalMs)));
-   PsPanelPushLine(lines, StringFormat("Window: %s %d-%d min | trail after: %s",
+   PsPanelPushLine(lines, StringFormat("Hold window %s · %d–%d min · Trail after window %s",
                                        (InpWindowEnable ? "ON" : "OFF"), InpWindowStartMin, InpWindowEndMin,
                                        (InpTrailAfterWindow ? "yes" : "no")));
-   PsPanelPushLine(lines, "----------------------------------------------");
-   PsPanelPushLine(lines, StringFormat("Positions monitored : %d", count));
-   PsPanelPushLine(lines, StringFormat("Floating profit     : %.2f %s", accProfit, g_accCcy));
-   PsPanelPushLine(lines, StringFormat("Winners / Losers    : %d (+%.2f) / %d (%.2f)",
+   PsPanelPushLine(lines, "———————— summary ————————");
+   PsPanelPushLine(lines, StringFormat("Positions monitored · %d", count));
+   PsPanelPushLine(lines, StringFormat("Floating profit · %+.2f %s", accProfit, g_accCcy));
+   PsPanelPushLine(lines, StringFormat("Winners %d (%+.2f) · Losers %d (%.2f)",
                                        g_winCount, g_winSum, g_lossCount, g_lossSum));
-   PsPanelPushLine(lines, StringFormat("Account peak        : %.2f %s %s", g_accPeak, g_accCcy,
+   PsPanelPushLine(lines, StringFormat("Account peak · %.2f %s %s", g_accPeak, g_accCcy,
                                        (g_accArmed ? "[ARMED]" : "")));
-   PsPanelPushLine(lines, StringFormat("ASAP floor          : %.2f %s%s", AsapFloorMoney(), g_accCcy,
+   PsPanelPushLine(lines, StringFormat("ASAP floor · %.2f %s%s", AsapFloorMoney(), g_accCcy,
                                        (InpScalpAsapAccountOnly ? "  [ASAP]" : "")));
-   PsPanelPushLine(lines, StringFormat("Profit lock         : %s arm>=%.2f keep=%.0f%% locked=%d | win floor %.2f",
+   PsPanelPushLine(lines, StringFormat("Profit lock · %s · arm ≥ %.2f · keep %.0f%% · locked %d · win floor %.2f",
                                        (InpProfitLockEnable ? "ON" : "OFF"), Money(InpProfitLockArm),
                                        InpProfitLockKeepPct, LockedPosCount(), Money(InpMinWinProfit)));
-   PsPanelPushLine(lines, StringFormat("Adverse Auto        : %s minBars>%d minAge=%d onceGreen=%s tf=%d last=%s streak=%d closed=%d",
+   PsPanelPushLine(lines, StringFormat("Adverse Auto · %s · bars > %d · min age %d · once green %s · TF %d",
                                        (gAdverseEnabled ? "ON" : "OFF"), InpAdverseMinBars, InpAdverseMinAgeMin,
                                        (InpAdverseProtectOnceGreen ? "protect" : "cut"),
-                                       (int)PsAdverseTf(),
-                                       (g_adverseLastSym == "" ? "-" : g_adverseLastSym),
+                                       (int)PsAdverseTf()));
+   PsPanelPushLine(lines, StringFormat("Last adverse · %s · streak %d · closed this cycle %d",
+                                       (g_adverseLastSym == "" ? "—" : g_adverseLastSym),
                                        g_adverseLastStreak, g_adverseClosedCycle));
-   PsPanelPushLine(lines, StringFormat("Account target      : %.2f %s%s", Money(InpAccTargetMoney), g_accCcy,
+   PsPanelPushLine(lines, StringFormat("Account target · %.2f %s%s", Money(InpAccTargetMoney), g_accCcy,
                                        (InpScalpAsapAccountOnly ? "  [ASAP]" : "")));
-   PsPanelPushLine(lines, "----------------------------------------------");
+
+   if(ArraySize(g_agg) > 0)
+      PsPanelPushLine(lines, "———————— by symbol ————————");
 
    for(int i = 0; i < ArraySize(g_agg); i++)
      {
       int r = SymIndex(g_agg[i].sym, false);
       double peak = (r >= 0 ? g_sym[r].peak : 0.0);
       bool armed  = (r >= 0 ? g_sym[r].armed : false);
-      PsPanelPushLine(lines, StringFormat("%-10s n=%d (w%d/l%d)  P/L %8.2f  peak %8.2f  age %4d min %s",
+      PsPanelPushLine(lines, StringFormat("%-10s  n=%d  W%d/L%d  P/L %+.2f  peak %.2f  age %d min %s",
                                           g_agg[i].sym, g_agg[i].count, g_agg[i].winCount, g_agg[i].lossCount,
                                           g_agg[i].profit, peak,
                                           AgeMinutes(g_agg[i].oldest), (armed ? "[ARMED]" : "")));
      }
 
-   PsPanelPushLine(lines, "----------------------------------------------");
-   PsPanelPushLine(lines, StringFormat("Session closes      : %d realized %.2f %s",
+   PsPanelPushLine(lines, "———————— session ————————");
+   PsPanelPushLine(lines, StringFormat("Session closes · %d · realized %+.2f %s",
                                        g_closedSession, g_realizedSession, g_accCcy));
-   PsPanelPushLine(lines, StringFormat("Last action: %s | Trading: %s",
+   PsPanelPushLine(lines, StringFormat("Last action · %s · Trading %s",
                                        g_lastAction, (TradingReady() ? "enabled" : "BLOCKED")));
 
    int nLines = ArraySize(lines);
@@ -1927,7 +2052,7 @@ void DrawPanel(double accProfit, int count)
 
    PsPanelApplyLayout(nLines);
    for(int i = 0; i < nLines; i++)
-      PsPanelSetLine(i, lines[i], C'210,218,230');
+      PsPanelSetLine(i, lines[i], PsPanelLineColor(lines[i]));
    PsPanelTrimLines(nLines);
 
    PsUpdateButtons();
@@ -1938,9 +2063,10 @@ bool PsPanelHitTitle(const int mx, const int my)
   {
    if(!InpShowPanel)
       return(false);
-   if(mx < g_panelX || mx > g_panelX + PS_PANEL_W)
+   int inset = GsxSx(8);
+   if(mx < g_panelX - inset || mx > g_panelX + g_psW + inset)
       return(false);
-   if(my < g_panelY || my > g_panelY + PS_PANEL_TITLE_H)
+   if(my < g_panelY - inset || my > g_panelY + g_psTitleH)
       return(false);
    return(true);
   }
@@ -1949,6 +2075,7 @@ void PsPanelMoveTo(const int x, const int y)
   {
    g_panelX = (int)MathMax(0, x);
    g_panelY = (int)MathMax(0, y);
+   GsxPanelClampPos(g_panelX, g_panelY, g_psW, GsxSx(220));
   }
 
 bool PsHandleChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam)
@@ -1993,18 +2120,27 @@ bool PsHandleChartEvent(const int id, const long &lparam, const double &dparam, 
          for(int i = 0; i < g_panelLinesUsed; i++)
            {
             string n = g_pnlPfx + StringFormat("L%d", i);
+            int ly = g_panelY + g_psTitleH + GsxSx(4) + i * g_psLineH;
+            if((i % 2) == 1)
+              {
+               string zb = g_pnlPfx + StringFormat("ZB%d", i);
+               if(ObjectFind(0, zb) >= 0)
+                 {
+                  ObjectSetInteger(0, zb, OBJPROP_XDISTANCE, g_panelX + GsxSx(2));
+                  ObjectSetInteger(0, zb, OBJPROP_YDISTANCE, ly - GsxSx(1));
+                 }
+              }
             if(ObjectFind(0, n) >= 0)
               {
-               ObjectSetInteger(0, n, OBJPROP_XDISTANCE, g_panelX + PS_PANEL_PAD);
-               ObjectSetInteger(0, n, OBJPROP_YDISTANCE,
-                               g_panelY + PS_PANEL_TITLE_H + 4 + i * PS_PANEL_LINE_H);
+               ObjectSetInteger(0, n, OBJPROP_XDISTANCE, g_panelX + g_psPad);
+               ObjectSetInteger(0, n, OBJPROP_YDISTANCE, ly);
               }
            }
          string tn = g_pnlPfx + "TITLE_TX";
          if(ObjectFind(0, tn) >= 0)
            {
-            ObjectSetInteger(0, tn, OBJPROP_XDISTANCE, g_panelX + PS_PANEL_PAD);
-            ObjectSetInteger(0, tn, OBJPROP_YDISTANCE, g_panelY + 3);
+            ObjectSetInteger(0, tn, OBJPROP_XDISTANCE, g_panelX + g_psPad);
+            ObjectSetInteger(0, tn, OBJPROP_YDISTANCE, g_panelY + GsxSx(3));
            }
          PsUpdateButtons();
          ChartRedraw();
@@ -2227,9 +2363,9 @@ void PsSetButton(const string tag, const int x, const int y, const int w, const 
    ObjectSetString(0, n, OBJPROP_TEXT, text);
    ObjectSetInteger(0, n, OBJPROP_COLOR, fg);
    ObjectSetInteger(0, n, OBJPROP_BGCOLOR, bg);
-   ObjectSetInteger(0, n, OBJPROP_BORDER_COLOR, clrDimGray);
-   ObjectSetInteger(0, n, OBJPROP_FONTSIZE, 9);
-   ObjectSetString(0, n, OBJPROP_FONT, "Segoe UI");
+   ObjectSetInteger(0, n, OBJPROP_BORDER_COLOR, g_psColEdge);
+   ObjectSetInteger(0, n, OBJPROP_FONTSIZE, GsxSf(9 + GsxPanelFontBump()));
+   ObjectSetString(0, n, OBJPROP_FONT, "Segoe UI Bold");
    ObjectSetInteger(0, n, OBJPROP_STATE, false);
   }
 
@@ -2247,19 +2383,29 @@ void PsUpdateButtons()
       PsDeleteButtons();
       return;
      }
-   // Standalone controls (not docked) so they stay visible while the panel moves
+   PsApplyUiChrome();
    int x = InpBtnX;
    int y = InpBtnY;
-   PsSetButton("START", x, y, 78, 26, "START",
-               gScoutEnabled ? C'38,208,124' : C'40,44,52',
-               gScoutEnabled ? C'18,22,30' : C'222,228,240');
-   PsSetButton("STOP", x + 86, y, 78, 26, "STOP",
-               gScoutEnabled ? C'40,44,52' : C'235,77,75',
-               gScoutEnabled ? C'222,228,240' : C'18,22,30');
-   PsSetButton("AUTO", x + 172, y, 78, 26,
+   int bh = GsxSx(26);
+   // Equal pack across a scaled content width (no fixed 78/86 collisions)
+   int packW = GsxSx(260);
+   GsxLayCtx blay;
+   GsxLayBegin(blay, x, y, packW, GsxSp(6));
+   GsxLayRowStart(blay, bh);
+   GsxLaySlot bslots[];
+   GsxLayEqual(blay, 3, bslots);
+   if(ArraySize(bslots) < 3)
+      return;
+   PsSetButton("START", bslots[0].x, bslots[0].y, bslots[0].w, bslots[0].h, "START",
+               gScoutEnabled ? g_psColBull : C'40,44,52',
+               gScoutEnabled ? C'18,22,30' : g_psColText);
+   PsSetButton("STOP", bslots[1].x, bslots[1].y, bslots[1].w, bslots[1].h, "STOP",
+               gScoutEnabled ? C'40,44,52' : g_psColBear,
+               gScoutEnabled ? g_psColText : C'18,22,30');
+   PsSetButton("AUTO", bslots[2].x, bslots[2].y, bslots[2].w, bslots[2].h,
                gAdverseEnabled ? "AUTO ON" : "AUTO OFF",
                gAdverseEnabled ? C'56,168,220' : C'40,44,52',
-               gAdverseEnabled ? C'18,22,30' : C'222,228,240');
+               gAdverseEnabled ? C'18,22,30' : g_psColText);
   }
 
 bool PsHandleChartClick(const string sparam)

@@ -5,8 +5,8 @@
 //+------------------------------------------------------------------+
 #property service
 #property copyright "Profit Scouter"
-#property version   "1.22"
-#property description "Profit Scouter - Dollar Target (Service edition)"
+#property version   "2.00"
+#property description "Gsignalx Velocity 2.00 — Profit Scouter Dollar Target (Service edition)"
 #property description "Scalp ASAP; profit lock; honors chart START/STOP/AUTO via shared Instance ID."
 #property description "Profit harvest: winners-only at set levels. Adverse-bar Auto can close same-symbol losers."
 #property description "Default CloseTicket refuses losses; only ADVERSE-BAR Auto may allowLoss."

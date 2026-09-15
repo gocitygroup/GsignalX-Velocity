@@ -2,12 +2,31 @@
 
 Step-by-step install, compile, run, and verify for the connector bus + opportunity grader on one or more MetaTrader 5 terminals.
 
+### Start here if you are not technical
+
+**Plain-language Windows path (ZIP or clone → double-click → MT5):**  
+[docs/WINDOWS_DEPLOY_SIMPLE.md](docs/WINDOWS_DEPLOY_SIMPLE.md)
+
+That guide covers download/unzip, which `.bat` to run, what to click in MetaTrader, and a **Problems and fixes** table for the errors people hit most often.
+
 **Guided deploy with confirmation gates + feedback:** [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md)
 
-**Commercial v1.21 release (AutoLot / EQ / Compact panel):** [docs/RELEASE_v1.21_Commercial_Deploy.md](docs/RELEASE_v1.21_Commercial_Deploy.md)
+**Velocity 2.00 prop desk release (Service / Trade Center / Telegram / PropRisk / Scouter):** [docs/RELEASE_v2.00_Prop_Desk_Deploy.md](docs/RELEASE_v2.00_Prop_Desk_Deploy.md)
+
+**Historical commercial v1.21 (AutoLot / EQ / Compact panel):** [docs/RELEASE_v1.21_Commercial_Deploy.md](docs/RELEASE_v1.21_Commercial_Deploy.md)
 
 For protocol/schema details see [ARCHITECTURE_CONNECTOR_BUS.md](ARCHITECTURE_CONNECTOR_BUS.md).  
 For Profit Scouter inputs see [README_ProfitScouter.md](README_ProfitScouter.md).
+
+---
+
+## 0. Non-tech notice (read once)
+
+1. This toolkit is **not** a phone app — it runs inside **MetaTrader 5 on Windows**.  
+2. “Install” means: copy files into MT5’s Data Folder and compile them (the `.bat` does this).  
+3. After the `.bat`, you must still turn **Algo Trading ON** and **start Services** in MT5 — scripts cannot press those buttons for you.  
+4. Use a **demo** account until Confirm says PASS and you understand PLAY / STOP / Scouter.  
+5. If anything fails, do **not** keep clicking randomly — match the message in [WINDOWS_DEPLOY_SIMPLE.md § Problems and fixes](docs/WINDOWS_DEPLOY_SIMPLE.md#problems-and-fixes).
 
 ---
 
@@ -29,6 +48,8 @@ For Profit Scouter inputs see [README_ProfitScouter.md](README_ProfitScouter.md)
 | `Include/GSignalX/*.mqh` | `MQL5\Include\GSignalX\` |
 | `Include/ProfitScouter/*.mqh` | `MQL5\Include\ProfitScouter\` |
 | `GsignalX_GocityGroup.mq5` | `MQL5\Experts\` |
+| `GsignalX_Multisymbol_Dashboard.mq5` | `MQL5\Experts\` |
+| `GsignalX_Service.mq5` | `MQL5\Services\` |
 | `ProfitScouter_DollarTarget.mq5` | `MQL5\Experts\` |
 | `ProfitScouter_Service.mq5` | `MQL5\Services\` |
 | `ProfitOpportunity_Grader.mq5` | `MQL5\Services\` |
@@ -61,10 +82,16 @@ Typical path: `%APPDATA%\MetaQuotes\Terminal\<HASH>\`
 
 After deploy:
 
-1. In MT5: Algo Trading ON → start `ProfitScouter_Service` + `ProfitOpportunity_Grader` → attach GsignalX (bus ON)  
+1. In MT5: Algo Trading ON → start `GsignalX_Service` + `ProfitScouter_Service` + `ProfitOpportunity_Grader` → attach `GsignalX_Multisymbol_Dashboard` (same magic)  
 2. Double-click [`deploy\Confirm-After-Start.bat`](deploy/Confirm-After-Start.bat)
 
-If MetaEditor is not found, edit the deploy `.bat` and set `METAEDITOR=...`.
+**Stuck?** [docs/WINDOWS_DEPLOY_SIMPLE.md](docs/WINDOWS_DEPLOY_SIMPLE.md) — Problems and fixes (SmartScreen, MetaEditor path, missing Navigator items, Telegram WebRequest, stale bus).
+
+**Velocity 2.00 Trade Center:** Attach `GsignalX_Multisymbol_Dashboard` (same magic as Service). Larger Trade Center buttons, Telegram notifier, and challenge soft-locks (daily loss / equity DD / max trades / consistency / profit target / Friday / news). Breaches set `GSX_SVC_RUN=0` and Telegram `[PROP]` — **never closes trades**. Allow WebRequest URL `https://api.telegram.org` under Tools → Options → Expert Advisors.
+
+**Multisymbol desk:** Prefer one `GsignalX_Service` per magic with live roster from the Dashboard. Keep chart EAs for UI/monitoring; with Service OWN=1 they defer fleet/auto-entries unless `InpChartEntriesWhenService=true`. ProfitScouter still owns all closes.
+
+If MetaEditor is not found, edit the deploy `.bat` and set `METAEDITOR=...` to your broker’s `MetaEditor64.exe` path (see the simple guide).
 
 ### PowerShell (from repo root `MQ5\files`)
 
@@ -259,26 +286,39 @@ Bus schema uses `"version":1`. Old readers ignore unknown versions; keep publish
 
 ## 10. Troubleshooting
 
+**Non-tech first stop:** [docs/WINDOWS_DEPLOY_SIMPLE.md — Problems and fixes](docs/WINDOWS_DEPLOY_SIMPLE.md#problems-and-fixes)
+
 | Symptom | Fix |
 |---|---|
-| Compile: `file not found` Include | Includes not under `MQL5\Include\GSignalX` (and ProfitScouter) |
-| Service missing in Navigator | File must live in `MQL5\Services\` then Refresh |
+| ZIP has no `deploy` folder | Open the **inner** extracted folder until you see `deploy\` and `.mq5` files |
+| SmartScreen blocks `.bat` | More info → Run anyway (only for this toolkit) |
+| `No MT5 terminal data folders found` | Open MT5 once (same Windows user), then re-run deploy |
+| `Could not find MetaEditor64.exe` | Set `METAEDITOR=...` in `Click-and-Run-Deploy.bat` / `Clean-and-Deploy.bat` to your broker’s MetaEditor path |
+| Compile: `file not found` Include | Includes not under `MQL5\Include\GSignalX` (and ProfitScouter) — re-run Clean-and-Deploy |
+| Compile: N errors (N > 0) | Open the `.log` beside the `.mq5` in the Data Folder; fix path / clean old includes |
+| Service / Expert missing in Navigator | File must live in `MQL5\Services\` or `Experts\` then Navigator → Refresh |
 | `bus=ON` but no Common Files | Wrong Windows user / sandboxed terminal; confirm Common\Files path |
-| Grader `terminals_scanned=0` | No heartbeat yet — start Scouter or GsignalX with `InpBusEnable` |
-| Grades empty | No positive entry/harvest scores yet; open demo positions or wait for engine agreement |
-| Trading BLOCKED | Algo Trading off, or investor password / expert trading disabled |
+| Grader `terminals_scanned=0` | No heartbeat yet — start Scouter or GSignalX Service/EA with bus on |
+| Grades empty / stale WARN | Start publishers; wait ~60s; run `Confirm-After-Start.bat` |
+| Trading BLOCKED / smiley X | Algo Trading off, or Common tab disallow, or investor password |
+| No entries | Service not RUN, Prop LOCK, STOP, weekend FX, or fleet already full |
+| Positions never bank | Start **one** `ProfitScouter_Service` (or DollarTarget START) |
+| Telegram WebRequest failed | Allow `https://api.telegram.org` under Expert Advisors options |
 | Two terminals, no shared grades | Different Windows accounts, or Grader not started |
 
 ---
 
 ## 11. Post-deploy checklist (print / tick)
 
+- [ ] Toolkit root contains `deploy\` (see [WINDOWS_DEPLOY_SIMPLE.md](docs/WINDOWS_DEPLOY_SIMPLE.md))  
 - [ ] Includes copied to every terminal in use  
-- [ ] All five programs compiled (0 errors)  
+- [ ] Primary hosts compiled (**0 errors, 0 warnings**) — Velocity **2.00**  
 - [ ] Algo Trading enabled  
-- [ ] ProfitScouter Service started (`InpBusEnable=true`)  
+- [ ] `GsignalX_Service` started (entries)  
+- [ ] `ProfitScouter_Service` started (`InpBusEnable=true`) — exits  
 - [ ] Grader Service started (one per PC/user)  
-- [ ] GsignalX attached with bus + grades on (optional but recommended)  
+- [ ] `GsignalX_Multisymbol_Dashboard` attached (same magic; optional Telegram URL allowlist)  
+- [ ] Optional chart `GsignalX_GocityGroup` for strip/UI  
 - [ ] Common Files bus tree populated  
-- [ ] `grades\latest.json` updating  
-- [ ] Demo checklist in architecture doc completed before live  
+- [ ] `Confirm-After-Start.bat` → SUMMARY PASS (or PASS + idle WARN)  
+- [ ] Demo session understood before live / challenge  

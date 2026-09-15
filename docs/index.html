@@ -7,48 +7,21 @@
 <link rel="canonical" href="Gsignalx_Velocity_Users_Manual.html"/>
 <link rel="icon" href="assets/icons/group-icon.svg" type="image/svg+xml"/>
 <meta name="color-scheme" content="dark light"/>
-<meta name="description" content="Gsignalx Velocity v1.21 trader manual — redirect"/>
-<title>Gsignalx Velocity v1.21 — Trader Manual</title>
+<meta name="description" content="Gsignalx Velocity 2.00 trader &amp; investor manual — redirect"/>
+<title>Gsignalx Velocity 2.00 — Trader &amp; Investor Manual</title>
+<link rel="stylesheet" href="assets/css/gsx-docs.css"/>
+<script src="assets/js/gsx-theme.js"></script>
 <script>
-(function () {
-  try {
-    var k = "gsx-velocity-theme";
-    var s = localStorage.getItem(k);
-    var t = s || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-    document.documentElement.setAttribute("data-theme", t);
-    document.documentElement.style.colorScheme = t;
-  } catch (e) {
-    document.documentElement.setAttribute("data-theme", "dark");
-  }
-  location.replace("Gsignalx_Velocity_Users_Manual.html" + (location.hash || ""));
-})();
+location.replace("Gsignalx_Velocity_Users_Manual.html" + (location.hash || ""));
 </script>
 <style>
-:root, [data-theme="dark"] {
-  --bg: #0A121E;
-  --text: #F2F7FC;
-  --muted: #A8C4DB;
-  --gold: #FBA927;
-  --brand-blue: #469AD4;
-  --link: #7EBFE8;
-  color-scheme: dark;
-}
-[data-theme="light"] {
-  --bg: #F4F8FC;
-  --text: #0A1F33;
-  --muted: #4A6A82;
-  --gold: #D99212;
-  --brand-blue: #2E7BB0;
-  --link: #1E6FA8;
-  color-scheme: light;
-}
 body {
   margin: 0;
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
   place-items: center;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font);
   background: var(--bg);
   color: var(--text);
   padding:
@@ -57,14 +30,8 @@ body {
     max(24px, env(safe-area-inset-bottom, 0px))
     max(24px, env(safe-area-inset-left, 0px));
 }
-.splash {
-  text-align: center;
-  max-width: 28rem;
-  width: 100%;
-  padding: 0 8px;
-}
+.splash { text-align: center; max-width: 28rem; width: 100%; padding: 0 8px; }
 a { color: var(--gold); font-weight: 700; text-decoration: none; }
-a:hover { text-decoration: underline; color: var(--brand-blue); }
 p { color: var(--muted); margin: 0.5em 0; line-height: 1.5; }
 strong { color: var(--gold); }
 .ver {
@@ -78,23 +45,14 @@ strong { color: var(--gold); }
   border-radius: 999px;
   padding: 4px 10px;
 }
-img {
-  margin: 0 auto 16px;
-  display: block;
-  max-width: min(160px, 40vw);
-  height: auto;
-}
-@media (max-width: 480px) {
-  body { font-size: 15px; }
-  .splash { max-width: 22rem; }
-}
+img { margin: 0 auto 16px; display: block; max-width: min(160px, 40vw); height: auto; }
 </style>
 </head>
 <body>
   <div class="splash">
     <img src="assets/icons/group-icon.svg" alt="Gocity Group" width="160" height="88"/>
-    <p>Opening <strong>Gsignalx Velocity v1.21</strong> trader manual…</p>
-    <p class="ver">GSignalX v1.21 · ProfitScouter v1.21</p>
+    <p>Opening <strong>Gsignalx Velocity 2.00</strong> trader manual…</p>
+    <p class="ver">Velocity 2.00 · bus schema v1 · hardening 2.01</p>
     <p><a href="Gsignalx_Velocity_Users_Manual.html">Continue if you are not redirected</a></p>
   </div>
 </body>

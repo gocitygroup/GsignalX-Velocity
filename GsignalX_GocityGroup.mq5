@@ -18,11 +18,12 @@
 //|  (c) Gocity Group - GsignalX. Research / educational use.        |
 //+------------------------------------------------------------------+
 #property copyright "Gocity Group"
-#property version   "1.21"
-#property description "GsignalX v1.21 - PP SuperTrend + ATR SuperTrend + SuperBollingerTrend"
+#property version   "2.00"
+#property description "Gsignalx Velocity 2.00 - PP SuperTrend + ATR SuperTrend + SuperBollingerTrend"
 #property description "AutoLot/FIXED + EQ equity guide + Compact/Full outcome panel."
 #property description "Entry engine: limit/stop bracket, scalping drill, fleet fill."
 #property description "Fleet: 4 pairs complete = open position OR working pending."
+#property description "Multisymbol roster strip; defers when GsignalX_Service owns magic."
 #property description "Scouter mode: catastrophe SL; FOLLOW/WAIT; movable panel."
 #property description "STOP / HALT pause the operation only - neither ever closes a trade."
 
@@ -30,11 +31,19 @@
 #include <Trade\PositionInfo.mqh>
 #include <GSignalX/BusProtocol.mqh>
 #include <GSignalX/BusIO.mqh>
+#include <GSignalX/SignalBus.mqh>
 #include <GSignalX/SymbolCanon.mqh>
 #include <GSignalX/TerminalIdentity.mqh>
 #include <GSignalX/OpportunityGrade.mqh>
 #include <GSignalX/LotSizing.mqh>
 #include <GSignalX/ChartPanel.mqh>
+#include <GSignalX/Fleet.mqh>
+#include <GSignalX/Engines.mqh>
+#include <GSignalX/MarketGates.mqh>
+#include <GSignalX/MultisymbolPanel.mqh>
+#include <GSignalX/RosterStore.mqh>
+#include <GSignalX/TelegramNotifier.mqh>
+#include <GSignalX/TgDealWatch.mqh>
 
 //+------------------------------------------------------------------+
 //| Enumerations                                                     |
@@ -153,6 +162,7 @@ input bool        InpFleetEnable          = true;  // Keep required active pairs
 input int         InpFleetTargetPairs     = 4;     // Required pairs: open OR pending (this magic)
 input int         InpFleetFillCooldownSec= 10;    // Min seconds between fleet fills (anti-stampede)
 input bool        InpFleetRequireDrill    = false; // Fill only inside the drill window
+input bool        InpChartEntriesWhenService = false; // When Service OWN=1: allow chart auto-entries
 
 input group "5e) Exit ownership"
 input EnExitMode  InpExitMode          = GSX_EXIT_SCOUTER; // Exit ownership (Scouter = signal never closes)
@@ -194,14 +204,18 @@ input string      InpComment       = "GsignalX";   // Order comment
 input group "10) Chart appearance & controls"
 input EnPanelDensity InpPanelDensity = GSX_PANEL_COMPACT; // Panel density (Compact investor / Full trader)
 input bool         InpShowButtons  = true;               // Show PLAY/STOP/HALT/FOLLOW|WAIT/SPREAD|IGN/AUTOLOT|FIXED/EQ
+input bool         InpShowRosterStrip = true;            // Compact multisymbol roster strip (v1.24)
+input int          InpRosterStripPageSize = 4;           // Roster strip page size
 input bool         InpShowArrows   = true;               // Draw signal arrows on the chart
 input int          InpArrowBars    = 300;                // Arrows: how many bars back
 input bool         InpShowLevels   = true;               // Draw engine + trade levels
 input ENUM_BASE_CORNER InpCorner   = CORNER_LEFT_UPPER;  // Panel corner
 input int          InpPanelX       = 12;                 // Panel X (initial; drag title to move; saved)
 input int          InpPanelY       = 22;                 // Panel Y (initial; drag title to move; saved)
+input double       InpUiScale      = 1.5;                // UI scale request (system applies −40% size policy)
+input ENUM_GSX_UI_VISION InpUiVision = GSX_VISION_COMFORT; // Near / Comfort / Far readability
 input string       InpFont         = "Segoe UI";         // Panel font
-input int          InpFontSize     = 9;                  // Panel font size
+input int          InpFontSize     = 9;                  // Panel font size (design units)
 input color        InpColBull      = C'38,208,124';      // Bullish colour
 input color        InpColBear      = C'235,77,75';       // Bearish colour
 input color        InpColNeutral   = C'150,155,170';     // Neutral colour
@@ -216,6 +230,16 @@ input bool        InpAlertPopup    = false;        // Popup alert on signal
 input bool        InpAlertPush     = false;        // Push notification on signal
 input bool        InpVerboseSignals = true;        // Log skip reasons when a flip is filtered
 
+input group "9b) Telegram notifier (chart attach)"
+input bool   InpTgEnable             = false;
+input string InpTgBotToken           = "";
+input string InpTgChatId1            = "";
+input string InpTgChatId2            = "";
+input string InpTgChatId3            = "";
+input int    InpTgSilentStartHourGMT = -1;
+input int    InpTgSilentEndHourGMT   = -1;
+input int    InpTgRatePerMin         = 20;
+input int    InpTgMaxRetries         = 3;
 input group "11) Connector bus (FILE_COMMON)"
 input bool        InpBusEnable       = true;       // Publish signals + heartbeat
 input int         InpSwingStartHour  = 12;         // Swing window start (server hour)
@@ -254,6 +278,8 @@ int      gPendDir      = 0;   // direction of the pending bracket currently work
 double   gIntendedLot  = 0.0; // size one leg was supposed to fill for
 bool     gOcoRequest   = false; // event handler asked for a cleanup pass
 bool     gTradingEnabled = true;  // PLAY / STOP state
+GsxTgConfig g_chartTgCfg;
+bool     g_chartTgSeeded = false;
 string   gPfx            = "GSX_";
 int      gLastSigDir     = 0;     // direction of the most recent trigger flip
 int      gLastSigIdx     = -1;    // its index in the calculation arrays
@@ -285,14 +311,37 @@ bool     g_panelDragging = false;
 bool     g_panelDragOffSet = false;
 int      g_panelDragOffX = 0;
 int      g_panelDragOffY = 0;
+int      g_panelW = 500;
+int      g_panelLastH = 280;  // last painted signal panel height (roster strip anchor)
 string   g_lastPanelState = "OPEN";
-int      g_panelW = 400;
 int      g_panelTitleH = 22;
 string   gPanelBlockReason = "";  // surfaced on Status (equity/spread/daily/…)
 bool     gUiDirty = true;
 ulong    gUiLastMs = 0;
 bool     gUiNeedChartArt = true;  // redraw arrows/levels on bar or position change
 int      gUiLastPosDir = 0;       // track flat↔position for art dirty
+
+//+------------------------------------------------------------------+
+//| Service coexistence (v1.23)                                      |
+//+------------------------------------------------------------------+
+bool ChartServiceOwnsFleet()
+  {
+   return(GsxFleetServiceOwns(InpMagic));
+  }
+
+// Auto entries/fleet: allowed unless Service owns this magic (unless override).
+bool ChartAutoEntriesAllowed()
+  {
+   if(!ChartServiceOwnsFleet())
+      return(true);
+   return(InpChartEntriesWhenService);
+  }
+
+void ChartSyncServiceRun(const bool on)
+  {
+   // Chart PLAY/STOP/HALT drives Service RUN GV for the same magic.
+   GsxFleetServiceRunSet(InpMagic, on);
+  }
 
 
 //+------------------------------------------------------------------+
@@ -306,83 +355,65 @@ void GsxPublishBusState(const string tradeState)
       return;
    gBusLastPub = TimeCurrent();
 
+   // v2.01 DRY: publish via shared SignalBus (same schema as Service)
+   GsxEngineState st;
+   st.n = 0;
+   st.ready = false;
+   st.lastBarTime = 0;
+   st.lastSigDir = gLastSigDir;
+   st.lastSigIdx = gLastSigIdx;
+   st.status = "";
+   if(gDataReady && gN >= 1)
+     {
+      int last = gN - 1;
+      ArrayResize(st.ppDir, 1);
+      ArrayResize(st.stDir, 1);
+      ArrayResize(st.sbtDir, 1);
+      st.ppDir[0] = gPPdir[last];
+      st.stDir[0] = gSTdir[last];
+      st.sbtDir[0] = gSBTdir[last];
+      st.n = 1;
+      st.ready = true;
+     }
+
+   string owner = (ChartServiceOwnsFleet() ? "service" : "chart");
+   GsxSignalBusWriteSymbol(_Symbol, st, InpMagic, InpMinAgree,
+                           (InpMode == GSX_SIMPLE ? 0 : 1),
+                           EffectiveMaxSpreadPt(), InpStaleTickSec,
+                           gIgnoreSpread,
+                           InpSwingStartHour, InpSwingEndHour, InpCryptoExtraList,
+                           true, gClosedCount, gClosedWins, gClosedLosses,
+                           gClosedRealized, owner);
+   GsxSignalBusHeartbeat("gsignalx");
+
+   // Local grade line for chart strip (advisory)
    string reason = "";
    bool marketOpen = IsMarketOpen(reason);
    bool cryptoExempt = CryptoWeekendExempt();
-   bool calendarWeekend = false;
    bool weekend = false;
    bool fridayLate = false;
    MqlDateTime dt;
    TimeToStruct(TimeCurrent(), dt);
-   if(dt.day_of_week == SATURDAY || dt.day_of_week == SUNDAY)
-      calendarWeekend = true;
-   // grading: crypto exempt must not be penalized for calendar weekend
-   weekend = calendarWeekend && !cryptoExempt;
+   if((dt.day_of_week == SATURDAY || dt.day_of_week == SUNDAY) && !cryptoExempt)
+      weekend = true;
    if(InpFridayStop && !cryptoExempt &&
       dt.day_of_week == FRIDAY && dt.hour >= InpFridayStopHr)
       fridayLate = true;
 
    int bull = 0, bear = 0, direction = 0;
-   if(gDataReady && gN >= 1)
+   if(st.ready)
      {
-      int last = gN - 1;
-      bull = (gPPdir[last] == 1 ? 1 : 0) + (gSTdir[last] == 1 ? 1 : 0) + (gSBTdir[last] == 1 ? 1 : 0);
+      bull = (st.ppDir[0] == 1 ? 1 : 0) + (st.stDir[0] == 1 ? 1 : 0) + (st.sbtDir[0] == 1 ? 1 : 0);
       bear = 3 - bull;
-      if(bull > bear)
-         direction = 1;
-      else
-         if(bear > bull)
-            direction = -1;
-      if(gLastSigDir != 0)
-         direction = gLastSigDir;
+      if(bull > bear) direction = 1;
+      else if(bear > bull) direction = -1;
+      if(st.lastSigDir != 0) direction = st.lastSigDir;
      }
-
    long spread = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
    bool stale = false;
    datetime tickTime = (datetime)SymbolInfoInteger(_Symbol, SYMBOL_TIME);
    if(InpStaleTickSec > 0 && tickTime > 0 && (TimeCurrent() - tickTime) > InpStaleTickSec)
       stale = true;
-
-   bool swing = GsxInSwingWindow(TimeCurrent(), InpSwingStartHour, InpSwingEndHour);
-   string tid = GsxMakeTid();
-   string canon = GsxSymbolCanon(_Symbol);
-
-   //--- live fleet + session outcome snapshot (real time, every publish)
-   int    fleetPos  = 0;
-   double fleetPL   = 0.0;
-   FleetFloating(fleetPL, fleetPos);
-
-   string j = "{";
-   j += GsxJsonKV_I("version", GSX_BUS_VERSION);
-   j += GsxJsonKV_I("ts", (long)TimeCurrent());
-   j += GsxJsonKV_S("tid", tid);
-   j += GsxJsonKV_S("symbol", _Symbol);
-   j += GsxJsonKV_S("symbol_canon", canon);
-   j += GsxJsonKV_I("direction", direction);
-   j += GsxJsonKV_I("bull", bull);
-   j += GsxJsonKV_I("bear", bear);
-   j += GsxJsonKV_I("min_agree", InpMinAgree);
-   j += GsxJsonKV_S("mode", (InpMode == GSX_SIMPLE ? "simple" : "advanced"));
-   j += GsxJsonKV_B("is_crypto", GsxIsCryptoSymbolEx(_Symbol, InpCryptoExtraList));
-   j += GsxJsonKV_B("in_session", marketOpen && !weekend);
-   j += GsxJsonKV_B("weekend", weekend);
-   j += GsxJsonKV_B("friday_late", fridayLate);
-   j += GsxJsonKV_B("swing_window", swing);
-   j += GsxJsonKV_I("spread_pt", spread);
-   j += GsxJsonKV_I("max_spread_pt", EffectiveMaxSpreadPt());
-   j += GsxJsonKV_B("stale_tick", stale);
-   j += GsxJsonKV_B("market_open", marketOpen, false);
-   j += GsxJsonKV_I("positions", fleetPos);
-   j += GsxJsonKV_D("fleet_floating", fleetPL);
-   j += GsxJsonKV_I("closed_count", gClosedCount);
-   j += GsxJsonKV_I("closed_wins", gClosedWins);
-   j += GsxJsonKV_I("closed_losses", gClosedLosses);
-   j += GsxJsonKV_D("closed_realized", gClosedRealized, false);
-   j += "}";
-
-   GsxBusWriteAtomic(GsxBusSignalPath(tid, canon), j);
-   GsxBusRegisterSignal(tid, canon);
-   GsxBusPublishHeartbeat("gsignalx");
 
    GsxEntryInputs ein;
    ein.direction = direction;
@@ -392,7 +423,7 @@ void GsxPublishBusState(const string tradeState)
    ein.in_session = marketOpen && !weekend;
    ein.weekend = weekend;
    ein.friday_late = fridayLate;
-   ein.swing_window = swing;
+   ein.swing_window = GsxInSwingWindow(TimeCurrent(), InpSwingStartHour, InpSwingEndHour);
    ein.spread_pt = (int)spread;
    ein.max_spread_pt = EffectiveMaxSpreadPt();
    ein.stale_tick = stale;
@@ -411,118 +442,37 @@ void GsxPublishBusState(const string tradeState)
   }
 
 //+------------------------------------------------------------------+
-//| Helpers - math                                                   |
-//+------------------------------------------------------------------+
-void SmaSeries(const double &src[], const int n, const int period, double &out[])
-  {
-   ArrayResize(out, n);
-   ArrayInitialize(out, 0.0);
-   if(period <= 0 || n < period)
-      return;
-   double sum = 0.0;
-   for(int i = 0; i < n; i++)
-     {
-      sum += src[i];
-      if(i >= period)
-         sum -= src[i - period];
-      if(i >= period - 1)
-         out[i] = sum / period;
-     }
-  }
-
-void StdDevSeries(const double &src[], const int n, const int period, double &out[])
-  {
-   ArrayResize(out, n);
-   ArrayInitialize(out, 0.0);
-   if(period <= 1 || n < period)
-      return;
-   for(int i = period - 1; i < n; i++)
-     {
-      double mean = 0.0;
-      for(int k = i - period + 1; k <= i; k++)
-         mean += src[k];
-      mean /= period;
-      double acc = 0.0;
-      for(int k = i - period + 1; k <= i; k++)
-         acc += (src[k] - mean) * (src[k] - mean);
-      out[i] = MathSqrt(acc / period);   // population stdev, matches Pine ta.stdev
-     }
-  }
-
-// Wilder smoothing, matches Pine ta.atr / ta.rma
-void RmaSeries(const double &src[], const int n, const int period, double &out[])
-  {
-   ArrayResize(out, n);
-   ArrayInitialize(out, 0.0);
-   if(period <= 0 || n < period)
-      return;
-   double sum = 0.0;
-   for(int i = 0; i < period; i++)
-      sum += src[i];
-   double prev = sum / period;
-   out[period - 1] = prev;
-   for(int i = period; i < n; i++)
-     {
-      prev = (prev * (period - 1) + src[i]) / period;
-      out[i] = prev;
-     }
-  }
-
-//+------------------------------------------------------------------+
-//| Core - rebuild every engine from raw rates                       |
+//| Core - rebuild every engine from raw rates (shared Engines.mqh)  |
 //+------------------------------------------------------------------+
 bool CalcEngines()
   {
    gDataReady = false;
 
-   int shift  = InpEvalClosedBar ? 1 : 0;      // 1 = ignore the forming bar
-   int want   = InpLookback;
-   int warmup = InpBBLen + InpMaLen + InpStLen + InpPPAtrLen + InpRiskAtrLen + InpPivotPrd * 4 + 60;
-   if(want < warmup + 100)
-      want = warmup + 100;
+   GsxEngineParams p;
+   p.evalClosedBar = InpEvalClosedBar;
+   p.lookback      = InpLookback;
+   p.pivotPrd      = InpPivotPrd;
+   p.ppFactor      = InpPPFactor;
+   p.ppAtrLen      = InpPPAtrLen;
+   p.stLen         = InpStLen;
+   p.stMult        = InpStMult;
+   p.useMA         = InpUseMA;
+   p.maLen         = InpMaLen;
+   p.bbLen         = InpBBLen;
+   p.bbMult        = InpBBMult;
+   p.riskAtrLen    = InpRiskAtrLen;
+   p.trigPP        = InpTrigPP;
+   p.trigST        = InpTrigST;
+   p.trigSBT       = InpTrigSBT;
 
-   MqlRates r[];
-   ArraySetAsSeries(r, false);                 // index 0 = oldest
-   int n = CopyRates(_Symbol, _Period, shift, want, r);
-   if(n < warmup)
+   GsxEngineState st;
+   if(!GsxCalcEngines(_Symbol, (ENUM_TIMEFRAMES)_Period, p, st))
      {
-      gStatus = "waiting for history (" + IntegerToString(n) + " bars)";
+      gStatus = (st.status == "" ? "waiting for history" : st.status);
       return(false);
      }
 
-   double hi[], lo[], cl[], hl2[], tr[];
-   ArrayResize(hi, n);  ArrayResize(lo, n);  ArrayResize(cl, n);
-   ArrayResize(hl2, n); ArrayResize(tr, n);
-
-   for(int i = 0; i < n; i++)
-     {
-      hi[i]  = r[i].high;
-      lo[i]  = r[i].low;
-      cl[i]  = r[i].close;
-      hl2[i] = (r[i].high + r[i].low) / 2.0;
-      if(i == 0)
-         tr[i] = hi[i] - lo[i];
-      else
-        {
-         double a = hi[i] - lo[i];
-         double b = MathAbs(hi[i] - cl[i - 1]);
-         double c = MathAbs(lo[i] - cl[i - 1]);
-         tr[i] = MathMax(a, MathMax(b, c));
-        }
-     }
-
-   double atrPP[], atrST[], atrRisk[], maArr[];
-   RmaSeries(tr, n, InpPPAtrLen,   atrPP);
-   RmaSeries(tr, n, InpStLen,      atrST);
-   RmaSeries(tr, n, InpRiskAtrLen, atrRisk);
-   SmaSeries(cl, n, InpMaLen,      maArr);
-
-   double smaHi[], smaLo[], sdHi[], sdLo[];
-   SmaSeries(hi, n, InpBBLen, smaHi);
-   SmaSeries(lo, n, InpBBLen, smaLo);
-   StdDevSeries(hi, n, InpBBLen, sdHi);
-   StdDevSeries(lo, n, InpBBLen, sdLo);
-
+   int n = st.n;
    ArrayResize(gPPdir, n);   ArrayResize(gSTdir, n);   ArrayResize(gSBTdir, n);
    ArrayResize(gPPline, n);  ArrayResize(gSTline, n);  ArrayResize(gSBTline, n);
    ArrayResize(gMA, n);      ArrayResize(gAtrRisk, n);
@@ -530,161 +480,25 @@ bool CalcEngines()
    ArrayResize(gHigh, n);    ArrayResize(gLow, n);
    ArrayResize(gOpen, n);
 
-   //--- Engine 1 : PP SuperTrend -----------------------------------
-   double center = 0.0;
-   bool   haveCenter = false;
-   double ppTU[], ppTD[];
-   ArrayResize(ppTU, n); ArrayResize(ppTD, n);
-   ArrayInitialize(ppTU, 0.0); ArrayInitialize(ppTD, 0.0);
-
-   int prd = InpPivotPrd;
    for(int i = 0; i < n; i++)
      {
-      //--- pivot confirmed at bar i refers to bar j = i - prd
-      int j = i - prd;
-      if(j - prd >= 0)
-        {
-         bool isPH = true, isPL = true;
-         for(int k = j - prd; k <= j + prd; k++)
-           {
-            if(k == j)
-               continue;
-            if(hi[k] >= hi[j]) isPH = false;
-            if(lo[k] <= lo[j]) isPL = false;
-           }
-         double lastpp = 0.0;
-         bool   got    = false;
-         if(isPH)      { lastpp = hi[j]; got = true; }
-         else if(isPL) { lastpp = lo[j]; got = true; }
-         if(got)
-           {
-            if(!haveCenter) { center = lastpp; haveCenter = true; }
-            else            { center = (center * 2.0 + lastpp) / 3.0; }
-           }
-        }
-
-      double up = 0.0, dn = 0.0;
-      bool   valid = (haveCenter && atrPP[i] > 0.0);
-      if(valid)
-        {
-         up = center - InpPPFactor * atrPP[i];
-         dn = center + InpPPFactor * atrPP[i];
-        }
-
-      if(i == 0 || !valid)
-        {
-         ppTU[i]   = up;
-         ppTD[i]   = dn;
-         gPPdir[i] = (i == 0) ? 1 : gPPdir[i - 1];
-        }
-      else
-        {
-         double prevTU = (ppTU[i - 1] != 0.0) ? ppTU[i - 1] : up;
-         double prevTD = (ppTD[i - 1] != 0.0) ? ppTD[i - 1] : dn;
-         ppTU[i] = (cl[i - 1] > prevTU) ? MathMax(up, prevTU) : up;
-         ppTD[i] = (cl[i - 1] < prevTD) ? MathMin(dn, prevTD) : dn;
-         if(cl[i] > prevTD)      gPPdir[i] =  1;
-         else if(cl[i] < prevTU) gPPdir[i] = -1;
-         else                    gPPdir[i] = gPPdir[i - 1];
-        }
-      gPPline[i] = (gPPdir[i] == 1) ? ppTU[i] : ppTD[i];
+      gPPdir[i]   = st.ppDir[i];
+      gSTdir[i]   = st.stDir[i];
+      gSBTdir[i]  = st.sbtDir[i];
+      gPPline[i]  = st.ppLine[i];
+      gSTline[i]  = st.stLine[i];
+      gSBTline[i] = st.sbtLine[i];
+      gMA[i]      = st.ma[i];
+      gAtrRisk[i] = st.atrRisk[i];
+      gClose[i]   = st.close[i];
+      gBarTime[i] = st.barTime[i];
+      gOpen[i]    = st.open[i];
+      gHigh[i]    = st.high[i];
+      gLow[i]     = st.low[i];
      }
 
-   //--- Engine 2 : classic ATR SuperTrend --------------------------
-   double stUp[], stDn[];
-   ArrayResize(stUp, n); ArrayResize(stDn, n);
-   ArrayInitialize(stUp, 0.0); ArrayInitialize(stDn, 0.0);
-   for(int i = 0; i < n; i++)
-     {
-      bool valid = (atrST[i] > 0.0);
-      double u = valid ? hl2[i] - InpStMult * atrST[i] : 0.0;
-      double d = valid ? hl2[i] + InpStMult * atrST[i] : 0.0;
-      if(i == 0 || !valid)
-        {
-         stUp[i]   = u;
-         stDn[i]   = d;
-         gSTdir[i] = (i == 0) ? 1 : gSTdir[i - 1];
-        }
-      else
-        {
-         double u1 = (stUp[i - 1] != 0.0) ? stUp[i - 1] : u;
-         double d1 = (stDn[i - 1] != 0.0) ? stDn[i - 1] : d;
-         stUp[i] = (cl[i - 1] > u1) ? MathMax(u, u1) : u;
-         stDn[i] = (cl[i - 1] < d1) ? MathMin(d, d1) : d;
-         int prev = gSTdir[i - 1];
-         if(prev == -1 && cl[i] > d1)     gSTdir[i] =  1;
-         else if(prev == 1 && cl[i] < u1) gSTdir[i] = -1;
-         else                             gSTdir[i] = prev;
-        }
-      gSTline[i] = (gSTdir[i] == 1) ? stUp[i] : stDn[i];
-     }
-
-   //--- Engine 3 : SuperBollingerTrend -----------------------------
-   double line = 0.0;
-   int    dir  = 1;
-   bool   haveLine = false;
-   for(int i = 0; i < n; i++)
-     {
-      bool valid = (smaHi[i] != 0.0 && smaLo[i] != 0.0 && i >= InpBBLen);
-      if(!valid)
-        {
-         gSBTline[i] = 0.0;
-         gSBTdir[i]  = dir;
-         continue;
-        }
-      double bbUp = smaHi[i] + sdHi[i] * InpBBMult;
-      double bbDn = smaLo[i] - sdLo[i] * InpBBMult;
-
-      if(!haveLine)
-        {
-         line = bbDn;
-         dir  = 1;
-         haveLine = true;
-        }
-      else
-         if(dir == 1)
-           {
-            if(cl[i] < line) { line = bbUp; dir = -1; }
-            else             { line = MathMax(line, bbDn); }
-           }
-         else
-           {
-            if(cl[i] > line) { line = bbDn; dir = 1; }
-            else             { line = MathMin(line, bbUp); }
-           }
-      gSBTline[i] = line;
-      gSBTdir[i]  = dir;
-     }
-
-   for(int i = 0; i < n; i++)
-     {
-      gMA[i]      = maArr[i];
-      gAtrRisk[i] = atrRisk[i];
-      gClose[i]   = cl[i];
-      gBarTime[i] = r[i].time;
-      gOpen[i]    = r[i].open;
-      gHigh[i]    = hi[i];
-      gLow[i]     = lo[i];
-     }
-
-   //--- most recent flip among the enabled trigger engines
-   gLastSigDir = 0;
-   gLastSigIdx = -1;
-   for(int i = n - 1; i >= 1 && gLastSigIdx < 0; i--)
-     {
-      bool up = (InpTrigPP  && gPPdir[i]  ==  1 && gPPdir[i - 1]  == -1) ||
-                (InpTrigST  && gSTdir[i]  ==  1 && gSTdir[i - 1]  == -1) ||
-                (InpTrigSBT && gSBTdir[i] ==  1 && gSBTdir[i - 1] == -1);
-      bool dw = (InpTrigPP  && gPPdir[i]  == -1 && gPPdir[i - 1]  ==  1) ||
-                (InpTrigST  && gSTdir[i]  == -1 && gSTdir[i - 1]  ==  1) ||
-                (InpTrigSBT && gSBTdir[i] == -1 && gSBTdir[i - 1] ==  1);
-      if(up || dw)
-        {
-         gLastSigDir = up ? 1 : -1;
-         gLastSigIdx = i;
-        }
-     }
-
+   gLastSigDir = st.lastSigDir;
+   gLastSigIdx = st.lastSigIdx;
    gN = n;
    gDataReady = true;
    return(true);
@@ -702,83 +516,15 @@ bool CryptoWeekendExempt()
 
 bool IsMarketOpen(string &reason)
   {
-   if(!TerminalInfoInteger(TERMINAL_CONNECTED))
-     { reason = "terminal not connected"; return(false); }
-
-   long tmode = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_MODE);
-   if(tmode == SYMBOL_TRADE_MODE_DISABLED)
-     { reason = "symbol trading disabled"; return(false); }
-   if(tmode == SYMBOL_TRADE_MODE_CLOSEONLY)
-     { reason = "close-only mode"; return(false); }
-
-   MqlTick tick;
-   if(!SymbolInfoTick(_Symbol, tick))
-     { reason = "no tick data"; return(false); }
-
-   //--- a market that has not ticked for a long time is closed
-   if(InpStaleTickSec > 0 && (TimeCurrent() - tick.time) > InpStaleTickSec)
-     { reason = "no ticks for " + IntegerToString((int)(TimeCurrent() - tick.time)) + "s (market closed)"; return(false); }
-
-   MqlDateTime dt;
-   TimeToStruct(TimeCurrent(), dt);
-   ENUM_DAY_OF_WEEK dow = (ENUM_DAY_OF_WEEK)dt.day_of_week;
-   bool cryptoExempt = CryptoWeekendExempt();
-
-   //--- hard weekend block (FX/metals); crypto 24/7 exempt
-   if(InpBlockWeekend && !cryptoExempt && (dow == SATURDAY || dow == SUNDAY))
-     { reason = "weekend"; return(false); }
-
-   //--- broker session table
-   if(InpUseSessions)
-     {
-      datetime from, to;
-      int  sessions = 0;
-      bool inSession = false;
-      int  secs = dt.hour * 3600 + dt.min * 60 + dt.sec;
-      for(uint s = 0; s < 8; s++)
-        {
-         if(!SymbolInfoSessionTrade(_Symbol, dow, s, from, to))
-            break;
-         sessions++;
-         int f = (int)from;
-         int t = (int)to;
-         if(secs >= f && secs <= t)
-            inSession = true;
-        }
-      if(sessions > 0 && !inSession)
-        { reason = "outside broker trading session"; return(false); }
-
-      // crypto brokers often omit Sat/Sun session rows while ticks still flow
-      if(sessions == 0 && cryptoExempt &&
-         (dow == SATURDAY || dow == SUNDAY))
-         return(true);
-     }
-
-   return(true);
+   return(GsxIsMarketOpen(_Symbol, InpStaleTickSec, InpBlockWeekend, InpUseSessions,
+                          InpCryptoAllowWeekend, InpCryptoExtraList, reason));
   }
 
 bool TimeFilterOK(string &reason)
   {
-   MqlDateTime dt;
-   TimeToStruct(TimeCurrent(), dt);
-   bool cryptoExempt = CryptoWeekendExempt();
-
-   if(InpUseHourFilter)
-     {
-      bool ok;
-      if(InpStartHour <= InpEndHour)
-         ok = (dt.hour >= InpStartHour && dt.hour < InpEndHour);
-      else                                  // window crosses midnight
-         ok = (dt.hour >= InpStartHour || dt.hour < InpEndHour);
-      if(!ok)
-        { reason = "outside trading hours"; return(false); }
-     }
-
-   if(InpFridayStop && !cryptoExempt &&
-      dt.day_of_week == FRIDAY && dt.hour >= InpFridayStopHr)
-     { reason = "Friday cut-off"; return(false); }
-
-   return(true);
+   return(GsxTimeFilterOK(_Symbol, InpUseHourFilter, InpStartHour, InpEndHour,
+                          InpFridayStop, InpFridayStopHr,
+                          InpCryptoAllowWeekend, InpCryptoExtraList, reason));
   }
 
 //+------------------------------------------------------------------+
@@ -1775,98 +1521,45 @@ void RefreshDrillStatus()
   }
 
 //+------------------------------------------------------------------+
-//| Fleet governor — keep the required number of pairs covered       |
+//| Fleet governor — shared Fleet.mqh (chart + service)              |
 //| A pair is complete when it has an open position OR at least one  |
 //| working pending with our magic. Default target = 4.              |
 //+------------------------------------------------------------------+
 string FleetLockVarName()
   {
-   return("GSX_FLEET_LOCK_" + IntegerToString((int)InpMagic));
+   return(GsxFleetLockVarName(InpMagic));
   }
 
-// Account-wide live floating P/L + position count for this magic
-// (every pair the fleet holds, updated on every tick in real time).
 void FleetFloating(double &pl, int &count)
   {
-   pl    = 0.0;
-   count = 0;
-   for(int i = PositionsTotal() - 1; i >= 0; i--)
-     {
-      ulong ticket = PositionGetTicket(i);
-      if(ticket == 0 || !PositionSelectByTicket(ticket))
-         continue;
-      if(PositionGetInteger(POSITION_MAGIC) != (long)InpMagic)
-         continue;
-      pl += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
-      count++;
-     }
+   GsxFleetFloating(InpMagic, pl, count);
   }
 
 void FleetAddUniqueSymbol(string &syms[], const string s)
   {
-   if(s == "")
-      return;
-   for(int k = 0; k < ArraySize(syms); k++)
-      if(syms[k] == s)
-         return;
-   int n = ArraySize(syms);
-   ArrayResize(syms, n + 1);
-   syms[n] = s;
+   GsxFleetAddUniqueSymbol(syms, s);
   }
 
-// Distinct symbols with an open position OR working pending (our magic).
-// One symbol with both bracket legs counts as a single complete pair.
 int FleetActivePairs()
   {
-   string syms[];
-
-   int total = PositionsTotal();
-   for(int i = 0; i < total; i++)
-     {
-      ulong ticket = PositionGetTicket(i);
-      if(ticket == 0 || !PositionSelectByTicket(ticket))
-         continue;
-      if(PositionGetInteger(POSITION_MAGIC) != (long)InpMagic)
-         continue;
-      FleetAddUniqueSymbol(syms, PositionGetString(POSITION_SYMBOL));
-     }
-
-   int ototal = OrdersTotal();
-   for(int i = 0; i < ototal; i++)
-     {
-      ulong ticket = OrderGetTicket(i);
-      if(ticket == 0)
-         continue;
-      if(OrderGetInteger(ORDER_MAGIC) != (long)InpMagic)
-         continue;
-      FleetAddUniqueSymbol(syms, OrderGetString(ORDER_SYMBOL));
-     }
-
-   return(ArraySize(syms));
+   return(GsxFleetActivePairs(InpMagic));
   }
 
-// Atomic claim of the terminal-wide fill slot. Fails when another chart
-// claimed it inside the cooldown window (GlobalVariableSetOnCondition
-// is a server-side compare-and-set, so same-second races are safe).
 bool FleetTryClaim(const datetime now)
   {
-   string name = FleetLockVarName();
-   double prev = 0.0;
-   if(GlobalVariableCheck(name))
-      prev = GlobalVariableGet(name);
-   else
-      GlobalVariableSet(name, 0.0);
-   if(prev > 0.0 && (now - (datetime)prev) < InpFleetFillCooldownSec)
-      return(false);
-   return(GlobalVariableSetOnCondition(name, (double)now, prev));
+   return(GsxFleetTryClaim(InpMagic, InpFleetFillCooldownSec, now));
   }
 
 // Timer entry: if the fleet is short and this pair is idle, claim the
-// fill slot and evaluate the entry immediately (joins the active engine
-// direction under bot rules - same path the drill uses).
+// fill slot and evaluate the entry immediately (joins active direction).
 void FleetFillCheck()
   {
    if(!InpFleetEnable || !gTradingEnabled || !gDataReady)
+      return;
+   // Service owns fleet for this magic — chart must not stampede fills.
+   if(ChartServiceOwnsFleet())
+      return;
+   if(!ChartAutoEntriesAllowed())
       return;
 
    gFleetActive = FleetActivePairs();
@@ -2206,6 +1899,11 @@ void EvaluateSignals()
      }
 
    gMarchOnce = false;
+   if(!ChartAutoEntriesAllowed())
+     {
+      SignalSkip("Service owns entries (chart deferred)", true);
+      return;
+     }
    PlaceEntry(wanted);
   }
 
@@ -2301,9 +1999,11 @@ bool GsxPanelHitTitle(const int mx, const int my)
   {
    if(!InpShowPanel)
       return(false);
-   int left = g_panelX - 8;
-   int top  = g_panelY - 8;
-   if(mx < left || mx > left + g_panelW)
+   int inset = GsxSx(8);
+   int left = g_panelX - inset;
+   int top  = g_panelY - inset;
+   int ww = g_panelW + 2 * inset;
+   if(mx < left || mx > left + ww)
       return(false);
    if(my < top || my > top + g_panelTitleH)
       return(false);
@@ -2456,21 +2156,33 @@ void UpdatePanel(string tradeState)
 
    const bool compact = (InpPanelDensity == GSX_PANEL_COMPACT);
    int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
+
+   double effScale = GsxPanelFitScale(InpUiScale, 400, 24);
+   GsxPanelSetScale(effScale);
+   GsxPanelSetVision((int)InpUiVision);
+   GsxMsPanelSetUiScale(InpUiScale);
+   GsxMsPanelSetVision((int)InpUiVision);
+
    int x = g_panelX;
    int y = g_panelY;
-   g_panelTitleH = InpFontSize + 12;
-   g_panelW = 400;
+   g_panelW = GsxSx(400);
+   GsxPanelClampPos(g_panelX, g_panelY, g_panelW, GsxSx(280));
+   x = g_panelX;
+   y = g_panelY;
 
    GsxPanelConfigure(gPfx, InpCorner, InpFont, InpFontSize, InpColPanelEdge);
-   GsxPanelBegin(x, y, g_panelW, InpFontSize, g_panelTitleH);
+   GsxPanelBegin(x, y, g_panelW, InpFontSize, GsxPanelTitleHDesign(InpFontSize + 12));
+   g_panelTitleH = g_gsxPnlTitleH;
 
    //--- Chrome BEFORE body rows so RECTANGLE_LABEL BG cannot cover text
-   int btnH = (InpShowButtons ? 78 : 12);
+   int btnH = (InpShowButtons ? GsxSx(78) : GsxSx(12));
    int estRows = compact ? 16 : 26;
    if(InpBusEnable)
       estRows++;
-   int estH = g_panelTitleH + estRows * (InpFontSize + 8) + btnH;
-   string densHint = compact ? "Compact · drag" : "Full · drag";
+   int estH = g_panelTitleH + estRows * g_gsxPnlRh + btnH;
+   string densHint = compact
+                     ? (InpUiVision == GSX_VISION_FAR ? "Comfort desk · drag" : "Compact · drag title")
+                     : (InpUiVision == GSX_VISION_NEAR ? "Full · near view" : "Full · drag title");
    GsxPanelApplyChrome(estH, InpColPanelBg, InpColPanelEdge, C'36,42,54',
                        InpColAccent, InpColNeutral, "GsignalX", densHint);
 
@@ -2734,38 +2446,54 @@ void UpdatePanel(string tradeState)
    GsxPanelTrimBody();
 
    //--- shrink/grow BG to actual body height (size only — do not recreate BG)
-   int totalH = g_panelTitleH + GsxPanelRowCount() * (InpFontSize + 8) + btnH;
+   int totalH = g_panelTitleH + GsxPanelRowCount() * g_gsxPnlRh + btnH;
    GsxPanelResizeBg(totalH);
+   g_panelLastH = totalH;
 
    if(InpShowButtons)
      {
       int by = GsxPanelButtonsY();
-      GsxPanelButton("BTN_RUN",  x,       by, 74, 24, "PLAY",
-                     gTradingEnabled ? InpColBull : InpColPanelBg,
-                     gTradingEnabled ? InpColPanelBg : InpColText);
-      GsxPanelButton("BTN_STOP", x + 80,  by, 74, 24, "STOP",
-                     gTradingEnabled ? InpColPanelBg : InpColBear,
-                     gTradingEnabled ? InpColText : InpColPanelBg);
-      GsxPanelButton("BTN_FLAT", x + 160, by, 74, 24, "HALT", InpColPanelBg, InpColAccent);
-      GsxPanelButton("BTN_FLIP", x + 240, by, 74, 24,
-                     gFlipWaitMode ? "WAIT" : "FOLLOW",
-                     gFlipWaitMode ? InpColAccent : InpColBull,
-                     InpColPanelBg);
-      int by2 = by + 30;
-      GsxPanelButton("BTN_SPREAD", x, by2, 74, 24,
-                     gIgnoreSpread ? "IGN" : "SPREAD",
-                     gIgnoreSpread ? InpColAccent : InpColPanelBg,
-                     gIgnoreSpread ? InpColPanelBg : InpColText);
-      GsxPanelButton("BTN_AUTOLOT", x + 80, by2, 90, 24,
-                     gAutoLot ? "AUTOLOT" : "FIXED",
-                     gAutoLot ? InpColBull : InpColPanelBg,
-                     gAutoLot ? InpColPanelBg : InpColText);
-      bool eqOn = (gMaxDailyDrawdownPct > 0.0);
-      string eqLbl = eqOn ? StringFormat("EQ %.0f%%", gMaxDailyDrawdownPct) : "EQ OFF";
-      GsxPanelButton("BTN_EQGUARD", x + 176, by2, 90, 24,
-                     eqLbl,
-                     eqOn ? InpColAccent : InpColPanelBg,
-                     eqOn ? InpColPanelBg : InpColText);
+      int bh = GsxSx(24);
+      GsxLayCtx blay;
+      GsxLayBegin(blay, x, by, g_panelW, GsxSp(6));
+      GsxLaySlot bslots[];
+
+      GsxLayRowStart(blay, bh);
+      GsxLayEqual(blay, 4, bslots);
+      if(ArraySize(bslots) >= 4)
+        {
+         GsxPanelSlotButton("BTN_RUN", bslots[0], "PLAY",
+                            gTradingEnabled ? InpColBull : InpColPanelBg,
+                            gTradingEnabled ? InpColPanelBg : InpColText);
+         GsxPanelSlotButton("BTN_STOP", bslots[1], "STOP",
+                            gTradingEnabled ? InpColPanelBg : InpColBear,
+                            gTradingEnabled ? InpColText : InpColPanelBg);
+         GsxPanelSlotButton("BTN_FLAT", bslots[2], "HALT", InpColPanelBg, InpColAccent);
+         GsxPanelSlotButton("BTN_FLIP", bslots[3],
+                            gFlipWaitMode ? "WAIT" : "FOLLOW",
+                            gFlipWaitMode ? InpColAccent : InpColBull,
+                            InpColPanelBg);
+        }
+      GsxLayAdvance(blay, bh);
+
+      GsxLayRowStart(blay, bh);
+      GsxLayEqual(blay, 3, bslots);
+      if(ArraySize(bslots) >= 3)
+        {
+         GsxPanelSlotButton("BTN_SPREAD", bslots[0],
+                            gIgnoreSpread ? "IGN" : "SPREAD",
+                            gIgnoreSpread ? InpColAccent : InpColPanelBg,
+                            gIgnoreSpread ? InpColPanelBg : InpColText);
+         GsxPanelSlotButton("BTN_AUTOLOT", bslots[1],
+                            gAutoLot ? "AUTOLOT" : "FIXED",
+                            gAutoLot ? InpColBull : InpColPanelBg,
+                            gAutoLot ? InpColPanelBg : InpColText);
+         bool eqOn = (gMaxDailyDrawdownPct > 0.0);
+         string eqLbl = eqOn ? StringFormat("EQ %.0f%%", gMaxDailyDrawdownPct) : "EQ OFF";
+         GsxPanelSlotButton("BTN_EQGUARD", bslots[2], eqLbl,
+                            eqOn ? InpColAccent : InpColPanelBg,
+                            eqOn ? InpColPanelBg : InpColText);
+        }
      }
 
    //--- chart art: skip while dragging; arrows only when marked dirty
@@ -2779,7 +2507,44 @@ void UpdatePanel(string tradeState)
          gUiNeedChartArt = false;
         }
      }
+
+   //--- v1.24 compact multisymbol roster strip (shared GSXMS_ panel)
+   GsxChartDrawRosterStrip();
+
    ChartRedraw();
+  }
+
+//+------------------------------------------------------------------+
+//| Compact roster strip under the signal panel                      |
+//+------------------------------------------------------------------+
+bool GsxChartRosterStripEnabled()
+  {
+   if(!InpShowRosterStrip)
+      return(false);
+   // Prefer showing when Service owns OR a roster file already exists.
+   if(ChartServiceOwnsFleet())
+      return(true);
+   return(GsxRosterStoreExists(InpMagic));
+  }
+
+void GsxChartDrawRosterStrip()
+  {
+   if(!GsxChartRosterStripEnabled())
+     {
+      // leave any prior strip alone if disabled mid-session — avoid wipe of Dashboard on same chart
+      return;
+     }
+
+   GsxMsSnapshot snap;
+   GsxMsBuildSnapshot(InpMagic, InpFleetTargetPairs, InpRosterStripPageSize, snap);
+   g_msPage = snap.page;
+   g_msDefaultFleet = InpFleetTargetPairs;
+   g_msShowButtons = true;
+   int ay = g_panelY + g_panelLastH + GsxSx(10);
+   GsxMsPanelDrawCompact(snap, g_panelX, ay);
+
+   // restore ChartPanel prefix for next signal panel paint
+   GsxPanelConfigure(gPfx, InpCorner, InpFont, InpFontSize, InpColPanelEdge);
   }
 
 //+------------------------------------------------------------------+
@@ -2990,6 +2755,7 @@ void SetRunState(bool on, bool announce)
   {
    gTradingEnabled = on;
    GlobalVariableSet(RunStateVarName(), on ? 1.0 : 0.0);
+   ChartSyncServiceRun(on);
 
    if(!on)
      {
@@ -3029,6 +2795,18 @@ void SetRunState(bool on, bool announce)
 
 void OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam)
   {
+   // Multisymbol strip / dashboard objects on this chart (GSXMS_)
+   if(StringFind(sparam, "GSXMS_") == 0 ||
+      (id == CHARTEVENT_MOUSE_MOVE && g_msDragging))
+     {
+      if(GsxMsPanelOnChartEvent(id, lparam, dparam, sparam))
+        {
+         GsxUiMarkDirty();
+         UpdatePanel(g_lastPanelState);
+         return;
+        }
+     }
+
    if(id == CHARTEVENT_OBJECT_CLICK)
      {
       if(sparam == gPfx + "BTN_RUN")
@@ -3106,6 +2884,7 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
            }
          g_panelX = (int)MathMax(0, mx - g_panelDragOffX);
          g_panelY = (int)MathMax(0, my - g_panelDragOffY);
+         GsxPanelClampPos(g_panelX, g_panelY, g_panelW, g_panelLastH);
          UpdatePanel(g_lastPanelState);
          return;
         }
@@ -3123,6 +2902,43 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
 //+------------------------------------------------------------------+
 //| Init / Deinit                                                    |
 //+------------------------------------------------------------------+
+GsxTgConfig ChartBuildTgConfig()
+  {
+   GsxTgConfig c;
+   c.enable = InpTgEnable;
+   c.botToken = InpTgBotToken;
+   c.chatId1 = InpTgChatId1;
+   c.chatId2 = InpTgChatId2;
+   c.chatId3 = InpTgChatId3;
+   c.silentStartHourGmt = InpTgSilentStartHourGMT;
+   c.silentEndHourGmt = InpTgSilentEndHourGMT;
+   c.ratePerMin = InpTgRatePerMin;
+   c.maxRetries = InpTgMaxRetries;
+   return(c);
+  }
+
+void ChartTgTick()
+  {
+   if(!InpTgEnable)
+      return;
+   g_chartTgCfg = ChartBuildTgConfig();
+   GsxTgMaybeReverify(g_chartTgCfg);
+   GsxTgProcessQueue(g_chartTgCfg);
+   GsxTgPublishStatus(InpMagic);
+
+   // Deal failover when Trade Center desk HB is stale
+   if(GsxTgChartMayOwnDeals(InpMagic) && GsxTgIsVerified())
+     {
+      GsxTgClaimDealOwner(InpMagic, GSX_TG_HOST_CHART);
+      if(!g_chartTgSeeded)
+        {
+         GsxTgwSeedFromOpen(InpMagic);
+         g_chartTgSeeded = true;
+        }
+      GsxTgwPoll(InpMagic, g_chartTgCfg, true);
+     }
+  }
+
 int OnInit()
   {
    if(InpMinAgree < 1 || InpMinAgree > 3)
@@ -3189,7 +3005,10 @@ int OnInit()
 
    //--- PLAY / STOP state survives a restart or recompile
    if(GlobalVariableCheck(RunStateVarName()))
+     {
       gTradingEnabled = (GlobalVariableGet(RunStateVarName()) > 0.5);
+      ChartSyncServiceRun(gTradingEnabled);
+     }
    else
       SetRunState(true, false);
 
@@ -3218,6 +3037,17 @@ int OnInit()
    ChartSetInteger(0, CHART_EVENT_MOUSE_MOVE, true);
    GsxLoadPanelPos();
 
+   // v1.24 compact roster strip (same magic as Service / Dashboard)
+   g_msDefaultFleet = InpFleetTargetPairs;
+   GsxMsPanelInit(InpMagic, InpRosterStripPageSize, true, InpUiScale, (int)InpUiVision);
+   if(InpShowRosterStrip)
+     {
+      string seed[];
+      // do not overwrite existing CSV — Ensure only seeds when missing
+      if(!GsxRosterStoreExists(InpMagic))
+         GsxRosterStoreEnsure(InpMagic, _Symbol, seed);
+     }
+
    gInitBarTime = iTime(_Symbol, _Period, InpEvalClosedBar ? 1 : 0);
    gLastBarTime = 0;
    gNeedSignalEval = true;
@@ -3241,17 +3071,30 @@ int OnInit()
          " | stratSL: ", (ScouterOwnsExits() && InpStrategicStopEnable
                          ? DoubleToString(InpStrategicStopMult, 1) + "xATR" : "off"),
          " | flip: ", (gFlipWaitMode ? "WAIT" : "FOLLOW"),
-         " | fleet: ", (InpFleetEnable ? IntegerToString(InpFleetTargetPairs) + " pairs" : "off"));
+         " | fleet: ", (InpFleetEnable ? IntegerToString(InpFleetTargetPairs) + " pairs" : "off"),
+         " | svcOwn: ", (ChartServiceOwnsFleet() ? "YES" : "no"),
+         " | chartEntries@svc: ", (InpChartEntriesWhenService ? "ON" : "OFF"));
 
    gUiDirty = true;
    gUiNeedChartArt = true;
    UpdatePanel("initialising");
+
+   g_chartTgCfg = ChartBuildTgConfig();
+   GsxTgSetMagic(InpMagic);
+   GsxTgSetHostTag("chart");
+   string acct = StringFormat("%I64d %s chart %s", AccountInfoInteger(ACCOUNT_LOGIN),
+                              AccountInfoString(ACCOUNT_SERVER), _Symbol);
+   GsxTgInit(g_chartTgCfg, acct);
+   g_chartTgSeeded = false;
+
    return(INIT_SUCCEEDED);
   }
 
 void OnDeinit(const int reason)
   {
    EventKillTimer();
+   if(InpTgEnable)
+      GsxTgDeinit(g_chartTgCfg, g_tgwSessionPl);
    Comment("");
    DeleteOurObjects();
    ChartRedraw();
@@ -3263,6 +3106,17 @@ void OnDeinit(const int reason)
 void OnTimer()
   {
    FleetFillCheck();
+   ChartTgTick();
+   // Harden: retry march/fleet-armed eval when gates clear (not only flat-edge once).
+   if(gTradingEnabled && ChartAutoEntriesAllowed() && gDataReady &&
+      (gMarchOnce || gNeedSignalEval))
+     {
+      string why = "";
+      bool hours = TimeFilterOK(why);
+      bool spread = SpreadOK(why);
+      string block = "";
+      TryRunSignalEval(hours, spread, block);
+     }
   }
 
 //+------------------------------------------------------------------+

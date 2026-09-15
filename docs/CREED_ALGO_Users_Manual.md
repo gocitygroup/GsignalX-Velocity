@@ -25,6 +25,7 @@ date: "2026"
 | **New to CREED ALGO / MT5** | [Chapter 3 — Install & first run](#3-install--first-run) → [Chapter 5 — Beginner automated day](#5-beginner-automated-day) |
 | **Trading a daily session** | [Chapter 4 — Daily Session trading](#4-daily-session-trading) |
 | **Scaling across pairs** | [Chapter 7 — Scaling program](#7-scaling-program-multi-pair-swing-entries) |
+| **Practice $20/$50/$100** | [docs/PRACTICE_LIVE_SIM_20_50_100.md](PRACTICE_LIVE_SIM_20_50_100.md) (Standard + Raw) |
 | **Banking profit (scout)** | [Chapter 9 — Profit Scouting](#9-creed-algo-profit-scouting) |
 | **Advanced / multi-terminal** | [Chapter 11 — Advanced reference](#11-advanced-reference) |
 
@@ -310,8 +311,52 @@ It does **not** mean pyramiding (adding ticket after ticket on the same pair). G
 ### 7.2 Build a daily roster
 
 1. Choose a short list of liquid pairs (example: majors + one metal).
-2. Open one chart per pair; attach GSignalX with the **same magic** only if you intend one strategy family (or different magics to separate strategies).
-3. Use **one** ProfitScouter instance with scope **All symbols** (or a symbol list that matches the roster).
+2. **Chart desk:** open one chart per pair; attach GSignalX with the **same magic** only if you intend one strategy family (or different magics to separate strategies).
+3. **Service desk (Velocity 2.00):** start `GsignalX_Service` with `InpSymbolList` matching the roster (no charts required for entries). Keep chart EAs for panel/UI; when Service OWN=1 they defer fleet/auto-entries unless `InpChartEntriesWhenService=true`.
+4. Use **one** ProfitScouter instance with scope **All symbols** (or a symbol list that matches the roster).
+5. PLAY (chart) or ensure Service RUN GV is on; STOP/HALT pauses new entries (Service honors `GSX_SVC_RUN_{magic}` when `InpRespectChartRunState`).
+
+### 7.2b Multisymbol Service (Velocity 2.00)
+
+| Item | Guidance |
+|---|---|
+| Host | Navigator → Services → `GsignalX_Service` (**2.00**) |
+| Roster | `InpSymbolList` e.g. `EURUSD,GBPUSD,XAUUSD,USDJPY` |
+| Timeframe | `InpTimeframe = M5` |
+| Fleet | `InpFleetTargetPairs` = how many pairs should stay covered |
+| Exits | Always ProfitScouter — Service never reverse-closes |
+| Coexistence | One Service per magic; same-magic charts defer fills while OWN=1 |
+
+Preset: `deploy/presets/GSignalX_Service_Multisymbol.set`.
+
+### 7.2c Multisymbol Dashboard UI (Velocity 2.00)
+
+| Item | Guidance |
+|---|---|
+| Host | Attach `GsignalX_Multisymbol_Dashboard` (**2.00**) on any chart (same magic as Service) |
+| Add pairs | Carousel ◀ SYM ▶ then **ADD** — writes live roster CSV |
+| Remove | **REMOVE** drops the first symbol on the current page (does not close trades) |
+| Mute | Per-row **MUTE** — Service skips fills; position may stay open for Scouter |
+| Fleet target | −/+ on the dashboard persists `GSX_MS_FLEET_TARGET_{magic}` |
+| Chart strip | Signal EA `InpShowRosterStrip` shows a compact roster under the panel |
+| Objects | Dashboard/strip use prefix `GSXMS_` — never wipe the signal `GSX_` panel |
+
+### 7.2d Prop Firm Trade Center + Telegram (Velocity 2.00 / v1.27)
+
+| Item | Guidance |
+|---|---|
+| Host | `GsignalX_Multisymbol_Dashboard` **2.00** (desk); optional `GsignalX_Service` + Chart TG |
+| Buttons | Larger 28px Trade Center controls (PLAY/STOP/HALT/FOLLOW, fleet, ADD/REMOVE) + **VERIFY** |
+| Prop gates | Soft STOP only — daily loss, equity DD, max trades, consistency share, daily profit target, Friday hour, news CSV windows |
+| Resume | Press **PLAY** after a prop LOCK to clear and resume Service RUN |
+| Telegram | Enable + bot token + up to 3 chat IDs; allow `https://api.telegram.org` in MT5 WebRequest list |
+| Alerts | OPEN/CLOSE/MODIFY (entry·SL·TP·P/L), START/STOP, DAILY/WEEKLY (win rate·DD·balance), `[PROP]` / `[EVENT]` / WARN / ERROR |
+| Hosts | Desk = deals + PROP/EVENT/summaries; Service = engine WARN; Chart = failover deals if desk detached |
+| Status strip | PROP:OK/LOCK · TG:**Verified / Connected / NotCfg / Error** · sent/fail · queue |
+| Trader recipe | Service + Dashboard TG; EVENT + PROP + deals — see Velocity **Telegram Alerts** |
+| Investor recipe | Dashboard (or Chart) TG; DAILY/WEEKLY + PROP + silent hours — Compact `TG:Verified` |
+
+Primary reading: [Gsignalx Velocity — Telegram Alerts](Gsignalx_Velocity_Users_Manual.html#telegram) · Deploy: [RELEASE_v2.00_Prop_Desk_Deploy.md](RELEASE_v2.00_Prop_Desk_Deploy.md) · Provenance: [PLAN_V1.27_Telegram_Dual_Host.md](PLAN_V1.27_Telegram_Dual_Host.md).
 
 ### 7.3 Position sizing
 
@@ -545,6 +590,9 @@ Full gates: `DEPLOYMENT_RUNBOOK.md`.
 
 | Document | Topic |
 |---|---|
+| `docs/Gsignalx_Velocity_Users_Manual.html` | **Primary** Velocity 2.00 desk manual |
+| `docs/WINDOWS_DEPLOY_SIMPLE.md` | Non-tech Windows ZIP → double-click → MT5 + error fixes |
+| `docs/RELEASE_v2.00_Prop_Desk_Deploy.md` | Prop desk deploy + sign-off |
 | `README.md` | Toolkit overview |
 | `README_ProfitScouter.md` | Harvest presets in depth |
 | `DEPLOYMENT.md` | Install & verify |
@@ -555,10 +603,10 @@ Full gates: `DEPLOYMENT_RUNBOOK.md`.
 
 ## Appendix C — Version notes
 
-Manual aligned with toolkit behaviour as of **GSignalX v1.21** / **ProfitScouter v1.21** (scalping drill, fleet fill, FOLLOW/WAIT, **SPREAD/IGN** entry spread toggle, **AUTOLOT/FIXED** chart lot sizing, **EQ OFF/5/10/20** equity DD guide, Compact/Full outcome panel, signal-open limit/stop defaults, Scalp ASAP winners-only harvest, adverse-bar Auto, strategic SL, non-closing STOP/HALT).
+Manual aligned with toolkit behaviour as of **Gsignalx Velocity 2.00** (hosts `2.00`; FILE_COMMON bus schema still **1**). Includes Multisymbol Service, Trade Center, Telegram, PropRisk soft STOP, scalping drill, fleet fill, FOLLOW/WAIT, SPREAD/IGN, AUTOLOT/FIXED, EQ guide, Compact/Full, ASAP winners-only harvest, adverse-bar Auto (min age + once-green), strategic SL, non-closing STOP/HALT.
 
-Commercial deploy: [RELEASE_v1.21_Commercial_Deploy.md](RELEASE_v1.21_Commercial_Deploy.md).
+Prefer the Velocity HTML manual for day-to-day operators. Prop desk deploy: [RELEASE_v2.00_Prop_Desk_Deploy.md](RELEASE_v2.00_Prop_Desk_Deploy.md). Historical: [RELEASE_v1.21_Commercial_Deploy.md](RELEASE_v1.21_Commercial_Deploy.md).
 
 ---
 
-*© Gocity Group — CREED ALGO / GSignalX. For research and educational use with MetaTrader 5. Trade responsibly.*
+*© Gocity Group — CREED ALGO / Gsignalx Velocity 2.00 / GSignalX. For research and educational use with MetaTrader 5. Trade responsibly.*

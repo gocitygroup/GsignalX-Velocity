@@ -1,0 +1,44 @@
+; ProfitScouter Service — Practice $20 RAW (Day)
+; ASAP/lock/minWin from PracticeSim; commission ON. Match Service Practice_20_Raw.
+; docs/PRACTICE_LIVE_SIM_20_50_100.md
+
+InpInstanceID=1
+InpUseMagicFilter=false
+InpMagicNumber=0
+InpScope=1
+InpSymbolList=EURUSD
+InpPrimarySymbol=EURUSD
+InpCheckIntervalMs=100
+InpTargetCurrency=
+InpIncludeSwap=true
+InpIncludeCommission=true
+InpSlippagePoints=30
+InpMaxRetries=3
+InpScalpAsapAccountOnly=true
+InpRespectChartRunState=true
+InpPosTargetEnable=false
+InpPosTrailEnable=false
+InpSymTargetEnable=false
+InpSymTrailEnable=false
+InpAccTargetEnable=true
+InpAccTargetMoney=0.20
+InpAccTargetPctBal=0.0
+InpAccTrailEnable=false
+InpWindowEnable=false
+InpTrailRequirePositive=true
+InpTrailMinCloseProfit=0.05
+InpPersistPeaks=true
+InpProfitLockEnable=true
+InpProfitLockArm=0.20
+InpProfitLockKeepPct=50.0
+InpMinWinProfit=0.10
+InpAdverseExitEnable=true
+InpAdverseMinBars=2
+InpAdverseTimeframe=5
+InpAdverseRequireSignal=true
+InpLogStatus=true
+InpStatusEverySec=60
+InpWriteStatusFile=false
+InpPushOnClose=false
+InpVerboseLog=false
+InpBusEnable=true

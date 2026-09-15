@@ -1,0 +1,50 @@
+; GSignalX Service — Practice Live Sim $20 STANDARD (Day default)
+; Coach: Trade Center 20·STD·DAY — docs/PRACTICE_LIVE_SIM_20_50_100.md
+; Pair with ProfitScouter_Practice_20_Standard.set. Prefer Day/Swing over Scalp on STD.
+; Min-lot floors risk — demo first. CMD/CRYPTO = SUSPEND.
+
+InpSymbolList=EURUSD
+InpTimeframe=5
+InpCycleMs=200
+InpRespectChartRunState=true
+InpEngineBudgetPerCycle=4
+InpFleetEnable=true
+InpFleetTargetPairs=1
+InpFleetFillCooldownSec=10
+InpMode=0
+InpTrigPP=true
+InpTrigST=false
+InpTrigSBT=true
+InpMinAgree=2
+InpEvalClosedBar=true
+InpEntryMode=3
+InpOffsetUnit=0
+InpLimitOffset=5
+InpStopOffset=5
+InpPendFromSignalOpen=true
+InpPendMaxAgeMin=60
+InpStrategicStopEnable=true
+InpStrategicStopMult=4.0
+InpFlipWaitDefault=false
+InpRiskMode=1
+InpRiskPct=1.0
+InpFixedLot=0.01
+InpMaxLot=0.01
+InpAutoLotDefault=true
+InpMaxSpreadPt=50
+InpMagic=20260904
+InpLookback=400
+InpComment=GsignalX-Prac20S
+InpBusEnable=true
+InpBusFullSyncSec=10
+InpVerboseSignals=false
+InpPropEnable=true
+InpPropDailyLossMoney=1.0
+InpPropDailyLossPct=0.0
+InpPropMaxEquityDdPct=5.0
+InpPropMaxTradesDay=2
+InpPropMaxDaySharePct=0.0
+InpPropDailyProfitTarget=0.40
+InpPropBlockFridayHour=20
+InpPropNewsBlackoutMin=0
+InpPropNewsTimes=

@@ -68,13 +68,16 @@ if %CONFIRM_EXIT% NEQ 0 (
 )
 
 echo.
-echo NEXT IN MT5:
-echo   1. Enable Algo Trading ^(toolbar green^)
-echo   2. Start Service: ProfitScouter_Service  ^(InpBusEnable=true^)
-echo   3. Start Service: ProfitOpportunity_Grader
-echo   4. Attach Expert: GsignalX_GocityGroup  ^(InpBusEnable=true^)
-echo   5. Double-click Confirm-After-Start.bat
+echo NEXT IN METATRADER 5:
+echo   1. Algo Trading ON ^(toolbar green^)
+echo   2. Start Services: GsignalX_Service
+echo   3. Start Services: ProfitScouter_Service  ^(InpBusEnable=true^)
+echo   4. Start Services: ProfitOpportunity_Grader
+echo   5. Attach Expert: GsignalX_Multisymbol_Dashboard ^(same magic^)
+echo   6. Optional: GsignalX_GocityGroup on M5 for chart strip
+echo   7. Double-click Confirm-After-Start.bat
 echo.
+echo Stuck? Open docs\WINDOWS_DEPLOY_SIMPLE.md  ^(Problems and fixes^)
 echo Docs: DEPLOYMENT.md / DEPLOYMENT_RUNBOOK.md
 echo.
 pause
@@ -83,5 +86,11 @@ exit /b %CONFIRM_EXIT%
 :fail
 echo.
 echo UPGRADE FAILED. See messages above.
+echo.
+echo Common fixes:
+echo   - Open MetaTrader 5 once, then re-run this .bat
+echo   - If MetaEditor not found: edit this .bat and set METAEDITOR=...
+echo   - Full guide: docs\WINDOWS_DEPLOY_SIMPLE.md
+echo.
 pause
 exit /b 1

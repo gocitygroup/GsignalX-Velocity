@@ -1,0 +1,47 @@
+; GSignalX Service — Prop Desk 30 (Velocity 2.01 production hardening)
+; Attach: Navigator → Services → GsignalX_Service
+; Target: 24–30 roster symbols (8 FX + 8 CMD + 8–14 CRYPTO). SUSPEND unused crypto on Trade Center.
+; Match ProfitScouter InpSymbolList / All symbols to this roster.
+; Unresolved broker names are skipped by GsxRosterResolve.
+
+InpSymbolList=EURUSD,GBPUSD,USDJPY,AUDUSD,USDCAD,NZDUSD,EURGBP,EURJPY,XAUUSD,XAGUSD,USOIL,UKOIL,XPTUSD,XPDUSD,NATGAS,COPPER,BTCUSD,ETHUSD,XRPUSD,LTCUSD,BNBUSD,SOLUSD,ADAUSD,DOGEUSD
+InpTimeframe=5
+InpCycleMs=200
+InpRespectChartRunState=true
+InpEngineBudgetPerCycle=4
+InpFleetEnable=true
+InpFleetTargetPairs=4
+InpFleetFillCooldownSec=10
+InpMode=0
+InpTrigPP=true
+InpTrigST=false
+InpTrigSBT=true
+InpMinAgree=2
+InpEvalClosedBar=true
+InpEntryMode=3
+InpOffsetUnit=0
+InpLimitOffset=5
+InpStopOffset=5
+InpPendFromSignalOpen=true
+InpPendMaxAgeMin=240
+InpStrategicStopEnable=true
+InpStrategicStopMult=4.0
+InpFlipWaitDefault=false
+InpRiskMode=1
+InpRiskPct=1.0
+InpFixedLot=0.10
+InpMaxLot=5.0
+InpAutoLotDefault=true
+InpMaxSpreadPt=40
+InpMagic=20260904
+InpLookback=400
+InpComment=GsignalX-Svc
+InpBusEnable=true
+InpBusFullSyncSec=10
+InpVerboseSignals=false
+InpPropEnable=true
+InpPropMaxEquityDdPct=5.0
+InpPropBlockFridayHour=20
+
+; Telegram (Service engine alerts — WARN/ERROR/START/STOP). Default off.
+; InpTgEnable=false

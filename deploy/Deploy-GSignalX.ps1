@@ -65,7 +65,9 @@ function Deploy-ToTerminal([string] $dataPath) {
 
   $fileMap = @(
     @{ Rel = "Experts";  Name = "GsignalX_GocityGroup.mq5" },
+    @{ Rel = "Experts";  Name = "GsignalX_Multisymbol_Dashboard.mq5" },
     @{ Rel = "Experts";  Name = "ProfitScouter_DollarTarget.mq5" },
+    @{ Rel = "Services"; Name = "GsignalX_Service.mq5" },
     @{ Rel = "Services"; Name = "ProfitScouter_Service.mq5" },
     @{ Rel = "Services"; Name = "ProfitOpportunity_Grader.mq5" },
     @{ Rel = "Scripts";  Name = "ProfitHarvest_Now.mq5" }
@@ -92,6 +94,8 @@ function Compile-Toolkit([string] $mql5, [string] $editor) {
     "Services\ProfitScouter_Service.mq5",
     "Experts\ProfitScouter_DollarTarget.mq5",
     "Services\ProfitOpportunity_Grader.mq5",
+    "Services\GsignalX_Service.mq5",
+    "Experts\GsignalX_Multisymbol_Dashboard.mq5",
     "Experts\GsignalX_GocityGroup.mq5",
     "Scripts\ProfitHarvest_Now.mq5"
   )
@@ -177,5 +181,6 @@ foreach ($td in $targets) {
   }
 }
 
-Write-Host "`nDone. Next: enable Algo Trading, start Services, attach GsignalX." -ForegroundColor Green
-Write-Host "See DEPLOYMENT.md for first-run inputs and verification."
+Write-Host "`nDone. Next: enable Algo Trading, start Services, attach Trade Center." -ForegroundColor Green
+Write-Host "Non-tech guide: docs\WINDOWS_DEPLOY_SIMPLE.md"
+Write-Host "Full detail: DEPLOYMENT.md"

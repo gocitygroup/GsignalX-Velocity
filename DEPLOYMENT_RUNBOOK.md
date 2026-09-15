@@ -2,6 +2,8 @@
 
 Use this after [DEPLOYMENT.md](DEPLOYMENT.md). Work **one gate at a time**. Do not skip ahead if a gate fails.
 
+**Not technical?** Start with [docs/WINDOWS_DEPLOY_SIMPLE.md](docs/WINDOWS_DEPLOY_SIMPLE.md) (ZIP → double-click → MT5 → problems/fixes). Come back here only if you want the gated PASS/FAIL feedback blocks.
+
 **How feedback works**
 
 1. You complete a step (or we run the confirm script).  
@@ -32,7 +34,16 @@ If MetaEditor is not found, edit `Click-and-Run-Deploy.bat` or `Clean-and-Deploy
 
 `set METAEDITOR=C:\Program Files\MetaTrader 5 IC Markets Global\MetaEditor64.exe`
 
-**MT5 still needs a short manual step after the .bat:** Algo Trading on, start Scouter + Grader services, attach GsignalX — then run `Confirm-After-Start.bat`.
+(Replace with the real path to **your** broker’s `MetaEditor64.exe` — Search in Windows Start if unsure.)
+
+**MT5 still needs a short manual step after the .bat** (scripts cannot enable Algo Trading for you):
+
+1. Algo Trading **ON** (toolbar green)  
+2. Start Services: `GsignalX_Service`, `ProfitScouter_Service`, `ProfitOpportunity_Grader`  
+3. Attach `GsignalX_Multisymbol_Dashboard` (same magic)  
+4. Run `Confirm-After-Start.bat`  
+
+If the black window shows an error, match it in [WINDOWS_DEPLOY_SIMPLE.md § Problems and fixes](docs/WINDOWS_DEPLOY_SIMPLE.md#problems-and-fixes).
 
 ---
 
@@ -143,7 +154,10 @@ RESULTS:
   ProfitScouter_DollarTarget: 0 errors?
   ProfitOpportunity_Grader: 0 errors?
   GsignalX_GocityGroup: 0 errors?
+  GsignalX_Service: 0 errors?
+  GsignalX_Multisymbol_Dashboard: 0 errors?
   ProfitHarvest_Now: 0 errors?
+  Hosts #property version "2.00" on six primary programs?
 NOTES:
 ```
 
@@ -151,32 +165,37 @@ NOTES:
 
 ## G3 — Start runtime
 
-**Do (on demo)**
+**Do (on demo) — Velocity 2.00 topology**
 
 1. Enable **Algo Trading** (green).  
-2. Services → Add/Start `ProfitScouter_Service` with `InpBusEnable=true`.  
-3. Services → Add/Start `ProfitOpportunity_Grader` (one instance).  
-4. Attach `GsignalX_GocityGroup` on a liquid chart; `InpBusEnable=true`, `InpBusShowGrades=true`.  
-5. Refresh Navigator if programs missing.
+2. If Telegram enabled: Tools → Options → Expert Advisors → allow WebRequest for `https://api.telegram.org`.  
+3. Services → Add/Start `GsignalX_Service` (shared magic; seed roster).  
+4. Services → Add/Start `ProfitScouter_Service` with `InpBusEnable=true`.  
+5. Services → Add/Start `ProfitOpportunity_Grader` (one instance).  
+6. Attach `GsignalX_Multisymbol_Dashboard` (same magic; PropRisk / Telegram inputs as needed).  
+7. Optional: attach `GsignalX_GocityGroup` on M5 for UI/strip; keep `InpChartEntriesWhenService=false`.  
+8. Refresh Navigator if programs missing.
 
 **Confirm (manual)**
 
-- Experts log: Scouter `started ... bus=ON`  
-- Experts log: Grader `started`  
-- Chart: GsignalX smiley + **Opp grades** row  
+- Experts log: GSignalX Service OWN / roster; Scouter `started ... bus=ON`; Grader `started`  
+- Dashboard: PROP/TG strip visible; roster rows update  
+- Chart (if attached): GsignalX smiley + optional roster strip  
 
 **Feedback block**
 
 ```
 GATE: G3
 RESULT: PASS | FAIL | BLOCKED
+GSX_SERVICE: running yes/no | OWN=1 yes/no
 SCOUTER: running yes/no | bus=ON yes/no
 GRADER: running yes/no
-GSIGNALX: attached yes/no | panel grades visible yes/no
+DASHBOARD: attached yes/no | PROP strip yes/no
+GSIGNALX_CHART: attached yes/no (optional)
 ALGO_TRADING: on/off
+WEBREQUEST_TG: n/a | allowed yes/no
 NOTES: (paste 2-3 Experts lines if FAIL)
 ```
-
 ---
 
 ## G4 — Bus on disk

@@ -80,3 +80,9 @@ Rules of thumb:
    - GSignalX panel: Fleet row shows 2-pair coverage; session row starts at 0/0.
    - Bus JSON (`win_floor`, `acc_target`) reports 0.50 / 1.00.
 5. **Demo first.** This is a risk-geometry proposal, not a performance forecast — the PP/SuperTrend/Bollinger agreement has not been backtested at these floors. Run demo or Strategy Tester (every-tick) for ~2 weeks and check the session closed wins/losses before going live.
+
+---
+
+## Related — $20 / $50 / $100 practice packs (Standard + Raw)
+
+For Velocity Service + Scouter + Trade Center coach buttons (Scalp / Day / Swing), see **[PRACTICE_LIVE_SIM_20_50_100.md](PRACTICE_LIVE_SIM_20_50_100.md)** and plan **[PLAN_V2.02_Practice_Live_Simulation.md](PLAN_V2.02_Practice_Live_Simulation.md)**. The $100 Raw pack aligns with this EUR100 ASAP geometry; Standard packs use wider floors and `InpIncludeCommission=false`.

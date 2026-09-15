@@ -3,8 +3,8 @@
 //|                    Profit monitoring / harvesting engine for MT5 |
 //+------------------------------------------------------------------+
 #property copyright "Profit Scouter"
-#property version   "1.22"
-#property description "Profit Scouter - Dollar Target (EA edition)"
+#property version   "2.00"
+#property description "Gsignalx Velocity 2.00 — Profit Scouter Dollar Target (EA edition)"
 #property description "Standalone START/STOP/AUTO scout; Scalp ASAP; movable on-chart panel."
 #property description "Profit harvest: winners-only at set levels. Adverse-bar Auto can close same-symbol losers."
 #property description "Chart AUTO toggles adverse loss exit; default CloseTicket refuses losses otherwise."
@@ -12,6 +12,7 @@
 #define PS_HOST_EA
 
 #include <Trade\Trade.mqh>
+#include <GSignalX/ChartPanel.mqh>
 
 enum ENUM_PS_SCOPE
   {
@@ -106,6 +107,8 @@ input bool    InpShowButtons       = true;    // Chart START / STOP / AUTO (stan
 input bool    InpScoutStartArmed   = true;    // Initial arm if no saved run state
 input int     InpPanelX            = 10;      // Panel X (left-upper); drag to move; saved
 input int     InpPanelY            = 50;      // Panel Y (below buttons by default)
+input double  InpUiScale           = 1.5;     // UI scale request (system applies −40% size policy)
+input ENUM_GSX_UI_VISION InpUiVision = GSX_VISION_COMFORT; // Near / Comfort / Far readability
 input int     InpBtnX              = 10;      // Buttons X (left-upper corner)
 input int     InpBtnY              = 18;      // Buttons Y (left-upper corner)
 input bool    InpAlertOnClose      = false;
