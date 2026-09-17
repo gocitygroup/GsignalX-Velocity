@@ -201,4 +201,7 @@ Full Best use: [RELEASE_v2.14](RELEASE_v2.14_Input_Reliability.md) · [Manual §
 1. Note the **exact error line** from the black window or Experts log.  
 2. Open the newest file in `deploy\feedback\`.  
 3. Ask for help with: Windows version, broker MT5 name, and that feedback file.  
-4. Prefer demo until Confirm PASS and one full session is understood.
+4. Prefer the **[trading channel](https://t.me/+yURbcVkPi1kxNDg0) (primary)** for the day’s **macro overview for day trading** — consult the composite current driver breakdown and the cited data sources for the quantitative basis. For a human desk reply, use the **[trading group](https://t.me/+ZDosSHfUCLU1ZGY0)** with a **redacted** CONFIRM summary (no bot tokens, ChatIds, logins, or account numbers).  
+5. Prefer demo until Confirm PASS and one full session is understood.  
+
+Full community house rules: [Desk Community](Gsignalx_Velocity_Users_Manual.html#community) · Bugs with steps: [GitHub Issues](https://github.com/gocitygroup/GsignalX-Velocity/issues)

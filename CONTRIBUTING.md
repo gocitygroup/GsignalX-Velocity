@@ -17,9 +17,12 @@ By opening a pull request or issue with patches, you agree that your contributio
 
 ## Feedback channels
 
-- **GitHub Issues:** https://github.com/gocitygroup/GsignalX-Velocity/issues  
+- **Trading channel (Telegram · primary this update):** https://t.me/+yURbcVkPi1kxNDg0 — Macro overview for day trading: consult the composite current driver breakdown and the cited data sources for the quantitative basis  
+- **Trading group (Telegram · secondary):** https://t.me/+ZDosSHfUCLU1ZGY0 — desk feedback, peer setups, “still stuck” after Confirm (redact tokens / account numbers)  
+- **GitHub Issues:** https://github.com/gocitygroup/GsignalX-Velocity/issues — reproducible bugs, deploy failures, panel defects  
 - **Discussions / PR comments:** use the same repository  
-- **Executive cloud signals & product programs:** https://www.gsignalx.cloud/
+- **Executive cloud signals & product programs:** https://www.gsignalx.cloud/  
+- **Manual:** [Desk Community](docs/Gsignalx_Velocity_Users_Manual.html#community)
 
 ## Before you open an issue
 

@@ -9,6 +9,7 @@
 <link rel="icon" href="assets/icons/group-icon.svg" type="image/svg+xml"/>
 <link rel="stylesheet" href="assets/css/gsx-docs.css"/>
 <script src="assets/js/gsx-theme.js"></script>
+<script src="assets/js/gsx-community.js"></script>
 <style>
 :root, [data-theme="dark"] {
   /* Executive / Gocity brand floor palette */
@@ -300,6 +301,13 @@ pre code { background: none; border: none; padding: 0; color: inherit; }
   background: var(--cta-gh-bg);
 }
 .header-cta.gh:hover { background: var(--cta-gh-hover); color: var(--link); }
+.header-cta.community {
+  border-color: rgba(70, 154, 212, 0.55);
+  color: var(--brand-blue);
+  background: var(--cta-gh-bg);
+}
+.header-cta.community:hover { background: var(--cta-gh-hover); color: var(--link); }
+.header-cta.community .cm-short { display: none; }
 
 .theme-toggle {
   appearance: none;
@@ -613,6 +621,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
 }
 .kbd-hint .hint-mobile { display: none; }
 .header-cta.gh .gh-short { display: none; }
+.header-cta.community .cm-short { display: none; }
 .footer-note {
   margin-top: 48px;
   padding-top: 16px;
@@ -705,6 +714,8 @@ tr:nth-child(even) td { background: var(--row-stripe); }
   .brand-mark { height: 34px; max-width: 96px; }
   .header-cta.gh .gh-full { display: none; }
   .header-cta.gh .gh-short { display: inline; }
+  .header-cta.community .cm-full { display: none; }
+  .header-cta.community .cm-short { display: inline; }
   .header-actions { gap: 4px; }
   .main {
     padding: 16px 12px 56px;
@@ -733,7 +744,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
     --row-stripe: transparent;
   }
   body { background: #fff; color: #111; }
-  .site-header, .rail, .header-cta, .theme-toggle, .kbd-hint, .chapter-nav { display: none !important; }
+  .site-header, .rail, .header-cta, .theme-toggle, .kbd-hint, .chapter-nav, .gsx-community-strip { display: none !important; }
   .shell { display: block; }
   .panel { display: block !important; page-break-before: always; }
   .panel:first-of-type { page-break-before: avoid; }
@@ -771,6 +782,9 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       </button>
       <a class="header-cta gh" href="https://github.com/gocitygroup/GsignalX-Velocity" target="_blank" rel="noopener">
         <span class="gh-full">Clone on GitHub</span><span class="gh-short">GitHub</span>
+      </a>
+      <a class="header-cta community" href="#community" data-tab="community" title="Macro channel · desk community">
+        <span class="cm-full">Channel</span><span class="cm-short">TG</span>
       </a>
       <a class="header-cta" href="https://www.gsignalx.cloud/" target="_blank" rel="noopener" title="Executive">
         <span class="header-cta-label">Executive</span><span class="hide-sm"> → cloud</span>
@@ -842,6 +856,12 @@ tr:nth-child(even) td { background: var(--row-stripe); }
           <h3>🔶 Velocity (this toolkit)</h3>
           <p>Local MT5 momentum engines + ProfitScouter <strong>cash floors</strong>. Use it to <em>execute the session</em> and bank closed P/L with process — then get the ping on Telegram.</p>
           <p>Runs on your Windows terminal — no cloud order routing in this build.</p>
+        </div>
+        <div class="card">
+          <h3>💬 Trader community</h3>
+          <p><strong>Channel (main this update):</strong> macro overview for day trading — consult the composite current driver breakdown and the cited data sources for the quantitative basis. <strong>Group</strong> remains optional for feedback and peer setups.</p>
+          <div data-gsx-community="macro"></div>
+          <p><a href="#community" data-tab="community">Community chapter →</a></p>
         </div>
       </div>
 
@@ -1101,9 +1121,11 @@ cd GsignalX-Velocity</pre>
           <tr><td>Positions never close</td><td>Start <strong>one</strong> <code>ProfitScouter_Service</code> (or DollarTarget START)</td></tr>
           <tr><td>Telegram WebRequest error</td><td>Allow <code>https://api.telegram.org</code> in Expert Advisors options</td></tr>
           <tr><td>Confirm WARN stale bus</td><td>Start Services; wait ~60s; run Confirm-After-Start again</td></tr>
+          <tr><td>Want a human?</td><td>Share a <strong>redacted</strong> <code>CONFIRM_*.md</code> summary in the <a href="https://t.me/+ZDosSHfUCLU1ZGY0" target="_blank" rel="noopener noreferrer">trading group</a> — no tokens, login, or account numbers</td></tr>
         </tbody>
       </table>
       <p>Longer table: <code>docs/WINDOWS_DEPLOY_SIMPLE.md</code> · Gates: <code>DEPLOYMENT_RUNBOOK.md</code> · Sign-off: <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.</p>
+      <div data-gsx-community="stuck"></div>
 
       <h2>Host this manual on GitHub Pages</h2>
       <ol>
@@ -1217,6 +1239,11 @@ cd GsignalX-Velocity</pre>
         <li><code>deploy/presets/ProfitScouter_Practice_{20|50|100}_{Raw|Standard}.set</code></li>
       </ul>
       <p>Full maths (expectancy, Kelly proxy, Standard vs Raw floors): <code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code>. Demo first; no virtual balance — use a real funded demo near the band.</p>
+      <div class="callout gold">
+        <strong class="label">After your first practice pack</strong>
+        Check the <strong>trading channel</strong> first for the day’s macro overview (composite current driver breakdown + cited sources), then ask peers in the <strong>group</strong> — or post a process tip on the channel (preset + floor, not P/L).
+      </div>
+      <div data-gsx-community="macro"></div>
     </section>
 
     <!-- SESSIONS -->
@@ -1320,6 +1347,11 @@ cd GsignalX-Velocity</pre>
         <li>Drag <code>ProfitHarvest_Now</code> for a one-shot bank (default account target 10; Confirm ON).</li>
         <li>Use <strong>HALT</strong> when walking away mid-book without wanting harvest to continue.</li>
       </ul>
+      <div class="callout gold">
+        <strong class="label">First session done?</strong>
+        Read the <strong>trading channel</strong> macro overview for day trading (driver breakdown + cited sources), then ask a process question in the <strong>group</strong> if needed.
+      </div>
+      <div data-gsx-community="macro"></div>
     </section>
 
     <!-- ADVANCED -->
@@ -1762,6 +1794,11 @@ cd GsignalX-Velocity</pre>
         <strong class="label">Commercial tip</strong>
         Soft VERIFY means one working chat is enough for <strong>Verified</strong>. Prefer clearing unused ChatId slots rather than leaving dead IDs that only produce <code>skip</code> warnings.
       </div>
+
+      <h2>Community vs desk alerts</h2>
+      <p><strong>Desk alerts</strong> (this chapter) are a private bot → your numeric chat IDs (VERIFY, deals, PROP). <strong>Community Telegram</strong> — the <strong>channel is primary this update</strong> for the macro overview for day trading (composite current driver breakdown + cited data sources). The group is secondary for feedback. Never paste bot tokens or chat IDs into community spaces.</p>
+      <div data-gsx-community="macro"></div>
+      <p>Full house rules and join links: <a href="#community" data-tab="community">Desk community</a>.</p>
     </section>
 
     <!-- PROP -->
@@ -1832,6 +1869,7 @@ cd GsignalX-Velocity</pre>
         <li>Fleet target ≤ your capital rung?</li>
         <li>Spreads normal on roster pairs?</li>
         <li>Executive desk reviewed on <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">gsignalx.cloud</a> if you use cloud conviction?</li>
+        <li>Macro overview checked on the <a href="https://t.me/+yURbcVkPi1kxNDg0" target="_blank" rel="noopener noreferrer">trading channel</a> (composite current driver breakdown + cited sources)?</li>
       </ul>
 
       <h2>Mid-session</h2>
@@ -1850,7 +1888,9 @@ cd GsignalX-Velocity</pre>
         <li>Note any catastrophe SL hits — usually means adverse Auto TF too slow or session quality poor</li>
         <li>Friday: confirm no weekend FX risk</li>
         <li>Algo Trading OFF if leaving the machine</li>
+        <li>Optional: consult the <a href="https://t.me/+yURbcVkPi1kxNDg0" target="_blank" rel="noopener noreferrer">trading channel</a> macro overview (composite drivers + cited sources), then share <strong>one process note</strong> there — or ask peers in the <a href="https://t.me/+ZDosSHfUCLU1ZGY0" target="_blank" rel="noopener noreferrer">trading group</a></li>
       </ul>
+      <div data-gsx-community="macro"></div>
 
       <h2>Improve for best performance</h2>
       <table>
@@ -1924,6 +1964,12 @@ cd GsignalX-Velocity</pre>
           <li>Do not expect the MQ5 files to poll the cloud API in this release</li>
         </ul>
       </div>
+
+      <div class="callout gold">
+        <strong class="label">Submit your setup</strong>
+        After the channel’s macro overview for the day, share a worked recipe (pairs, Profit CASH floor, fleet, session window — no login or tokens) in the <strong>trading group</strong> so other desks can compare.
+      </div>
+      <div data-gsx-community="macro"></div>
     </section>
 
     <!-- CHEATSHEET -->
@@ -2001,6 +2047,55 @@ cd GsignalX-Velocity</pre>
       </table>
     </section>
 
+    </section>
+
+    <!-- COMMUNITY -->
+    <section class="panel" id="community" data-title="Desk Community" data-short="Community">
+      <div class="kicker">Telegram · channel primary · macro day trading</div>
+      <h1>GSignalX desk community</h1>
+      <p class="lede">Same invites as the GSignalX Executive / Xenon support desk. For this update the <strong>trading channel is primary</strong>: macro overview for day trading — consult the composite current driver breakdown and the cited data sources for the quantitative basis. The <strong>group</strong> stays available for live feedback and peer setups.</p>
+
+      <div class="callout gold">
+        <strong class="label">Channel · main (this update)</strong>
+        Macro overview for day trading: consult the composite current driver breakdown and the cited data sources for the quantitative basis.
+        <p style="margin:0.75em 0 0"><a href="https://t.me/+yURbcVkPi1kxNDg0" target="_blank" rel="noopener noreferrer"><strong>Open trading channel →</strong></a></p>
+      </div>
+
+      <div class="callout">
+        <strong class="label">Not the same as MT5 alert Telegram</strong>
+        Desk alerts (<a href="#telegram" data-tab="telegram">Telegram Alerts</a>) are a private bot → your numeric chat IDs with soft VERIFY. Community links below are public invite spaces. Never paste bot tokens, ChatId numbers, broker logins, or account numbers into the channel or group.
+      </div>
+
+      <h2>Join</h2>
+      <div class="card-grid">
+        <div class="card">
+          <h3>📣 Trading channel · primary</h3>
+          <p>Macro overview for day trading — composite current driver breakdown and cited data sources for the quantitative basis. Also desk updates and process testimonials (preset band + Profit CASH floor — not P/L brags).</p>
+          <p><a href="https://t.me/+yURbcVkPi1kxNDg0" target="_blank" rel="noopener noreferrer">Open trading channel →</a></p>
+        </div>
+        <div class="card">
+          <h3>💬 Trading group · secondary</h3>
+          <p>Ask traders, share redacted deploy CONFIRM notes, compare sample setups, and send product feedback. Use after you have the day’s macro basis from the channel.</p>
+          <p><a href="https://t.me/+ZDosSHfUCLU1ZGY0" target="_blank" rel="noopener noreferrer">Open trading group →</a></p>
+        </div>
+      </div>
+      <div data-gsx-community="macro"></div>
+
+      <h2>House rules (short)</h2>
+      <ul>
+        <li>Start with the <strong>channel</strong> for the day’s macro / driver quantitative basis before sizing the Velocity book.</li>
+        <li>Process over hype — share what you ran (pairs, floor, session window), not account credentials.</li>
+        <li>No bot tokens, WebRequest secrets, or numeric TG ChatIds in community chats.</li>
+        <li>Bugs with steps to reproduce → prefer <a href="https://github.com/gocitygroup/GsignalX-Velocity/issues" target="_blank" rel="noopener">GitHub Issues</a>; narrative desk feedback → trading group.</li>
+        <li>Blur or omit account numbers in screenshots.</li>
+      </ul>
+
+      <div class="callout">
+        <strong class="label">Testimonial prompt</strong>
+        After a clean demo session: post one sentence on the channel — e.g. “Practice 50 Raw · Profit CASH 0.50 · Fleet 2 · M5 · London window.” Help the next desk start faster.
+      </div>
+    </section>
+
     <!-- APPENDIX -->
     <section class="panel" id="appendix" data-title="Appendix" data-short="Appendix">
       <div class="kicker">Documents &amp; glossary</div>
@@ -2032,10 +2127,17 @@ cd GsignalX-Velocity</pre>
         Full text: <code>LICENSE</code> · Required notice: <code>NOTICE</code>.
       </div>
       <p>
-        Feedback and contributions: <a href="https://github.com/gocitygroup/GsignalX-Velocity/issues" target="_blank" rel="noopener">GitHub Issues</a>
-        · <a href="https://github.com/gocitygroup/GsignalX-Velocity/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>
+        Feedback and contributions:
+        <a href="https://t.me/+yURbcVkPi1kxNDg0" target="_blank" rel="noopener noreferrer">Trading channel</a>
+        (primary — macro overview for day trading: composite current driver breakdown + cited data sources) ·
+        <a href="https://t.me/+ZDosSHfUCLU1ZGY0" target="_blank" rel="noopener noreferrer">Trading group</a>
+        (desk feedback) ·
+        <a href="https://github.com/gocitygroup/GsignalX-Velocity/issues" target="_blank" rel="noopener">GitHub Issues</a>
+        (reproducible bugs) ·
+        <a href="https://github.com/gocitygroup/GsignalX-Velocity/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>
         · Clone: <a href="https://github.com/gocitygroup/GsignalX-Velocity" target="_blank" rel="noopener">gocitygroup/GsignalX-Velocity</a>
       </p>
+      <div data-gsx-community="macro"></div>
 
       <p style="margin:1.5em 0">
         <img src="assets/gruop-high-resulation-file.svg" alt="Gocity Group wordmark" style="max-width:min(360px,100%);height:auto;opacity:0.9"/>
@@ -2061,6 +2163,7 @@ cd GsignalX-Velocity</pre>
           <tr><td><strong>Strategic SL</strong></td><td>Catastrophe broker stop (default 4×ATR)</td></tr>
           <tr><td><strong>Trade Center</strong></td><td>Multisymbol Dashboard — roster, PROP, Telegram desk</td></tr>
           <tr><td><strong>VERIFY</strong></td><td>Trade Center — soft Telegram health: getMe + plain probe per chat; Verified if ≥1 chat delivers</td></tr>
+          <tr><td><strong>Desk community</strong></td><td>Public GSignalX Telegram — <strong>channel primary</strong> (macro day-trading overview / driver breakdown); group secondary (feedback)</td></tr>
           <tr><td><strong>Deal failover</strong></td><td>Chart sends OPEN/CLOSE only when Trade Center desk heartbeat is stale</td></tr>
           <tr><td><strong>TG host tags</strong></td><td><code>svc</code> Service · <code>desk</code> Trade Center · <code>chart</code> Chart EA</td></tr>
           <tr><td><strong>Soft STOP</strong></td><td>PropRisk / operator pause entries; never closes</td></tr>
@@ -2078,7 +2181,11 @@ cd GsignalX-Velocity</pre>
         <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">https://www.gsignalx.cloud/</a>.
       </div>
 
-      <p class="footer-note">© Gocity Group — Gsignalx Velocity <strong>2.14</strong>. Commercial research and educational use with MetaTrader 5. Trade responsibly. Past performance is not indicative of future results.</p>
+      <p class="footer-note">© Gocity Group — Gsignalx Velocity <strong>2.14</strong>. Commercial research and educational use with MetaTrader 5. Trade responsibly. Past performance is not indicative of future results.<br/>
+        Desk community (channel primary): <a href="https://t.me/+yURbcVkPi1kxNDg0" target="_blank" rel="noopener noreferrer">macro channel</a>
+        · <a href="https://t.me/+ZDosSHfUCLU1ZGY0" target="_blank" rel="noopener noreferrer">group</a>
+        · Manual chapter <a href="#community" data-tab="community">#community</a>
+      </p>
     </section>
 
     <nav class="chapter-nav" aria-label="Chapter navigation">
@@ -2211,6 +2318,9 @@ cd GsignalX-Velocity</pre>
     });
     updateChapterNav(id);
     if (mobileSelect) mobileSelect.value = id;
+    if (window.GsxCommunity && typeof window.GsxCommunity.syncBanner === "function") {
+      window.GsxCommunity.syncBanner(id);
+    }
     if (push !== false) {
       history.replaceState(null, "", "#" + id);
     }

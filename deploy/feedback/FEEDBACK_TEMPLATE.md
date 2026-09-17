@@ -53,6 +53,8 @@ Copy to `FEEDBACK_YYYY-MM-DD.md` and fill as you pass each gate.
 - WHAT_WORKED:
 - WHAT_TO_IMPROVE_NEXT:
 
+**Where to send narrative feedback:** start with the [trading channel](https://t.me/+yURbcVkPi1kxNDg0) (**primary**) — macro overview for day trading: consult the composite current driver breakdown and the cited data sources for the quantitative basis. Share WHAT_WORKED / process notes in the [trading group](https://t.me/+ZDosSHfUCLU1ZGY0) (redact tokens and account numbers). Reproducible bugs → [GitHub Issues](https://github.com/gocitygroup/GsignalX-Velocity/issues).
+
 ## Topology A — Preferred live desk (DeskExecute ON; Service stopped or Yield ON)
 
 One magic · FIXED 0.01 · EQ OFF unless floating-DD brake · Chart EA not filling same magic · Scouter owns BANK/CUT/FLAT.
