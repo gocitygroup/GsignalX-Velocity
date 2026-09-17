@@ -32,6 +32,40 @@ int GsxRosterParse(const string listCsv, string &out[])
    return(ArraySize(out));
   }
 
+string GsxSymbolFamilyKey(string canon)
+  {
+   StringToUpper(canon);
+   if(canon == "USOIL" || canon == "XTIUSD" || canon == "WTIUSD" ||
+      canon == "WTICOUSD" || canon == "WTI" || canon == "XTI")
+      return("OILWTI");
+   if(canon == "UKOIL" || canon == "XBRUSD" || canon == "BRENT" ||
+      canon == "XBR" || canon == "UKOILSPOT")
+      return("OILBRENT");
+   if(canon == "XAUUSD" || canon == "GOLD" || canon == "GOLDUSD")
+      return("XAUUSD");
+   if(canon == "XAGUSD" || canon == "SILVER" || canon == "SILVERUSD")
+      return("XAGUSD");
+   if(canon == "BTCUSD" || canon == "XBTUSD" || canon == "BTCUSDT")
+      return("BTCUSD");
+   if(canon == "ETHUSD" || canon == "ETHUSDT")
+      return("ETHUSD");
+   if(canon == "XRPUSD" || canon == "XRPUSDT")
+      return("XRPUSD");
+   if(canon == "LTCUSD" || canon == "LTCUSDT")
+      return("LTCUSD");
+   return(canon);
+  }
+
+bool GsxSymbolCanonMatch(const string a, const string b)
+  {
+   if(a == "" || b == "")
+      return(false);
+   if(a == b)
+      return(true);
+   return(GsxSymbolFamilyKey(a) == GsxSymbolFamilyKey(b) &&
+          GsxSymbolFamilyKey(a) != a); // only when aliased family
+  }
+
 //+------------------------------------------------------------------+
 //| Resolve operator names to live broker SymbolName via canon match |
 //+------------------------------------------------------------------+
@@ -53,6 +87,7 @@ void GsxRosterResolve(string &names[])
 
       string exact = "";
       string canonHit = "";
+      string familyHit = "";
       for(int s = 0; s < total; s++)
         {
          string live = SymbolName(s, false);
@@ -63,14 +98,19 @@ void GsxRosterResolve(string &names[])
             exact = live;
             break;
            }
-         if(canonHit == "" && GsxSymbolCanon(live) == want)
+         string liveCanon = GsxSymbolCanon(live);
+         if(canonHit == "" && liveCanon == want)
             canonHit = live;
+         if(familyHit == "" && GsxSymbolCanonMatch(want, liveCanon))
+            familyHit = live;
         }
 
       if(exact != "")
          names[i] = exact;
       else if(canonHit != "")
          names[i] = canonHit;
+      else if(familyHit != "")
+         names[i] = familyHit;
       // else keep operator spelling for diagnostics
      }
   }

@@ -113,14 +113,14 @@ int GsxPanelLead()
    return(12);
   }
 
-// Value-column offset from panel left (vision-aware; tracks +25% panel length)
+// Value-column offset from panel left (vision-aware; tracks wider panel)
 int GsxPanelCol2Off()
   {
    if(g_gsxUiVision == GSX_VISION_FAR)
-      return(185);
+      return(175);
    if(g_gsxUiVision == GSX_VISION_NEAR)
-      return(148);
-   return(165);
+      return(140);
+   return(155);
   }
 
 // Soft font bump in design units for titles/body
@@ -140,12 +140,13 @@ string GsxPanelClip(const string text, const int maxChars)
    return(StringSubstr(text, 0, maxChars - 2) + "..");
   }
 
-// Approx chars that fit in availPx at given font pixel size
+   // Approx chars that fit in availPx at given font pixel size
 int GsxPanelCharsFit(const int availPx, const int fontPx)
   {
    if(availPx <= 0)
       return(4);
-   double em = MathMax(4.0, (double)MathMax(1, fontPx) * 0.66);
+   // Slightly conservative so long rows don't kiss the right edge
+   double em = MathMax(4.0, (double)MathMax(1, fontPx) * 0.62);
    int c = (int)MathFloor((double)availPx / em);
    if(c < 4) c = 4;
    return(c);
@@ -332,25 +333,34 @@ int GsxLayEqual(GsxLayCtx &ctx, const int n, GsxLaySlot &out[])
    ArrayResize(out, 0);
    if(n < 1)
       return(0);
-   int gaps = ctx.gap * (n - 1);
-   int each = (ctx.contentW - gaps) / n;
+   // Prefer current pack window (supports insets); fall back to full contentW
+   int x0 = ctx.packX;
+   int avail = ctx.packRemain;
+   if(avail < 1)
+     {
+      x0 = ctx.x0;
+      avail = ctx.contentW;
+     }
+   int gap = MathMax(GsxSp(6), ctx.gap);
+   int gaps = gap * (n - 1);
+   int each = (avail - gaps) / n;
    if(each < 1)
       each = 1;
    ArrayResize(out, n);
-   int x = ctx.x0;
+   int x = x0;
    for(int i = 0; i < n; i++)
      {
       int wi = each;
       if(i == n - 1)
-         wi = ctx.x0 + ctx.contentW - x;
+         wi = x0 + avail - x;
       if(wi < 1) wi = 1;
       out[i].x = x;
       out[i].y = ctx.packY;
       out[i].w = wi;
       out[i].h = ctx.packH;
-      x += wi + ctx.gap;
+      x += wi + gap;
      }
-   ctx.packX = ctx.x0 + ctx.contentW;
+   ctx.packX = x0 + avail;
    ctx.packRemain = 0;
    return(n);
   }
@@ -402,19 +412,63 @@ int GsxLayMeasuredH(const GsxLayCtx &ctx)
    return(h);
   }
 
+// Split a parent content width into two equal columns (true dual-column / quadrant).
+// left/right get independent GsxLayCtx; gutter is the horizontal gap between columns.
+void GsxLaySplit2(const int x0, const int y0, const int contentW,
+                  const int gutter, const int cellGap, const int rowGap,
+                  GsxLayCtx &left, GsxLayCtx &right)
+  {
+   int g = MathMax(0, gutter);
+   int colW = (contentW - g) / 2;
+   if(colW < 1)
+      colW = 1;
+   int rightW = contentW - g - colW;
+   if(rightW < 1)
+      rightW = 1;
+   GsxLayBegin(left, x0, y0, colW, cellGap, rowGap);
+   GsxLayBegin(right, x0 + colW + g, y0, rightW, cellGap, rowGap);
+  }
+
+// After packing left/right independently, advance parent cursor by max column height.
+int GsxLaySplit2MeasuredH(const GsxLayCtx &left, const GsxLayCtx &right)
+  {
+   return(MathMax(GsxLayMeasuredH(left), GsxLayMeasuredH(right)));
+  }
+
 void GsxPanelSlotLabel(const string tag, const GsxLaySlot &slot,
                        const string text, const color clr,
                        const int fontPx, const bool bold)
   {
    if(slot.w <= 0 || slot.h <= 0)
       return;
-   int pad = GsxSp(2);
-   int budget = GsxPanelCharsFit(MathMax(4, slot.w - 2 * pad), fontPx);
-   // Vertically center text inside the row slot (~1.15em glyph box)
-   int glyphH = (int)MathRound((double)fontPx * 1.15);
-   int yOff = MathMax(0, (slot.h - glyphH) / 2);
-   GsxPanelLabel(tag, slot.x + pad, slot.y + yOff,
+   int padX = MathMax(GsxSp(3), GsxSp(2));
+   int budget = GsxPanelCharsFit(MathMax(4, slot.w - 2 * padX), fontPx);
+   // Position by fontPx (not inflated glyph) — keeps text mid-box, avoids bottom clip
+   int yOff = MathMax(0, (slot.h - fontPx) / 2);
+   if(yOff + fontPx > slot.h)
+      yOff = MathMax(0, slot.h - fontPx);
+   GsxPanelLabel(tag, slot.x + padX, slot.y + yOff,
                  GsxPanelClip(text, budget), clr, fontPx, bold);
+  }
+
+// Centered label inside a slot (for status chips / pills)
+void GsxPanelSlotLabelCentered(const string tag, const GsxLaySlot &slot,
+                               const string text, const color clr,
+                               const int fontPx, const bool bold)
+  {
+   if(slot.w <= 0 || slot.h <= 0)
+      return;
+   int padX = MathMax(GsxSp(4), GsxSp(3));
+   int budget = GsxPanelCharsFit(MathMax(4, slot.w - 2 * padX), fontPx);
+   string clipped = GsxPanelClip(text, budget);
+   int yOff = MathMax(0, (slot.h - fontPx) / 2);
+   if(yOff + fontPx > slot.h)
+      yOff = MathMax(0, slot.h - fontPx);
+   int approxW = (int)MathRound((double)StringLen(clipped) * (double)fontPx * 0.58);
+   int xOff = MathMax(padX, (slot.w - approxW) / 2);
+   if(xOff + approxW > slot.w - padX)
+      xOff = padX;
+   GsxPanelLabel(tag, slot.x + xOff, slot.y + yOff, clipped, clr, fontPx, bold);
   }
 
 void GsxPanelSlotButton(const string tag, const GsxLaySlot &slot,
@@ -425,17 +479,17 @@ void GsxPanelSlotButton(const string tag, const GsxLaySlot &slot,
    GsxPanelButton(tag, slot.x, slot.y, slot.w, slot.h, text, bg, fg);
   }
 
-// Button inset inside slot so neighbors never touch (H + V padding)
+// Light inset only — heavy pad crushed scaled button height / clipped text
 void GsxPanelSlotButtonPad(const string tag, const GsxLaySlot &slot,
                            const string text, const color bg, const color fg,
                            const int pad)
   {
    if(slot.w <= 0 || slot.h <= 0)
       return;
-   int p = MathMax(GsxSp(1), pad);
+   int p = MathMax(1, MathMin(pad, 2));
    int bw = slot.w - 2 * p;
    int bh = slot.h - 2 * p;
-   if(bw < 1 || bh < 1)
+   if(bw < 20 || bh < 16)
      {
       GsxPanelSlotButton(tag, slot, text, bg, fg);
       return;
@@ -463,6 +517,12 @@ void GsxPanelRect(const string tag, const int x, const int y,
                   const color bg, const color edge, const bool selectable)
   {
    string n = g_gsxPnlPfx + tag;
+   if(ObjectFind(0, n) >= 0)
+     {
+      // Never overwrite a live OBJ_BUTTON with a rect
+      if((ENUM_OBJECT)ObjectGetInteger(0, n, OBJPROP_TYPE) == OBJ_BUTTON)
+         return;
+     }
    if(ObjectFind(0, n) < 0)
      {
       ObjectCreate(0, n, OBJ_RECTANGLE_LABEL, 0, 0, 0);
@@ -477,6 +537,7 @@ void GsxPanelRect(const string tag, const int x, const int y,
    ObjectSetInteger(0, n, OBJPROP_YSIZE, h);
    ObjectSetInteger(0, n, OBJPROP_BGCOLOR, bg);
    ObjectSetInteger(0, n, OBJPROP_COLOR, edge);
+   ObjectSetInteger(0, n, OBJPROP_BORDER_TYPE, BORDER_FLAT);
    ObjectSetInteger(0, n, OBJPROP_SELECTABLE, selectable);
    ObjectSetInteger(0, n, OBJPROP_SELECTED, false);
    ObjectSetInteger(0, n, OBJPROP_ZORDER, selectable ? 5 : 1);
@@ -502,35 +563,46 @@ void GsxPanelLabel(const string tag, const int x, const int y,
    ObjectSetString(0, n, OBJPROP_TEXT, text);
    ObjectSetInteger(0, n, OBJPROP_COLOR, clr);
    ObjectSetInteger(0, n, OBJPROP_FONTSIZE, size);
-   ObjectSetString(0, n, OBJPROP_FONT, bold ? "Segoe UI Bold" : g_gsxPnlFont);
+   ObjectSetString(0, n, OBJPROP_FONT, bold ? "Arial Bold" : "Arial");
    ObjectSetInteger(0, n, OBJPROP_ZORDER, 50);
   }
 
 //+------------------------------------------------------------------+
+// Native OBJ_BUTTON — reliable glyph centering. Border=bg softens bevel.
 void GsxPanelButton(const string tag, const int x, const int y,
                     const int w, const int h, const string text,
                     const color bg, const color fg)
   {
    string n = g_gsxPnlPfx + tag;
+   ObjectDelete(0, n + "_TX"); // leftover from flat-rect experiment
+   if(ObjectFind(0, n) >= 0)
+     {
+      if((ENUM_OBJECT)ObjectGetInteger(0, n, OBJPROP_TYPE) != OBJ_BUTTON)
+         ObjectDelete(0, n);
+     }
    if(ObjectFind(0, n) < 0)
      {
       ObjectCreate(0, n, OBJ_BUTTON, 0, 0, 0);
       ObjectSetInteger(0, n, OBJPROP_SELECTABLE, false);
       ObjectSetInteger(0, n, OBJPROP_HIDDEN, true);
       ObjectSetInteger(0, n, OBJPROP_ZORDER, 60);
-      ObjectSetString(0, n, OBJPROP_FONT, "Segoe UI Bold");
      }
+   int bh = MathMax(18, h);
+   int bw = MathMax(24, w);
+   int fsBtn = MathMax(8, MathMin(GsxSf(g_gsxPnlFontSize + 1), bh - 8));
    ObjectSetInteger(0, n, OBJPROP_CORNER, g_gsxPnlCorner);
    ObjectSetInteger(0, n, OBJPROP_XDISTANCE, x);
    ObjectSetInteger(0, n, OBJPROP_YDISTANCE, y);
-   ObjectSetInteger(0, n, OBJPROP_XSIZE, w);
-   ObjectSetInteger(0, n, OBJPROP_YSIZE, h);
+   ObjectSetInteger(0, n, OBJPROP_XSIZE, bw);
+   ObjectSetInteger(0, n, OBJPROP_YSIZE, bh);
    ObjectSetString(0, n, OBJPROP_TEXT, text);
-   ObjectSetInteger(0, n, OBJPROP_FONTSIZE, GsxSf(g_gsxPnlFontSize));
+   ObjectSetString(0, n, OBJPROP_FONT, "Arial Bold");
+   ObjectSetInteger(0, n, OBJPROP_FONTSIZE, fsBtn);
    ObjectSetInteger(0, n, OBJPROP_BGCOLOR, bg);
    ObjectSetInteger(0, n, OBJPROP_COLOR, fg);
-   ObjectSetInteger(0, n, OBJPROP_BORDER_COLOR, g_gsxPnlEdge);
+   ObjectSetInteger(0, n, OBJPROP_BORDER_COLOR, bg);
    ObjectSetInteger(0, n, OBJPROP_STATE, false);
+   ObjectSetInteger(0, n, OBJPROP_BACK, false);
    ObjectSetInteger(0, n, OBJPROP_ZORDER, 60);
   }
 
@@ -618,7 +690,7 @@ void GsxPanelApplyChrome(const int totalH,
                          const color titleClr, const color hintClr,
                          const string title, const string hint)
   {
-   int inset = GsxSx(g_gsxUiVision == GSX_VISION_FAR ? 10 : 8);
+   int inset = GsxSx(g_gsxUiVision == GSX_VISION_FAR ? 12 : 10);
    int boxX = g_gsxPnlX - inset;
    int boxY = g_gsxPnlY - inset;
    int boxW = g_gsxPnlW + 2 * inset;
@@ -646,9 +718,9 @@ void GsxPanelApplyChrome(const int totalH,
       brandW = MathMax(GsxSx(64), g_gsxPnlW - dragW - ctxW - gap * 2);
      }
 
-   GsxPanelRect("BG", boxX, boxY, boxW, totalH, bg, edge, false);
+   GsxPanelRect("BG", boxX, boxY, boxW, totalH, bg, bg, false);
    GsxPanelRect("TITLE", boxX, boxY, boxW, g_gsxPnlTitleH,
-                titleBg, edge, true);
+                titleBg, titleBg, true);
 
    GsxLaySlot sBrand, sCtx, sDrag;
    sBrand.x = g_gsxPnlX;
@@ -676,7 +748,7 @@ void GsxPanelResizeBg(const int totalH)
    string n = g_gsxPnlPfx + "BG";
    if(ObjectFind(0, n) >= 0)
      {
-      int inset = GsxSx(g_gsxUiVision == GSX_VISION_FAR ? 10 : 8);
+      int inset = GsxSx(g_gsxUiVision == GSX_VISION_FAR ? 12 : 10);
       ObjectSetInteger(0, n, OBJPROP_YSIZE, totalH);
       ObjectSetInteger(0, n, OBJPROP_XSIZE, g_gsxPnlW + 2 * inset);
      }

@@ -128,6 +128,6 @@ All under `deploy/presets/`.
 
 ## 8. Related
 
-- Plan: [PLAN_V2.02_Practice_Live_Simulation.md](PLAN_V2.02_Practice_Live_Simulation.md)
+- Current cut: [RELEASE_v2.14_Input_Reliability.md](RELEASE_v2.14_Input_Reliability.md)
 - EUR 100 deep dive: [PRESET_100EUR_RawSpread.md](PRESET_100EUR_RawSpread.md)
 - Prop soft-lock: `Include/GSignalX/PropRisk.mqh` (uses **broker** balance — no virtual equity)

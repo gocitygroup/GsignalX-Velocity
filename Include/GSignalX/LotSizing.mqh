@@ -51,6 +51,9 @@ double GsxCalcLot(const string symbol,
    if(!useAutoLot || riskMode == GSX_LOT_MODE_FIXED || stopDistance <= 0.0)
      {
       double lotFixed = GsxNormalizeLot(symbol, fixedLot, maxLotCap);
+      if(useAutoLot && stopDistance <= 0.0)
+         PrintFormat("[LOT_CALC] AUTO→FIX fallback symbol=%s (stopDist<=0) final=%.2f",
+                     symbol, lotFixed);
       if(logCalc)
          PrintFormat("[LOT_CALC] symbol=%s balance=%.2f risk%%=%.2f sl_dist=%.5f "
                      "tick_val=n/a raw=%.4f final=%.2f mode=%s",

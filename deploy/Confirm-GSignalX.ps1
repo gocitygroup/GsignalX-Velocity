@@ -10,7 +10,7 @@
 #>
 [CmdletBinding()]
 param(
-  [ValidateSet("Files", "Compile", "Bus", "Grades", "LoserSafety", "ProdHardening", "All")]
+  [ValidateSet("Files", "Compile", "Bus", "Grades", "LoserSafety", "ProdHardening", "Functional", "All")]
   [string] $Gate = "All",
 
   [string] $TerminalDataPath = "",
@@ -302,19 +302,20 @@ function Confirm-LoserSafety {
     $script:fail++
   }
 
-  if ($dashText -match 'InpTgBotToken' -and $dashText -match 'InpPropEnable' -and $dashText -match '#property\s+version\s+"2\.00"') {
-    Add-Line "PASS  Dashboard 2.00 Telegram + Prop inputs"
+  if ($dashText -match 'InpTgBotToken' -and $dashText -match 'InpPropEnable' -and
+      ($dashText -match '#property\s+version\s+"2\.\d+"')) {
+    Add-Line "PASS  Dashboard 2.xx Telegram + Prop inputs"
   }
   else {
-    Add-Line "FAIL  Dashboard 2.00 wiring / version missing"
+    Add-Line "FAIL  Dashboard 2.xx wiring / version missing"
     $script:fail++
   }
 
-  if ($msPanelText -match 'GSXMS_WIDTH\s+640' -and $msPanelText -match 'GSXMS_BTN_H\s+28') {
-    Add-Line "PASS  Trade Center button sizing 640/28"
+  if ($msPanelText -match 'GSXMS_WIDTH\s+1280' -and $msPanelText -match 'GSXMS_BTN_H\s+32') {
+    Add-Line "PASS  Trade Center button sizing 1280/32"
   }
   else {
-    Add-Line "FAIL  Trade Center sizing not updated (expect 640/28)"
+    Add-Line "FAIL  Trade Center sizing not updated (expect 1280/32)"
     $script:fail++
   }
 
@@ -342,8 +343,8 @@ function Confirm-LoserSafety {
     $script:fail++
   }
 
-  if ($dashText -match 'InpEvtCalendarEnable' -and $dashText -match 'GsxEventGatePoll' -and $dashText -match 'v1\.26') {
-    Add-Line "PASS  Dashboard EventGate + v1.26 wiring"
+  if ($dashText -match 'InpEvtCalendarEnable' -and $dashText -match 'GsxEventGatePoll') {
+    Add-Line "PASS  Dashboard EventGate wiring"
   }
   else {
     Add-Line "FAIL  Dashboard EventGate wiring missing"
@@ -370,16 +371,16 @@ function Confirm-LoserSafety {
   $verOk = 0
   foreach ($h in $hosts200) {
     $t = if (Test-Path $h.Path) { Get-Content $h.Path -Raw } else { "" }
-    if ($t -match '#property\s+version\s+"2\.00"') {
+    if ($t -match '#property\s+version\s+"2\.\d+"') {
       $verOk++
     }
     else {
-      Add-Line ("FAIL  {0} missing #property version `"2.00`"" -f $h.Label)
+      Add-Line ("FAIL  {0} missing #property version `"2.xx`"" -f $h.Label)
       $script:fail++
     }
   }
   if ($verOk -eq $hosts200.Count) {
-    Add-Line "PASS  Velocity 2.00 host versions (6/6)"
+    Add-Line "PASS  Velocity 2.xx host versions (6/6)"
   }
 
   $busProto = Join-Path $RepoRoot "Include\GSignalX\BusProtocol.mqh"
@@ -400,6 +401,7 @@ function Confirm-Files {
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\LotSizing.mqh") "Include GSignalX\LotSizing.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\ChartPanel.mqh") "Include GSignalX\ChartPanel.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\Fleet.mqh") "Include GSignalX\Fleet.mqh" | Out-Null
+  Test-PathMark (Join-Path $mql5 "Include\GSignalX\ScoutLink.mqh") "Include GSignalX\ScoutLink.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\Engines.mqh") "Include GSignalX\Engines.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\Core.mqh") "Include GSignalX\Core.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\EntryExec.mqh") "Include GSignalX\EntryExec.mqh" | Out-Null
@@ -524,16 +526,19 @@ function Confirm-ProdHardening {
     $script:fail++
   }
 
-  if ($dashText -match 'InpRefreshMs\s*=\s*1000' -and $dashText -match 'g_lastSnapFp' -and $dashText -match 'GsxTgProcessQueueEx') {
-    Add-Line "PASS  Dashboard cadence 1000ms + dirty redraw + TG budget"
+  if ($dashText -match 'g_lastSnapFp' -and $dashText -match 'GsxTgProcessQueueEx' -and
+      ($dashText -match 'InpRefreshMs' -or $dashText -match 'g_lastForcedRedraw')) {
+    Add-Line "PASS  Dashboard dirty redraw + TG budget (V2.13 cadence flexible)"
   }
   else {
-    Add-Line "FAIL  Dashboard v2.01 cadence/dirty redraw missing"
+    Add-Line "FAIL  Dashboard dirty redraw / TG budget missing"
     $script:fail++
   }
 
-  if ($panelText -match 'GsxMsPanelApplyAdaptive' -and $panelText -match 'signalStale') {
-    Add-Line "PASS  Trade Center adaptive layout + STALE rows"
+  if ($panelText -match 'GsxMsPanelApplyAdaptive' -and
+      ($panelText -match 'signalStale' -or $panelText -match 'dirState' -or
+       (Get-Content (Join-Path $RepoRoot "Include\GSignalX\RosterViewModel.mqh") -Raw) -match 'signalStale')) {
+    Add-Line "PASS  Trade Center adaptive layout + STALE/DIR state"
   }
   else {
     Add-Line "FAIL  MultisymbolPanel adaptive/STALE missing"
@@ -559,10 +564,19 @@ function Confirm-ProdHardening {
 
 function Confirm-Bus {
   Add-Line "=== GATE Bus ==="
-  Test-PathMark $busRoot "bus root" | Out-Null
+  if (-not (Test-Path $busRoot)) {
+    Add-Line "WARN  bus root missing (idle publishers OK offline): $busRoot"
+  }
+  else {
+    Add-Line "PASS  bus root"
+  }
   $index = Join-Path $busRoot "terminals\_index.txt"
   $tidList = @()
-  if (Test-PathMark $index "terminals\_index.txt") {
+  if (-not (Test-Path $index)) {
+    Add-Line "WARN  terminals\_index.txt missing (start Service/Desk with InpBusEnable)"
+  }
+  else {
+    Add-Line "PASS  terminals\_index.txt"
     $tidList = @(Get-Content $index | Where-Object { $_.Trim() -ne "" })
     Add-Line ("INFO  indexed tids: {0}" -f $tidList.Count)
     if ($tidList.Count -ge 2) {
@@ -586,8 +600,7 @@ function Confirm-Bus {
         }
       }
       else {
-        Add-Line "FAIL  missing heartbeat for $tid"
-        $script:fail++
+        Add-Line "WARN  missing heartbeat for $tid (idle publisher)"
       }
       $sigDir = Join-Path $busRoot ("terminals\{0}\signals" -f $tid.Trim())
       if (Test-Path $sigDir) {
@@ -645,7 +658,11 @@ function Confirm-Bus {
 function Confirm-Grades {
   Add-Line "=== GATE Grades ==="
   $grades = Join-Path $busRoot "grades\latest.json"
-  if (-not (Test-PathMark $grades "grades\latest.json")) { return }
+  if (-not (Test-Path $grades)) {
+    Add-Line "WARN  grades\latest.json missing (idle grader OK offline)"
+    return
+  }
+  Add-Line "PASS  grades\latest.json"
   $raw = Get-Content $grades -Raw
   if ($raw -notmatch '"version"\s*:\s*1') {
     Add-Line "FAIL  grades version missing or not 1"
@@ -672,6 +689,914 @@ Add-Line "TerminalDataPath=$TerminalDataPath"
 Add-Line "BusRoot=$busRoot"
 Add-Line ""
 
+function Confirm-Functional {
+  Add-Line "=== GATE Functional (desk contracts static) ==="
+
+  $scoutLink = Join-Path $RepoRoot "Include\GSignalX\ScoutLink.mqh"
+  $fleet     = Join-Path $RepoRoot "Include\GSignalX\Fleet.mqh"
+  $store     = Join-Path $RepoRoot "Include\GSignalX\RosterStore.mqh"
+  $core      = Join-Path $RepoRoot "Include\GSignalX\Core.mqh"
+  $entry     = Join-Path $RepoRoot "Include\GSignalX\EntryExec.mqh"
+  $msPanel   = Join-Path $RepoRoot "Include\GSignalX\MultisymbolPanel.mqh"
+  $prop      = Join-Path $RepoRoot "Include\GSignalX\PropRisk.mqh"
+  $psCore    = Join-Path $RepoRoot "Include\ProfitScouter\Core.mqh"
+  $dash      = Join-Path $RepoRoot "GsignalX_Multisymbol_Dashboard.mq5"
+  $chart     = Join-Path $RepoRoot "GsignalX_GocityGroup.mq5"
+
+  $scoutText  = if (Test-Path $scoutLink) { Get-Content $scoutLink -Raw } else { "" }
+  $fleetText  = if (Test-Path $fleet) { Get-Content $fleet -Raw } else { "" }
+  $storeText  = if (Test-Path $store) { Get-Content $store -Raw } else { "" }
+  $coreText   = if (Test-Path $core) { Get-Content $core -Raw } else { "" }
+  $entryText  = if (Test-Path $entry) { Get-Content $entry -Raw } else { "" }
+  $msText     = if (Test-Path $msPanel) { Get-Content $msPanel -Raw } else { "" }
+  $propText   = if (Test-Path $prop) { Get-Content $prop -Raw } else { "" }
+  $psText     = if (Test-Path $psCore) { Get-Content $psCore -Raw } else { "" }
+  $dashText   = if (Test-Path $dash) { Get-Content $dash -Raw } else { "" }
+  $chartText  = if (Test-Path $chart) { Get-Content $chart -Raw } else { "" }
+
+  Test-PathMark $scoutLink "ScoutLink.mqh" | Out-Null
+
+  if ($scoutText -match 'GsxScoutRunVarName' -and $scoutText -match 'GsxScoutRunSetLinked' -and $scoutText -match 'PS%d_RUN') {
+    Add-Line "PASS  ScoutLink shared PS{id}_RUN helpers"
+  }
+  else {
+    Add-Line "FAIL  ScoutLink helpers missing"
+    $script:fail++
+  }
+
+  if ($fleetText -match 'GSX_SVC_RUN_' -and $fleetText -match 'GSX_SVC_OWN_' -and $fleetText -match 'GsxFleetServiceOwnSet') {
+    Add-Line "PASS  Service RUN/OWN GV helpers"
+  }
+  else {
+    Add-Line "FAIL  Service RUN/OWN helpers missing"
+    $script:fail++
+  }
+
+  if ($storeText -match 'GSX_MS_FLIPWAIT_' -and $storeText -match 'GsxRosterFlipWaitGet') {
+    Add-Line "PASS  RosterStore FOLLOW/WAIT GV helpers"
+  }
+  else {
+    Add-Line "FAIL  FlipWait GV helpers missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'GsxRosterFlipWaitGet' -and $coreText -match 'g_flipWait') {
+    Add-Line "PASS  Core hot-reloads FOLLOW/WAIT each cycle"
+  }
+  else {
+    Add-Line "FAIL  Core flip-wait hot-reload missing"
+    $script:fail++
+  }
+
+  $followGate = Join-Path $RepoRoot "Include\GSignalX\FollowGate.mqh"
+  $fgText = if (Test-Path $followGate) { Get-Content $followGate -Raw } else { "" }
+
+  if (($coreText -match 'GsxAllowEntry' -or $coreText -match 'GsxAllowNewDirEntry') -and
+      ($fgText -match 'GsxAllowNewDirEntry') -and ($fgText -match 'GsxAllowEntry') -and
+      ($entryText -match 'FollowGate.mqh')) {
+    Add-Line "PASS  Single WAIT+FollowDir gate GsxAllowEntry"
+  }
+  else {
+    Add-Line "FAIL  WAIT gate missing"
+    $script:fail++
+  }
+
+  if ($msText -match 'BTN_HALT' -and $msText -match 'GsxScoutRunSetLinked' -and $msText -match 'HALT \(no closes\)') {
+    Add-Line "PASS  Trade Center HALT pauses linked Scouter (no closes)"
+  }
+  else {
+    Add-Line "FAIL  Trade Center HALT scout link missing"
+    $script:fail++
+  }
+
+  if ($msText -match 'BTN_STOP' -and $msText -match 'Entries only') {
+    Add-Line "PASS  Trade Center STOP entries-only (Scouter keeps harvesting)"
+  }
+  else {
+    Add-Line "FAIL  Trade Center STOP contract missing"
+    $script:fail++
+  }
+
+  if ($msText -match 'BTN_PLAY' -and $msText -match 'GsxScoutRunSetLinked') {
+    Add-Line "PASS  Trade Center PLAY resumes Service RUN + Scouter"
+  }
+  else {
+    Add-Line "FAIL  Trade Center PLAY scout resume missing"
+    $script:fail++
+  }
+
+  if ($dashText -match 'InpScoutLinkEnable' -and $dashText -match 'InpScoutInstanceID' -and $dashText -match 'GsxMsPanelSetScoutLink') {
+    Add-Line "PASS  Dashboard scout link inputs wired"
+  }
+  else {
+    Add-Line "FAIL  Dashboard scout link inputs missing"
+    $script:fail++
+  }
+
+  if ($chartText -match 'GSX_SPREADIGN_' -and $chartText -match 'GSX_AUTOLOT_' -and $chartText -match 'GSX_EQGUARD_') {
+    Add-Line "PASS  Chart SPREAD/AUTOLOT/EQ GV names present"
+  }
+  else {
+    Add-Line "FAIL  Chart SPREAD/AUTOLOT/EQ GVs missing"
+    $script:fail++
+  }
+
+  if ($chartText -match 'BTN_FLAT' -and $chartText -match 'SetScoutRun\(false\)' -and $chartText -match 'SetRunState\(false') {
+    Add-Line "PASS  Chart HALT pauses entries + Scouter"
+  }
+  else {
+    Add-Line "FAIL  Chart HALT contract missing"
+    $script:fail++
+  }
+
+  if ($propText -match 'GsxPropApplySoftStop' -and $propText -match 'GsxFleetServiceRunSet' -and $propText -notmatch 'PositionClose') {
+    Add-Line "PASS  PropRisk soft STOP (RUN=0, no PositionClose)"
+  }
+  else {
+    Add-Line "FAIL  PropRisk soft STOP contract broken"
+    $script:fail++
+  }
+
+  if ($entryText -match 'never closes' -or $entryText -match 'BLOCKED' -or $entryText -match 'exits are owned by Profit Scouter') {
+    Add-Line "PASS  EntryExec blocks reverse-closes"
+  }
+  else {
+    Add-Line "FAIL  EntryExec close block missing"
+    $script:fail++
+  }
+
+  if ($psText -match 'HarvestWinners' -and $psText -match 'IsProfitableTicket' -and $psText -match 'HandleAdverseBarLossCut') {
+    Add-Line "PASS  Scouter winners-only harvest + adverse loser path"
+  }
+  else {
+    Add-Line "FAIL  Scouter harvest/adverse path markers missing"
+    $script:fail++
+  }
+
+  if ($psText -match 'GsxScoutRunVarName' -or $psText -match 'GsxScoutRunSet') {
+    Add-Line "PASS  ProfitScouter uses shared ScoutLink"
+  }
+  else {
+    Add-Line "FAIL  ProfitScouter not on ScoutLink helpers"
+    $script:fail++
+  }
+
+  if ($coreText -match 'GsxFleetServiceOwnSet' -and $chartText -match 'ChartAutoEntriesAllowed' -and $chartText -match 'GsxFleetServiceOwns') {
+    Add-Line "PASS  OWN double-fill deferral contract present"
+  }
+  else {
+    Add-Line "FAIL  OWN double-fill contract missing"
+    $script:fail++
+  }
+
+  if ($msText -match 'GSXMS_WIDTH\s+1280' -and $msText -match 'GSXMS_BTN_H\s+32') {
+    Add-Line "PASS  Trade Center sizing 1280/32 (Functional)"
+  }
+  else {
+    Add-Line "FAIL  Trade Center sizing assert (Functional expect 1280/32)"
+    $script:fail++
+  }
+
+  # --- V2.04 must-not-change freeze (Lot / Spread / Floating P/L) ---
+  $lot = Join-Path $RepoRoot "Include\GSignalX\LotSizing.mqh"
+  $gates = Join-Path $RepoRoot "Include\GSignalX\MarketGates.mqh"
+  $lotText = if (Test-Path $lot) { Get-Content $lot -Raw } else { "" }
+  $gatesText = if (Test-Path $gates) { Get-Content $gates -Raw } else { "" }
+
+  if ($lotText -match 'GsxCalcLot' -and $lotText -match 'GsxNormalizeLot' -and
+      $lotText -match 'GsxAccountDrawdownPct' -and
+      $lotText -match 'riskMoney / \(\(stopDist / tickSize\) \* tickValue\)') {
+    Add-Line "PASS  LotSizing freeze (CalcLot/Normalize/DD signatures)"
+  }
+  else {
+    Add-Line "FAIL  LotSizing freeze broken (must-not-change)"
+    $script:fail++
+  }
+
+  if ($gatesText -match 'bool GsxSpreadOK' -and $gatesText -match 'SYMBOL_SPREAD' -and
+      $gatesText -match 'spread .+ > limit') {
+    Add-Line "PASS  MarketGates GsxSpreadOK freeze"
+  }
+  else {
+    Add-Line "FAIL  GsxSpreadOK freeze broken (must-not-change)"
+    $script:fail++
+  }
+
+  if ($gatesText -match 'GsxEffectiveMaxSpreadPt' -and $gatesText -match 'GSX_CLASS_CRYPTO' -and
+      $gatesText -match '1500' -and $gatesText -match 'cryptoExempt') {
+    Add-Line "PASS  V2.12 class-aware spread + crypto session/hour exempt"
+  }
+  else {
+    Add-Line "FAIL  V2.12 CMD/CR spread/session gates missing"
+    $script:fail++
+  }
+
+  if ($fleetText -match 'GsxFleetFloating' -and $fleetText -match 'POSITION_PROFIT' -and
+      $fleetText -match 'POSITION_SWAP') {
+    Add-Line "PASS  Fleet floating P/L freeze"
+  }
+  else {
+    Add-Line "FAIL  Fleet floating P/L freeze broken"
+    $script:fail++
+  }
+
+  # --- V2.04 FollowDir + desk TF (present after Phase 1+) ---
+  if ($storeText -match 'GSX_MS_FOLLOWDIR_' -and $storeText -match 'GsxRosterFollowDirGet' -and
+      $storeText -match 'GSX_FOLLOW_AUTO' -and $storeText -match 'GsxRosterTimeframeGet') {
+    Add-Line "PASS  RosterStore FollowDir + TF GV helpers"
+  }
+  else {
+    Add-Line "FAIL  FollowDir/TF GV helpers missing"
+    $script:fail++
+  }
+
+  if ($entryText -match 'GsxFollowDirAllows' -and $entryText -match 'FollowGate.mqh') {
+    Add-Line "PASS  EntryExec shared FollowDir gate"
+  }
+  else {
+    $fg = Join-Path $RepoRoot "Include\GSignalX\FollowGate.mqh"
+    $fgText = if (Test-Path $fg) { Get-Content $fg -Raw } else { "" }
+    if ($fgText -match 'GsxFollowDirAllows' -and $fgText -match 'GsxAllowEntry') {
+      Add-Line "PASS  EntryExec shared FollowDir gate"
+    }
+    else {
+      Add-Line "FAIL  EntryExec FollowDir gate missing"
+      $script:fail++
+    }
+  }
+
+  if ($coreText -match 'GsxRosterFollowDirGet' -and $coreText -match 'GsxAllowEntry' -and
+      $coreText -match 'GsxRosterTimeframeGet') {
+    Add-Line "PASS  Core enforces FollowDir + live TF"
+  }
+  else {
+    Add-Line "FAIL  Core FollowDir/TF wiring missing"
+    $script:fail++
+  }
+
+  if ($msText -match 'BTN_FDIR_' -or $msText -match 'FollowDir' -or $msText -match 'FOLLOWDIR') {
+    if ($msText -match 'new entries only' -or $msText -match 'Affects new entries only') {
+      Add-Line "PASS  Trade Center FollowDir UI + entries-only copy"
+    }
+    else {
+      Add-Line "FAIL  Trade Center FollowDir entries-only tooltip missing"
+      $script:fail++
+    }
+  }
+  else {
+    Add-Line "FAIL  Trade Center FollowDir controls missing"
+    $script:fail++
+  }
+
+  # --- V2.06 multi-symbol trading parity ---
+  $fg206 = Join-Path $RepoRoot "Include\GSignalX\FollowGate.mqh"
+  $fg206Text = if (Test-Path $fg206) { Get-Content $fg206 -Raw } else { "" }
+  if ($storeText -match 'GSX_FOLLOW_WAIT' -and $fg206Text -match 'GSX_FOLLOW_WAIT' -and
+      $storeText -match 'GsxRosterFollowDirCycle' -and $fg206Text -match 'GSX_FOLLOW_WAIT') {
+    Add-Line "PASS  FollowDir Wait mode (Follow/Buy/Sell/Wait)"
+  }
+  else {
+    Add-Line "FAIL  FollowDir Wait mode missing"
+    $script:fail++
+  }
+
+  if ($msText -match 'GsxMsRetireSymbol' -and $msText -match 'BTN_SWAP' -and
+      $msText -match 'BTN_PAIR_START_ALL' -and $coreText -match 'GsxCoreRetireSymbol') {
+    Add-Line "PASS  Retire cleanup + SWAP + start/stop-all"
+  }
+  else {
+    Add-Line "FAIL  Retire/SWAP/start-all wiring missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'InpSignalMaxAgeSec|GsxCoreSignalFresh' -and
+      $coreText -match 'GsxCoreFillsPerCycle|InpFleetFillsPerCycle' -and
+      $coreText -match 'g_joinDirCache') {
+    Add-Line "PASS  Signal-age gate + multi-fill + dir-change cache"
+  }
+  else {
+    Add-Line "FAIL  Latency/stale fill path missing"
+    $script:fail++
+  }
+
+  $gsxText = Get-Content (Join-Path $RepoRoot "GsignalX_GocityGroup.mq5") -Raw
+  if ($gsxText -match 'GsxRosterContains' -and $gsxText -match 'ChartAutoEntriesAllowed' -and
+      $gsxText -match 'Service owns this roster pair') {
+    Add-Line "PASS  Chart defers roster symbols when Service owns"
+  }
+  else {
+    Add-Line "FAIL  Chart single-owner roster defer missing"
+    $script:fail++
+  }
+
+  $rvm = Join-Path $RepoRoot "Include\GSignalX\RosterViewModel.mqh"
+  $rvmText = if (Test-Path $rvm) { Get-Content $rvm -Raw } else { "" }
+  if ($rvmText -match 'signalAgeSec' -and $msText -match 'signalAgeSec') {
+    Add-Line "PASS  Chart strip signal age + FollowDir status fields"
+  }
+  else {
+    Add-Line "FAIL  Strip status age/mode fields missing"
+    $script:fail++
+  }
+
+  $busIo = Join-Path $RepoRoot "Include\GSignalX\BusIO.mqh"
+  $busIoText = if (Test-Path $busIo) { Get-Content $busIo -Raw } else { "" }
+  $busProto = Join-Path $RepoRoot "Include\GSignalX\BusProtocol.mqh"
+  $busProtoText = if (Test-Path $busProto) { Get-Content $busProto -Raw } else { "" }
+  if ($busIoText -match 'GsxBusReadFreshestSignal' -and $busProtoText -match 'GsxBusDeskSignalPath' -and
+      $rvmText -match 'GsxBusReadFreshestSignal') {
+    Add-Line "PASS  Cross-terminal freshest signal + desk mirror"
+  }
+  else {
+    Add-Line "FAIL  Freshest/desk signal path missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'GsxCorePublishBus' -and $coreText -match 'g_svcEnabled' -and
+      ($coreText -match 'Always refresh engines' -or $coreText -match 'directions live even when STOPPED')) {
+    Add-Line "PASS  Service publishes signals while STOPPED"
+  }
+  else {
+    # Fallback: publish before early return on !g_svcEnabled
+    if ($coreText -match 'GsxCorePublishBus\(\);' -and $coreText -match 'if\(!g_svcEnabled\)') {
+      Add-Line "PASS  Service publishes signals while STOPPED"
+    }
+    else {
+      Add-Line "FAIL  Service bus-while-stopped wiring missing"
+      $script:fail++
+    }
+  }
+
+  if ($storeText -match 'GsxRosterDedupeInPlace' -and $storeText -match 'duplicate') {
+    Add-Line "PASS  Roster canon dedupe on ADD/load"
+  }
+  else {
+    Add-Line "FAIL  Roster dedupe helpers missing"
+    $script:fail++
+  }
+
+  $chartPanel = Join-Path $RepoRoot "Include\GSignalX\ChartPanel.mqh"
+  $cpText = if (Test-Path $chartPanel) { Get-Content $chartPanel -Raw } else { "" }
+  $quadDraw = Join-Path $RepoRoot "Include\GSignalX\MultisymbolQuadDraw.mqh"
+  $qdText = if (Test-Path $quadDraw) { Get-Content $quadDraw -Raw } else { "" }
+  $layoutBlob = $msText + "`n" + $qdText
+
+  if (($layoutBlob -match 'SEC_SYS') -and ($layoutBlob -match 'SEC_AUTO') -and
+      ($layoutBlob -match 'GsxLaySplit2' -or $cpText -match 'GsxLaySplit2')) {
+    Add-Line "PASS  Trade Center quadrant section markers"
+  }
+  else {
+    Add-Line "FAIL  Trade Center quadrant layout markers missing"
+    $script:fail++
+  }
+
+  if ($cpText -match 'GsxLaySplit2' -and $qdText -match 'GsxLaySplit2' -and
+      $qdText -match 'GsxMsDrawQuadUL' -and $qdText -match 'GsxMsDrawQuadLL') {
+    Add-Line "PASS  True dual-column GsxLaySplit2 + quad drawers"
+  }
+  else {
+    Add-Line "FAIL  True quadrant split/draw helpers missing"
+    $script:fail++
+  }
+
+  if ($dashText -match 'InpShowPractice' -and $msText -match 'g_msShowPractice') {
+    Add-Line "PASS  Practice coach muted by InpShowPractice"
+  }
+  else {
+    Add-Line "FAIL  InpShowPractice / g_msShowPractice missing"
+    $script:fail++
+  }
+
+  # --- V2.07 instant desk fill + service reliability ---
+  $sigBus = Join-Path $RepoRoot "Include\GSignalX\SignalBus.mqh"
+  $sigBusText = if (Test-Path $sigBus) { Get-Content $sigBus -Raw } else { "" }
+
+  if ($coreText -match 'g_onboardPending' -and $coreText -match 'GsxCorePublishBusIndex' -and
+      $coreText -match 'onboard priority' -and $coreText -match 'GsxCoreCalcIndex') {
+    Add-Line "PASS  V2.07 onboard priority calc + immediate bus"
+  }
+  else {
+    Add-Line "FAIL  V2.07 onboard priority path missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'cooldown bypass' -or $coreText -match 'onboard \? 0') {
+    Add-Line "PASS  V2.07 onboard fill claim exception"
+  }
+  else {
+    Add-Line "FAIL  V2.07 onboard claim exception missing"
+    $script:fail++
+  }
+
+  if ($rvmText -match 'dirState' -and $rvmText -match 'COMPUTE' -and $rvmText -match 'FLAT' -and
+      $msText -match 'GsxMsDirCellTxt' -and $qdText -match 'GsxMsDirCellTxt') {
+    Add-Line "PASS  V2.07 COMPUTE/LIVE/STALE/FLAT DIR UX"
+  }
+  else {
+    Add-Line "FAIL  V2.07 DIR state UX missing"
+    $script:fail++
+  }
+
+  if ($storeText -match 'GSX_MS_LASTDIR_' -and $storeText -match 'GsxRosterLastDirSet' -and
+      $coreText -match 'GsxRosterLastDirSet') {
+    Add-Line "PASS  V2.07 lastDir GV persistence"
+  }
+  else {
+    Add-Line "FAIL  V2.07 lastDir GV missing"
+    $script:fail++
+  }
+
+  if (($msText -match 'SVC OFF' -or $qdText -match 'SVC OFF') -and
+      $rvmText -match 'svcAlive' -and $busIoText -match 'GsxBusHeartbeatFresh') {
+    Add-Line "PASS  V2.07 SVC OFF + heartbeat health chip"
+  }
+  else {
+    Add-Line "FAIL  V2.07 SVC OFF health chip missing"
+    $script:fail++
+  }
+
+  if ($sigBusText -match 'fill_skip' -and $coreText -match 'g_fillSkip' -and
+      $rvmText -match 'fillSkip') {
+    Add-Line "PASS  V2.07 fill_skip on bus + desk row"
+  }
+  else {
+    Add-Line "FAIL  V2.07 fill_skip wiring missing"
+    $script:fail++
+  }
+
+  if ($busIoText -match 'GsxBusDeskSignalPath' -and $busIoText -match 'g_gsxFreshestTick' -and
+      $busIoText -match '250') {
+    Add-Line "PASS  V2.07 desk-mirror-first + 250ms freshest cache"
+  }
+  else {
+    Add-Line "FAIL  V2.07 freshest cache / desk-first missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'joinDirCache\[idx\] == 0' -or $coreText -match 'First fill') {
+    Add-Line "PASS  V2.07 first-fill SignalMaxAge exempt"
+  }
+  else {
+    Add-Line "FAIL  V2.07 first-fill age exempt missing"
+    $script:fail++
+  }
+
+  # --- V2.08 capability independence + desk UX ---
+  if ($chartText -match 'ChartAutoEntriesAllowed' -and
+      $chartText -match 'Single owner: defer on-roster' -and
+      ($chartText -notmatch 'if\(ChartServiceOwnsFleet\(\)\)\s*\n\s*return')) {
+    Add-Line "PASS  V2.08 FleetFillCheck uses ChartAutoEntriesAllowed only"
+  }
+  else {
+    # Fallback: no OWN-only early return before ChartAutoEntriesAllowed in FleetFillCheck
+    $ff = [regex]::Match($chartText, '(?s)void FleetFillCheck\(\)\s*\{.*?ChartAutoEntriesAllowed')
+    if ($ff.Success -and ($ff.Value -notmatch 'ChartServiceOwnsFleet\(\)')) {
+      Add-Line "PASS  V2.08 FleetFillCheck uses ChartAutoEntriesAllowed only"
+    }
+    else {
+      Add-Line "FAIL  V2.08 FleetFillCheck OWN short-circuit still present"
+      $script:fail++
+    }
+  }
+
+  if (($msText -match 'auto-PLAY' -or $storeText -match 'GsxRosterActivatePair') -and
+      $storeText -match 'do NOT force PLAY') {
+    Add-Line "PASS  V2.08/V2.14 ActivatePair onboard without forced PLAY"
+  }
+  else {
+    Add-Line "FAIL  V2.08/V2.14 ActivatePair STOP-preserve missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'GsxCoreOnboardTerminalSkip' -and
+      ($coreText -match 'Keep pending through gate' -or $coreText -match 'gate skips')) {
+    Add-Line "PASS  V2.08 onboard settle only on fill/terminal"
+  }
+  else {
+    Add-Line "FAIL  V2.08 onboard settle rule missing"
+    $script:fail++
+  }
+
+  if ($storeText -match 'GSX_MS_SPREADIGN_' -and $storeText -match 'GsxRosterSpreadIgnGet' -and
+      $coreText -match 'GsxRosterSpreadIgnGet' -and
+      ($msText -match 'BTN_SPREAD' -or $qdText -match 'BTN_SPREAD')) {
+    Add-Line "PASS  V2.08 desk SPREAD/IGN GV + UI"
+  }
+  else {
+    Add-Line "FAIL  V2.08 desk SPREAD/IGN missing"
+    $script:fail++
+  }
+
+  if ($msText -match 'BTN_REM_' -and $qdText -match 'BTN_REM_' -and
+      $msText -match 'select roster pair on carousel') {
+    Add-Line "PASS  V2.08 per-row REM + safe carousel REM"
+  }
+  else {
+    Add-Line "FAIL  V2.08 per-row / carousel REM missing"
+    $script:fail++
+  }
+
+  if ($dashText -match 'InpScoutLinkEnable\s*=\s*false' -and
+      $rvmText -match 'hbFresh' -and ($qdText -match 'ST_HB' -or $msText -match 'ST_HB')) {
+    Add-Line "PASS  V2.08 ScoutLink default false + OWN/HB split"
+  }
+  else {
+    Add-Line "FAIL  V2.08 independence defaults / HB pill missing"
+    $script:fail++
+  }
+
+  # --- V2.09 desk lot/EQ + Scouter manual exits ---
+  if ($storeText -match 'GSX_MS_AUTOLOT_' -and $storeText -match 'GsxRosterAutoLotGet' -and
+      $storeText -match 'GSX_MS_EQGUARD_' -and $storeText -match 'GsxRosterEqGuardSet' -and
+      $coreText -match 'GsxRosterAutoLotGet' -and $coreText -match 'GsxRosterEqGuardGet' -and
+      $coreText -match 'equity guard' -and
+      ($msText -match 'BTN_AUTOLOT' -or $qdText -match 'BTN_AUTOLOT') -and
+      ($qdText -match 'BTN_EQ_0' -or $msText -match 'BTN_EQ_0' -or
+       $msText -match 'BTN_EQGUARD' -or $qdText -match 'BTN_EQGUARD')) {
+    Add-Line "PASS  V2.09/V2.13 desk AUTOLOT/EQ GVs + Core poll/gate + UI"
+  }
+  else {
+    Add-Line "FAIL  V2.09 desk AUTOLOT/EQ wiring missing"
+    $script:fail++
+  }
+
+  if ($psText -match 'ManualCloseBySide' -and $psText -match 'ManualCloseConfirmAndRun' -and
+      $psText -match 'MessageBox' -and
+      $psText -match 'BANK' -and $psText -match 'CUT' -and $psText -match 'FLAT' -and
+      $psText -match 'never closes a losing trade') {
+    Add-Line "PASS  V2.09 Scouter BANK/CUT/FLAT + MessageBox (loser guard intact)"
+  }
+  else {
+    Add-Line "FAIL  V2.09 Scouter manual exit buttons missing"
+    $script:fail++
+  }
+
+  # --- V2.10 multi chart-parity + drill fill ---
+  $svc = Join-Path $RepoRoot "GsignalX_Service.mq5"
+  $svcText = if (Test-Path $svc) { Get-Content $svc -Raw } else { "" }
+  $eng = Join-Path $RepoRoot "Include\GSignalX\Engines.mqh"
+  $engText = if (Test-Path $eng) { Get-Content $eng -Raw } else { "" }
+  $entryEx = Join-Path $RepoRoot "Include\GSignalX\EntryExec.mqh"
+  $entryExText = if (Test-Path $entryEx) { Get-Content $entryEx -Raw } else { "" }
+
+  if ($coreText -match 'joinDirOverride' -or ($coreText -match 'GsxCoreJoinDir' -and $sigBusText -match 'joinDirOverride')) {
+    Add-Line "PASS  V2.10 bus DIR uses joinDir override"
+  }
+  else {
+    if ($sigBusText -match 'joinDirOverride' -and $coreText -match 'GsxSignalBusWriteSymbolEx') {
+      Add-Line "PASS  V2.10 bus DIR uses joinDir override"
+    }
+    else {
+      Add-Line "FAIL  V2.10 joinDir bus unify missing"
+      $script:fail++
+    }
+  }
+
+  if ($engText -match 'GsxEnabledTriggerMajority' -and $coreText -match 'GsxEnabledTriggerMajority') {
+    Add-Line "PASS  V2.10 enabled-trigger majority joinDir fallback"
+  }
+  else {
+    Add-Line "FAIL  V2.10 joinDir fallback missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'waiting for history' -and
+      ($coreText -match 'GsxCoreOnboardTerminalSkip' -and
+       ($coreText -notmatch 'StringFind\(skip, ."history".\)'))) {
+    Add-Line "PASS  V2.10 onboard history retry (not terminal)"
+  }
+  else {
+    Add-Line "FAIL  V2.10 onboard history settle fix missing"
+    $script:fail++
+  }
+
+  if ($svcText -match 'InpDrillEnable' -and $svcText -match 'InpDrillMinutes' -and
+      $coreText -match 'GsxCoreStartDrill' -and $coreText -match 'drill closed' -and
+      $coreText -match 'GsxCoreDrillActive') {
+    Add-Line "PASS  V2.10 Service/Core PLAY drill window + fill gate"
+  }
+  else {
+    Add-Line "FAIL  V2.10 drill parity missing"
+    $script:fail++
+  }
+
+  if ($storeText -match 'GSX_MS_DRILLKICK_' -and $coreText -match 'GsxRosterDrillKickTake' -and
+      $coreText -match 'g_coreNewOnboard' -and
+      ($msText -match 'GsxRosterDrillKickSet')) {
+    Add-Line "PASS  V2.10.1 PLAY/ADD drill kick + ADD under PLAY refresh"
+  }
+  else {
+    Add-Line "FAIL  V2.10.1 drill kick / ADD refresh missing"
+    $script:fail++
+  }
+
+  if ($storeText -match 'GsxRosterActivatePair' -and $msText -match 'GsxRosterActivatePair' -and
+      $chartText -match 'GsxRosterActivatePair') {
+    Add-Line "PASS  V2.11 ActivatePair chart/desk parity"
+  }
+  else {
+    Add-Line "FAIL  V2.11 ActivatePair wiring missing"
+    $script:fail++
+  }
+
+  if ($storeText -match 'GsxRosterOnboardKickSet' -and $coreText -match 'GsxCoreApplyOnboardKicks' -and
+      $storeText -notmatch 'GsxRosterLastDirClear\(magic, sym\)') {
+    Add-Line "PASS  V2.12 ADD/re-ARM onboard kick (keep LastDir)"
+  }
+  else {
+    Add-Line "FAIL  V2.12 onboard kick / LastDir preserve missing"
+    $script:fail++
+  }
+
+  if ($dashText -match 'GSX_DESK_CORE_LIVE' -and $rvmText -match 'GsxCoreLiveRowForSymbol') {
+    Add-Line "PASS  V2.12 desk live DIR from Core"
+  }
+  else {
+    Add-Line "FAIL  V2.12 live DIR wiring missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'GsxCoreSortFillOrderByClassDiversity' -and
+      $fleetText -match 'GsxFleetActiveInClass') {
+    $symRoster = Join-Path $RepoRoot "Include\GSignalX\SymbolRoster.mqh"
+    $symRosterText = if (Test-Path $symRoster) { Get-Content $symRoster -Raw } else { "" }
+    if ($symRosterText -match 'GsxSymbolFamilyKey' -and $symRosterText -match 'XTIUSD') {
+      Add-Line "PASS  V2.12 CMD/CR fleet diversity + oil/crypto alias resolve"
+    }
+    else {
+      Add-Line "FAIL  V2.12 oil/crypto alias resolve missing"
+      $script:fail++
+    }
+  }
+  else {
+    Add-Line "FAIL  V2.12 CMD/CR fill diversity missing"
+    $script:fail++
+  }
+
+  if ($engText -match 'GsxEngStateDetach' -and $engText -match 'st\.symbol = symbol' -and
+      $coreText -match 'engine symbol mismatch' -and $coreText -match 'GsxCoreEngOwnsSymbol') {
+    Add-Line "PASS  V2.12 per-pair engine series (no chart DIR bleed)"
+  }
+  else {
+    Add-Line "FAIL  V2.12 per-pair engine isolation missing"
+    $script:fail++
+  }
+
+  if ($entryExText -match 'pre-bracket' -and $entryExText -match '2\.0 \* atr' -and
+      $coreText -match 'GsxCoreCancelAllRosterPendings') {
+    Add-Line "PASS  V2.10 anchor clamp + pending hygiene"
+  }
+  else {
+    Add-Line "FAIL  V2.10 bracket/pending hygiene missing"
+    $script:fail++
+  }
+
+  if ($storeText -match 'GSX_MS_DRILLSEC_' -and $rvmText -match 'drillSecLeft' -and
+      ($qdText -match 'ST_DRILL' -or $msText -match 'ST_DRILL')) {
+    Add-Line "PASS  V2.10 desk DRILL status chip"
+  }
+  else {
+    Add-Line "FAIL  V2.10 desk DRILL chip missing"
+    $script:fail++
+  }
+
+  # --- V2.12 desk runtime (Dashboard hosts Core) ---
+  if ($dashText -match 'InpDeskExecute' -and $dashText -match 'GsxCoreInitEx' -and
+      $dashText -match 'GsxCoreCycle' -and $dashText -match 'g_deskCoreActive') {
+    Add-Line "PASS  V2.12 Dashboard DeskExecute hosts Core"
+  }
+  else {
+    Add-Line "FAIL  V2.12 Dashboard Core host missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'GsxCoreInitEx' -and $coreText -match 'g_coreHostTag' -and
+      $fleetText -match 'GSX_SVC_HOST_' -and $fleetText -match 'GSX_HOST_DESK') {
+    Add-Line "PASS  V2.12 Core host tag + OWN claim"
+  }
+  else {
+    Add-Line "FAIL  V2.12 Core/Fleet host mutex missing"
+    $script:fail++
+  }
+
+  if ($svcText -match 'InpYieldToDesk' -and $svcText -match 'GSX_HOST_DESK' -and
+      $dashText -match 'DashServicePeerAlive') {
+    Add-Line "PASS  V2.12 Desk vs Service yield mutual exclusion"
+  }
+  else {
+    Add-Line "FAIL  V2.12 yield/mutex wiring missing"
+    $script:fail++
+  }
+
+  if ($qdText -match 'splitRow' -and $qdText -match 'BTN_ADD') {
+    Add-Line "PASS  V2.12 ADD button survives tight UR layout"
+  }
+  else {
+    Add-Line "FAIL  V2.12 ADD layout guard missing"
+    $script:fail++
+  }
+
+  # --- V2.13 desk risk UI + Service reliability ---
+  $propRisk = Join-Path $RepoRoot "Include\GSignalX\PropRisk.mqh"
+  $propText = if (Test-Path $propRisk) { Get-Content $propRisk -Raw } else { "" }
+  $busIoV = Join-Path $RepoRoot "Include\GSignalX\BusIO.mqh"
+  $busIoVText = if (Test-Path $busIoV) { Get-Content $busIoV -Raw } else { "" }
+
+  if ($qdText -match 'BTN_EQ_0' -and $qdText -match 'BTN_EQ_5' -and
+      $qdText -match 'BTN_EQ_10' -and $qdText -match 'BTN_EQ_20' -and
+      $msText -match 'BTN_EQ_0') {
+    Add-Line "PASS  V2.13 discrete EQ OFF/5/10/20 pads"
+  }
+  else {
+    Add-Line "FAIL  V2.13 discrete EQ pads missing"
+    $script:fail++
+  }
+
+  if ($qdText -match 'Prop peak DD' -and $qdText -match 'Account DD' -and
+      $rvmText -match 'propPeakDdPct' -and $rvmText -match 'sessionWins' -and
+      $propText -match 'GsxPropSessionOutcomes' -and $propText -match 'GsxPropPeakDdPct') {
+    Add-Line "PASS  V2.13 Trade Info EQ guide + Prop peak DD + session outcomes"
+  }
+  else {
+    Add-Line "FAIL  V2.13 Trade Info risk guidance missing"
+    $script:fail++
+  }
+
+  if ($propText -match 'auto-clear when window ends' -and
+      $propText -match 'FRIDAY' -and $propText -match 'NEWS') {
+    Add-Line "PASS  V2.13 Friday/NEWS non-sticky Prop windows"
+  }
+  else {
+    Add-Line "FAIL  V2.13 Friday/NEWS auto-clear missing"
+    $script:fail++
+  }
+
+  if ($propText -match 'GsxPropGrantEquityGrace' -and $propText -match 'GsxPropClearLock' -and
+      $propText -match 'recoverBelow' -and
+      $dashText -match 'InpPropMaxEquityDdPct\s*=\s*0\.0' -and
+      $qdText -match 'BTN_PROP_CLEAR') {
+    Add-Line "PASS  V2.13.1 eased EQUITY_DD (default off + grace + PROP CLEAR)"
+  }
+  else {
+    Add-Line "FAIL  V2.13.1 equity ease / PROP CLEAR missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'GsxPropOnNewEntry' -and $coreText -match 'InpContinuousFleet' -and
+      $coreText -match 'cycle_ms' -and $dashText -match 'InpContinuousFleet' -and
+      $svcText -match 'InpContinuousFleet') {
+    Add-Line "PASS  V2.13 Core PropOnNewEntry + continuous fleet + cycle_ms"
+  }
+  else {
+    Add-Line "FAIL  V2.13 Core Prop count / continuous fleet missing"
+    $script:fail++
+  }
+
+  if ($busIoVText -match 'GsxBusHeartbeatFreshFromSource' -and
+      $busIoVText -match 'GSX_BUS_FRESHEST_CACHE_MAX' -and
+      $busIoVText -match 'GsxBusFreshestCachePut' -and
+      $svcText -match 'SvcDeskAliveNow' -and $svcText -match 'InpYieldConfirmTicks') {
+    Add-Line "PASS  V2.13 host-scoped HB + per-canon bus cache + yield hysteresis"
+  }
+  else {
+    Add-Line "FAIL  V2.13 HB/bus/yield reliability missing"
+    $script:fail++
+  }
+
+  if ($qdText -match 'BTN_DRILL_REKICK' -and $msText -match 'BTN_DRILL_REKICK' -and
+      $engText -match 'GsxEngPrefetchHistory') {
+    Add-Line "PASS  V2.13 Drill REKICK + engine prefetch"
+  }
+  else {
+    Add-Line "FAIL  V2.13 Drill REKICK / prefetch missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'GsxCleanupOrphanPendings' -and $entryExText -match 'GsxCleanupOrphanPendings' -and
+      $msText -match 'GsxMsCancelRosterPendings' -and $msText -match 'GsxMsSoftStopSymbol' -and
+      $coreText -match 'g_onboardPending\[i\] = false' -and
+      $storeText -match 'GsxRosterOnboardKickClear') {
+    Add-Line "PASS  V2.13.2 stale-pair trigger lifetime (orphan pendings + STOP hygiene)"
+  }
+  else {
+    Add-Line "FAIL  V2.13.2 trigger lifetime hygiene missing"
+    $script:fail++
+  }
+
+  # --- V2.14 input sync + service reliability ---
+  if ($storeText -match 'GsxRosterAutoLotSeed' -and $storeText -match 'GsxRosterEqGuardSeed' -and
+      $dashText -match 'GsxRosterAutoLotSeed' -and $svcText -match 'GsxRosterAutoLotSeed' -and
+      $dashText -notmatch 'GsxRosterAutoLotSet\(InpMagic,\s*InpAutoLotDefault\)' -and
+      $svcText -notmatch 'GsxRosterAutoLotSet\(InpMagic,\s*InpAutoLotDefault\)') {
+    Add-Line "PASS  V2.14 AUTOLOT seed-if-missing (no OnInit stomp)"
+  }
+  else {
+    Add-Line "FAIL  V2.14 AUTOLOT seed-if-missing missing"
+    $script:fail++
+  }
+
+  if ($chartText -match 'GsxRosterAutoLotGet' -and $chartText -match 'GsxRosterAutoLotSet' -and
+      $chartText -match 'GsxRosterEqGuardGet' -and $chartText -match 'GsxRosterEqGuardSet') {
+    Add-Line "PASS  V2.14 chart AutoLot/EQ bridge to desk GSX_MS_* GVs"
+  }
+  else {
+    Add-Line "FAIL  V2.14 chart AutoLot/EQ desk bridge missing"
+    $script:fail++
+  }
+
+  if ($entryExText -match 'no ATR sizing distance' -and
+      $entryExText -match 'v2\.14 parity' -and
+      $entryExText -match 'if\(atr > 0\.0\)') {
+    Add-Line "PASS  V2.14 EntryExec AUTOLOT ATR sizing + AUTO->FIX signal"
+  }
+  else {
+    Add-Line "FAIL  V2.14 EntryExec AUTOLOT sizing parity missing"
+    $script:fail++
+  }
+
+  if ($svcText -match 'Core paused immediately' -and
+      $dashText -match 'GsxSignalBusHeartbeat\(\"gsignalx-desk\"\)' -and
+      $storeText -match 'do NOT force PLAY') {
+    Add-Line "PASS  V2.14 instant Desk yield + ActivatePair preserves STOP"
+  }
+  else {
+    Add-Line "FAIL  V2.14 yield/ActivatePair STOP preserve missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'fillsDoneThisCycle' -and $coreText -match 'FillsPerCycle works') {
+    Add-Line "PASS  V2.14 fleet multi-fill claim cooldown bypass"
+  }
+  else {
+    Add-Line "FAIL  V2.14 fleet multi-fill claim missing"
+    $script:fail++
+  }
+
+  if ($propText -match 'clear sticky day money' -and
+      $sigBusText -match 'fridayStopHr' -and $sigBusText -match 'fridayStop &&') {
+    Add-Line "PASS  V2.14 Prop day-rollover clear + SignalBus Friday hour"
+  }
+  else {
+    Add-Line "FAIL  V2.14 Prop day clear / Friday hour missing"
+    $script:fail++
+  }
+
+  if ($dashText -match 'version\s+"2\.14"' -and $svcText -match 'version\s+"2\.14"') {
+    Add-Line "PASS  V2.14 host versions Dashboard/Service"
+  }
+  else {
+    Add-Line "FAIL  V2.14 host version bump missing"
+    $script:fail++
+  }
+
+  # --- V2.14.1 publish-as-ready + persistence/perf ---
+  if ($coreText -match 'Publish-as-ready' -and
+      $coreText -match 'GsxCorePublishBusIndex\(i, true\)' -and
+      $coreText -match 'g_engBudgetCursor') {
+    Add-Line "PASS  V2.14.1 RR publish-as-ready (PublishBusIndex after bar recalc)"
+  }
+  else {
+    Add-Line "FAIL  V2.14.1 publish-as-ready missing"
+    $script:fail++
+  }
+
+  if ($storeText -match 'GsxRosterStoreCacheTry' -and $storeText -match 'GsxRosterStoreCachePut' -and
+      $storeText -match 'g_gsxRosterCacheSeq') {
+    Add-Line "PASS  V2.14.1 RosterStore seq-gated in-memory cache"
+  }
+  else {
+    Add-Line "FAIL  V2.14.1 RosterStore seq cache missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'GsxCoreRefreshFleetSnap' -and $coreText -match 'g_coreFleetSnapFresh' -and
+      $coreText -match 'GsxCoreEnsureFleetSnap' -and $coreText -match 'g_coreFleetSnap') {
+    Add-Line "PASS  V2.14.1 cycle fleet snap reuse (PublishBus + fills)"
+  }
+  else {
+    Add-Line "FAIL  V2.14.1 cycle fleet snap missing"
+    $script:fail++
+  }
+
+  if ($rvmText -match 'GsxMsBuildFloatingPlMap' -and $rvmText -match 'GsxMsFloatingPlLookup' -and
+      $rvmText -match 'floatingPlKnown') {
+    Add-Line "PASS  V2.14.1 snapshot batched floating PL map"
+  }
+  else {
+    Add-Line "FAIL  V2.14.1 snapshot PL batch missing"
+    $script:fail++
+  }
+
+  if ($busIoText -match '<= 15' -and $busIoText -match 'GsxBusReadFreshestSignal' -and
+      $busIoText -match 'skip peer tid scan') {
+    Add-Line "PASS  V2.14.1 desk-mirror fast path age <=15s"
+  }
+  else {
+    Add-Line "FAIL  V2.14.1 desk-mirror age guard missing"
+    $script:fail++
+  }
+}
+
 switch ($Gate) {
   "Files"          { Confirm-Files }
   "Compile"        { Confirm-Compile }
@@ -679,11 +1604,13 @@ switch ($Gate) {
   "Grades"         { Confirm-Grades }
   "LoserSafety"    { Confirm-LoserSafety }
   "ProdHardening"  { Confirm-ProdHardening }
+  "Functional"     { Confirm-Functional }
   "All"     {
     Confirm-Files
     Confirm-Compile
     Confirm-LoserSafety
     Confirm-ProdHardening
+    Confirm-Functional
     Confirm-Bus
     Confirm-Grades
   }

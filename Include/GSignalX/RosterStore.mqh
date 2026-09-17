@@ -12,6 +12,7 @@
 #include <GSignalX/SymbolRoster.mqh>
 #include <GSignalX/SymbolCanon.mqh>
 #include <GSignalX/SymbolClass.mqh>
+#include <GSignalX/Fleet.mqh>
 
 #define GSX_ROSTER_DIR  GSX_BUS_ROOT "\\roster"
 
@@ -25,6 +26,23 @@
 #define GSX_CAT_CRYPTO    3
 
 #define GSX_CLASS_SOFT_MAX_DEFAULT 8
+
+// FollowDir — per-symbol entry side filter (entries only; does not close).
+#ifndef GSX_FOLLOW_AUTO
+#define GSX_FOLLOW_AUTO  0
+#define GSX_FOLLOW_BUY   1
+#define GSX_FOLLOW_SELL  2
+#define GSX_FOLLOW_WAIT  3
+#endif
+
+#ifndef GSX_FOLLOW_WAIT
+#define GSX_FOLLOW_WAIT  3
+#endif
+
+// v2.14.1: seq-gated in-memory roster (skip FILE_COMMON + SymbolsTotal resolve)
+long   g_gsxRosterCacheMagic = 0;
+double g_gsxRosterCacheSeq   = -1.0;
+string g_gsxRosterCacheNames[];
 
 //+------------------------------------------------------------------+
 string GsxRosterStorePath(const long magic)
@@ -80,6 +98,391 @@ string GsxRosterPracCostVarName(const long magic)
 string GsxRosterPracStyleVarName(const long magic)
   {
    return("GSX_MS_PRAC_STYLE_" + IntegerToString((int)magic));
+  }
+
+string GsxRosterFlipWaitVarName(const long magic)
+  {
+   return("GSX_MS_FLIPWAIT_" + IntegerToString((int)magic));
+  }
+
+// Trade Center FOLLOW/WAIT — Service Core hot-reloads each cycle.
+bool GsxRosterFlipWaitGet(const long magic, const bool defaultWait)
+  {
+   string name = GsxRosterFlipWaitVarName(magic);
+   if(!GlobalVariableCheck(name))
+      return(defaultWait);
+   return(GlobalVariableGet(name) > 0.5);
+  }
+
+void GsxRosterFlipWaitSet(const long magic, const bool waitMode)
+  {
+   GlobalVariableSet(GsxRosterFlipWaitVarName(magic), waitMode ? 1.0 : 0.0);
+  }
+
+//+------------------------------------------------------------------+
+//| FollowDir — Follow / Buy / Sell / Wait (per symbol). Entries only.|
+//+------------------------------------------------------------------+
+string GsxRosterFollowDirVarName(const long magic, const string symbolCanon)
+  {
+   return(StringFormat("GSX_MS_FOLLOWDIR_%d_%s", (int)magic, symbolCanon));
+  }
+
+int GsxRosterFollowDirNormalize(const int mode)
+  {
+   if(mode == GSX_FOLLOW_BUY || mode == GSX_FOLLOW_SELL || mode == GSX_FOLLOW_WAIT)
+      return(mode);
+   return(GSX_FOLLOW_AUTO);
+  }
+
+string GsxRosterFollowDirLabel(const int mode)
+  {
+   if(mode == GSX_FOLLOW_BUY)  return("BUY");
+   if(mode == GSX_FOLLOW_SELL) return("SELL");
+   if(mode == GSX_FOLLOW_WAIT) return("WAIT");
+   return("FOLLOW");
+  }
+
+int GsxRosterFollowDirGet(const long magic, const string symbol, const int defaultMode = GSX_FOLLOW_AUTO)
+  {
+   string canon = GsxSymbolCanon(symbol);
+   if(canon == "")
+      return(GsxRosterFollowDirNormalize(defaultMode));
+   string name = GsxRosterFollowDirVarName(magic, canon);
+   if(!GlobalVariableCheck(name))
+      return(GsxRosterFollowDirNormalize(defaultMode));
+   return(GsxRosterFollowDirNormalize((int)GlobalVariableGet(name)));
+  }
+
+void GsxRosterFollowDirSet(const long magic, const string symbol, const int mode)
+  {
+   string canon = GsxSymbolCanon(symbol);
+   if(canon == "")
+      return;
+   GlobalVariableSet(GsxRosterFollowDirVarName(magic, canon),
+                     (double)GsxRosterFollowDirNormalize(mode));
+  }
+
+void GsxRosterFollowDirClear(const long magic, const string symbol)
+  {
+   string canon = GsxSymbolCanon(symbol);
+   if(canon == "")
+      return;
+   string name = GsxRosterFollowDirVarName(magic, canon);
+   if(GlobalVariableCheck(name))
+      GlobalVariableDel(name);
+  }
+
+int GsxRosterFollowDirCycle(const long magic, const string symbol)
+  {
+   int m = GsxRosterFollowDirGet(magic, symbol, GSX_FOLLOW_AUTO);
+   if(m == GSX_FOLLOW_AUTO)
+      m = GSX_FOLLOW_BUY;
+   else if(m == GSX_FOLLOW_BUY)
+      m = GSX_FOLLOW_SELL;
+   else if(m == GSX_FOLLOW_SELL)
+      m = GSX_FOLLOW_WAIT;
+   else
+      m = GSX_FOLLOW_AUTO;
+   GsxRosterFollowDirSet(magic, symbol, m);
+   return(m);
+  }
+
+void GsxRosterFollowDirSetAll(const long magic, const string &symbols[], const int mode)
+  {
+   int n = ArraySize(symbols);
+   for(int i = 0; i < n; i++)
+     {
+      if(symbols[i] != "")
+         GsxRosterFollowDirSet(magic, symbols[i], mode);
+     }
+  }
+
+//+------------------------------------------------------------------+
+//| Last good direction (Service → Trade Center HIST fallback) v2.07 |
+//+------------------------------------------------------------------+
+string GsxRosterLastDirVarName(const long magic, const string symbolCanon)
+  {
+   return(StringFormat("GSX_MS_LASTDIR_%d_%s", (int)magic, symbolCanon));
+  }
+
+void GsxRosterLastDirSet(const long magic, const string symbol, const int dir)
+  {
+   string canon = GsxSymbolCanon(symbol);
+   if(canon == "" || dir == 0)
+      return;
+   GlobalVariableSet(GsxRosterLastDirVarName(magic, canon), (double)dir);
+  }
+
+int GsxRosterLastDirGet(const long magic, const string symbol)
+  {
+   string canon = GsxSymbolCanon(symbol);
+   if(canon == "")
+      return(0);
+   string name = GsxRosterLastDirVarName(magic, canon);
+   if(!GlobalVariableCheck(name))
+      return(0);
+   int d = (int)GlobalVariableGet(name);
+   if(d > 0) return(1);
+   if(d < 0) return(-1);
+   return(0);
+  }
+
+// Desk/Core: mark symbol for forced onboard calc/bus/fill (ADD / re-ARM)
+string GsxRosterOnboardKickVarName(const long magic, const string symbolCanon)
+  {
+   return(StringFormat("GSX_MS_ONBOARD_%d_%s", (int)magic, symbolCanon));
+  }
+
+void GsxRosterOnboardKickSet(const long magic, const string symbol)
+  {
+   string canon = GsxSymbolCanon(symbol);
+   if(canon == "")
+      return;
+   GlobalVariableSet(GsxRosterOnboardKickVarName(magic, canon), (double)TimeCurrent());
+  }
+
+void GsxRosterOnboardKickClear(const long magic, const string symbol)
+  {
+   string canon = GsxSymbolCanon(symbol);
+   if(canon == "")
+      return;
+   string name = GsxRosterOnboardKickVarName(magic, canon);
+   if(GlobalVariableCheck(name))
+      GlobalVariableDel(name);
+  }
+
+bool GsxRosterOnboardKickTake(const long magic, const string symbol)
+  {
+   string canon = GsxSymbolCanon(symbol);
+   if(canon == "")
+      return(false);
+   string name = GsxRosterOnboardKickVarName(magic, canon);
+   if(!GlobalVariableCheck(name))
+      return(false);
+   GlobalVariableDel(name);
+   return(true);
+  }
+
+datetime GsxRosterLastDirTime(const long magic, const string symbol)
+  {
+   string canon = GsxSymbolCanon(symbol);
+   if(canon == "")
+      return(0);
+   string name = GsxRosterLastDirVarName(magic, canon);
+   if(!GlobalVariableCheck(name))
+      return(0);
+   return(GlobalVariableTime(name));
+  }
+
+void GsxRosterLastDirClear(const long magic, const string symbol)
+  {
+   string canon = GsxSymbolCanon(symbol);
+   if(canon == "")
+      return;
+   string name = GsxRosterLastDirVarName(magic, canon);
+   if(GlobalVariableCheck(name))
+      GlobalVariableDel(name);
+  }
+
+//+------------------------------------------------------------------+
+//| Desk-wide spread IGN (Trade Center → Service) v2.08              |
+//+------------------------------------------------------------------+
+string GsxRosterSpreadIgnVarName(const long magic)
+  {
+   return("GSX_MS_SPREADIGN_" + IntegerToString((int)magic));
+  }
+
+bool GsxRosterSpreadIgnGet(const long magic, const bool defaultIgn = false)
+  {
+   string name = GsxRosterSpreadIgnVarName(magic);
+   if(!GlobalVariableCheck(name))
+      return(defaultIgn);
+   return(GlobalVariableGet(name) > 0.5);
+  }
+
+void GsxRosterSpreadIgnSet(const long magic, const bool ign)
+  {
+   GlobalVariableSet(GsxRosterSpreadIgnVarName(magic), ign ? 1.0 : 0.0);
+  }
+
+bool GsxRosterSpreadIgnToggle(const long magic)
+  {
+   bool next = !GsxRosterSpreadIgnGet(magic, false);
+   GsxRosterSpreadIgnSet(magic, next);
+   return(next);
+  }
+
+//+------------------------------------------------------------------+
+//| Desk AUTOLOT / FIXED (Trade Center → Service) v2.09              |
+//+------------------------------------------------------------------+
+string GsxRosterAutoLotVarName(const long magic)
+  {
+   return("GSX_MS_AUTOLOT_" + IntegerToString((int)magic));
+  }
+
+bool GsxRosterAutoLotGet(const long magic, const bool defaultOn = false)
+  {
+   string name = GsxRosterAutoLotVarName(magic);
+   if(!GlobalVariableCheck(name))
+      return(defaultOn);
+   return(GlobalVariableGet(name) > 0.5);
+  }
+
+void GsxRosterAutoLotSet(const long magic, const bool on)
+  {
+   GlobalVariableSet(GsxRosterAutoLotVarName(magic), on ? 1.0 : 0.0);
+  }
+
+// v2.14: seed only when missing — never stomp operator desk/chart toggles on attach
+bool GsxRosterAutoLotSeed(const long magic, const bool defaultOn)
+  {
+   string name = GsxRosterAutoLotVarName(magic);
+   if(GlobalVariableCheck(name))
+      return(false);
+   GsxRosterAutoLotSet(magic, defaultOn);
+   return(true);
+  }
+
+bool GsxRosterAutoLotToggle(const long magic)
+  {
+   bool next = !GsxRosterAutoLotGet(magic, false);
+   GsxRosterAutoLotSet(magic, next);
+   return(next);
+  }
+
+//+------------------------------------------------------------------+
+//| Desk equity guard % (0=off; cycle 0→5→10→20→0) v2.09             |
+//+------------------------------------------------------------------+
+string GsxRosterEqGuardVarName(const long magic)
+  {
+   return("GSX_MS_EQGUARD_" + IntegerToString((int)magic));
+  }
+
+double GsxRosterEqGuardNormalize(const double pct)
+  {
+   if(pct >= 17.5) return(20.0);
+   if(pct >= 7.5)  return(10.0);
+   if(pct >= 2.5)  return(5.0);
+   return(0.0);
+  }
+
+double GsxRosterEqGuardGet(const long magic, const double defaultPct = 0.0)
+  {
+   string name = GsxRosterEqGuardVarName(magic);
+   if(!GlobalVariableCheck(name))
+      return(GsxRosterEqGuardNormalize(defaultPct));
+   return(GsxRosterEqGuardNormalize(GlobalVariableGet(name)));
+  }
+
+void GsxRosterEqGuardSet(const long magic, const double pct)
+  {
+   GlobalVariableSet(GsxRosterEqGuardVarName(magic), GsxRosterEqGuardNormalize(pct));
+  }
+
+// v2.14: seed EQ guard only when missing (preserve desk pads across reattach)
+bool GsxRosterEqGuardSeed(const long magic, const double defaultPct)
+  {
+   string name = GsxRosterEqGuardVarName(magic);
+   if(GlobalVariableCheck(name))
+      return(false);
+   GsxRosterEqGuardSet(magic, defaultPct);
+   return(true);
+  }
+
+double GsxRosterEqGuardCycle(const long magic)
+  {
+   double cur = GsxRosterEqGuardGet(magic, 0.0);
+   double next = 0.0;
+   if(cur <= 0.0)       next = 5.0;
+   else if(cur < 7.5)   next = 10.0;
+   else if(cur < 17.5)  next = 20.0;
+   else                 next = 0.0;
+   GsxRosterEqGuardSet(magic, next);
+   return(next);
+  }
+
+string GsxRosterEqGuardLabel(const double pct)
+  {
+   double p = GsxRosterEqGuardNormalize(pct);
+   if(p <= 0.0) return("EQ OFF");
+   return(StringFormat("EQ %.0f%%", p));
+  }
+
+//+------------------------------------------------------------------+
+//| Desk drill seconds left (Service → Trade Center) v2.10           |
+//+------------------------------------------------------------------+
+string GsxRosterDrillSecVarName(const long magic)
+  {
+   return("GSX_MS_DRILLSEC_" + IntegerToString((int)magic));
+  }
+
+void GsxRosterDrillSecSet(const long magic, const int secLeft)
+  {
+   GlobalVariableSet(GsxRosterDrillSecVarName(magic), (double)MathMax(0, secLeft));
+  }
+
+int GsxRosterDrillSecGet(const long magic)
+  {
+   string name = GsxRosterDrillSecVarName(magic);
+   if(!GlobalVariableCheck(name))
+      return(0);
+   return((int)GlobalVariableGet(name));
+  }
+
+// Desk → Service: force (re)start drill on PLAY / ADD under PLAY (v2.10.1)
+string GsxRosterDrillKickVarName(const long magic)
+  {
+   return("GSX_MS_DRILLKICK_" + IntegerToString((int)magic));
+  }
+
+void GsxRosterDrillKickSet(const long magic)
+  {
+   GlobalVariableSet(GsxRosterDrillKickVarName(magic), (double)TimeCurrent());
+  }
+
+bool GsxRosterDrillKickTake(const long magic)
+  {
+   string name = GsxRosterDrillKickVarName(magic);
+   if(!GlobalVariableCheck(name))
+      return(false);
+   double v = GlobalVariableGet(name);
+   GlobalVariableDel(name);
+   return(v > 0.0);
+  }
+
+//+------------------------------------------------------------------+
+//| Desk timeframe — Trade Center chart Period → Service (fallback M5)|
+//+------------------------------------------------------------------+
+string GsxRosterTimeframeVarName(const long magic)
+  {
+   return("GSX_MS_TF_" + IntegerToString((int)magic));
+  }
+
+bool GsxRosterTimeframeValid(const ENUM_TIMEFRAMES tf)
+  {
+   if(tf == PERIOD_CURRENT)
+      return(false);
+   int sec = PeriodSeconds(tf);
+   return(sec > 0);
+  }
+
+void GsxRosterTimeframeSet(const long magic, const ENUM_TIMEFRAMES tf)
+  {
+   GlobalVariableSet(GsxRosterTimeframeVarName(magic), (double)(int)tf);
+  }
+
+ENUM_TIMEFRAMES GsxRosterTimeframeGet(const long magic, const ENUM_TIMEFRAMES fallback = PERIOD_M5)
+  {
+   string name = GsxRosterTimeframeVarName(magic);
+   ENUM_TIMEFRAMES fb = fallback;
+   if(!GsxRosterTimeframeValid(fb))
+      fb = PERIOD_M5;
+   if(!GlobalVariableCheck(name))
+      return(fb);
+   ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)(int)GlobalVariableGet(name);
+   if(!GsxRosterTimeframeValid(tf))
+      return(fb);
+   return(tf);
   }
 
 //+------------------------------------------------------------------+
@@ -148,6 +551,29 @@ void GsxRosterStateSet(const long magic, const string symbol, const int state)
    // keep mute GV in sync for older readers
    GlobalVariableSet(GsxRosterMuteVarName(magic, canon),
                      (st == GSX_PAIR_START) ? 0.0 : 1.0);
+  }
+
+void GsxRosterStateClear(const long magic, const string symbol)
+  {
+   string canon = GsxSymbolCanon(symbol);
+   if(canon == "")
+      return;
+   string sn = GsxRosterStateVarName(magic, canon);
+   string mn = GsxRosterMuteVarName(magic, canon);
+   if(GlobalVariableCheck(sn))
+      GlobalVariableDel(sn);
+   if(GlobalVariableCheck(mn))
+      GlobalVariableDel(mn);
+  }
+
+void GsxRosterStateSetAll(const long magic, const string &symbols[], const int state)
+  {
+   int n = ArraySize(symbols);
+   for(int i = 0; i < n; i++)
+     {
+      if(symbols[i] != "")
+         GsxRosterStateSet(magic, symbols[i], state);
+     }
   }
 
 int GsxRosterStateCycle(const long magic, const string symbol)
@@ -455,6 +881,25 @@ bool GsxRosterAdd(string &names[], const string symbol)
    return(true);
   }
 
+// Default automation for a newly added pair (Follow + START).
+void GsxRosterOnboardSymbol(const long magic, const string symbol)
+  {
+   if(symbol == "")
+      return;
+   GsxRosterStateSet(magic, symbol, GSX_PAIR_START);
+   GsxRosterFollowDirSet(magic, symbol, GSX_FOLLOW_AUTO);
+  }
+
+// Clear per-symbol automation meta (FollowDir / state / mute / lastDir / onboard).
+// Does not touch positions. Caller cancels pendings separately.
+void GsxRosterClearSymbolMeta(const long magic, const string symbol)
+  {
+   GsxRosterFollowDirClear(magic, symbol);
+   GsxRosterStateClear(magic, symbol);
+   GsxRosterLastDirClear(magic, symbol);
+   GsxRosterOnboardKickClear(magic, symbol);
+  }
+
 // capacity-aware ADD; reason set on failure
 bool GsxRosterAddCapped(string &names[],
                         const string symbol,
@@ -467,11 +912,6 @@ bool GsxRosterAddCapped(string &names[],
       reason = "empty";
       return(false);
      }
-   if(GsxRosterContains(names, symbol))
-     {
-      reason = "duplicate";
-      return(false);
-     }
 
    string one[];
    ArrayResize(one, 1);
@@ -479,6 +919,18 @@ bool GsxRosterAddCapped(string &names[],
    GsxRosterResolve(one);
    GsxRosterSelect(one);
    string resolved = one[0];
+   if(resolved == "")
+     {
+      reason = "unresolved";
+      return(false);
+     }
+   // Canon-aware duplicate (blocks EURUSD vs EURUSDm / suffix twins)
+   if(GsxRosterContains(names, resolved))
+     {
+      reason = "duplicate";
+      return(false);
+     }
+
    ENUM_GSX_SYM_CLASS cls = GsxSymbolClass(resolved);
    if(GsxRosterClassAtCap(names, cls, softMax))
      {
@@ -490,6 +942,109 @@ bool GsxRosterAddCapped(string &names[],
    ArrayResize(names, n + 1);
    names[n] = resolved;
    return(true);
+  }
+
+// Chart-attach / desk-ADD parity: fully enable signal + trade for one symbol.
+// - resolve/select into Market Watch
+// - add to roster when missing (capacity-aware)
+// - START + FOLLOW
+// - PLAY + drill kick so Service opens a fill window
+// - ensure fleet target has room for this candidate
+bool GsxRosterActivatePair(const long magic,
+                           const string symbol,
+                           string &roster[],
+                           const int classSoftMax,
+                           const bool addIfMissing,
+                           string &reason)
+  {
+   reason = "";
+   if(symbol == "")
+     {
+      reason = "empty symbol";
+      return(false);
+     }
+
+   string one[];
+   ArrayResize(one, 1);
+   one[0] = symbol;
+   GsxRosterResolve(one);
+   GsxRosterSelect(one);
+   string sym = one[0];
+   if(sym == "")
+     {
+      reason = "unresolved";
+      return(false);
+     }
+
+   bool added = false;
+   if(!GsxRosterContains(roster, sym))
+     {
+      if(!addIfMissing)
+        {
+         reason = "not on roster";
+         return(false);
+        }
+      string addWhy = "";
+      if(!GsxRosterAddCapped(roster, sym, classSoftMax, addWhy))
+        {
+         reason = (addWhy != "" ? addWhy : "add failed");
+         return(false);
+        }
+      added = true;
+     }
+
+   GsxRosterOnboardSymbol(magic, sym);
+   // Do NOT clear LastDir — wiping it blanks desk DIR until bus/live catches up.
+   // Force Core onboard so ADD/re-ARM gets priority calc + fill (even if already on roster).
+   GsxRosterOnboardKickSet(magic, sym);
+
+   // Always reserve a fleet slot for this activated pair (do not stick at default 4)
+   int target = GsxRosterFleetTargetGet(magic);
+   if(target <= 0)
+      target = 4;
+   int active = GsxFleetActivePairs(magic);
+   int need = active + 1;
+   // ADD always grows capacity by one from current target when already at/over cap
+   if(added && target <= active)
+      need = active + 1;
+   if(target < need)
+     {
+      GsxRosterFleetTargetSet(magic, need);
+      target = need;
+     }
+
+   // v2.14: do NOT force PLAY — STOPPED desk stays STOPPED; operator must PLAY
+   GsxRosterDrillKickSet(magic);
+
+   if(!GsxRosterStoreSave(magic, roster, true))
+     {
+      reason = "roster save failed";
+      return(false);
+     }
+
+   string ownNote = GsxFleetServiceOwns(magic) ? "OWN" : "Service not OWN";
+   reason = StringFormat("%s %s · START+FOLLOW · PLAY · fleet≥%d · %s",
+                         (added ? "ADD" : "ARM"), sym, target, ownNote);
+   return(true);
+  }
+
+void GsxRosterDedupeInPlace(string &names[])
+  {
+   string out[];
+   ArrayResize(out, 0);
+   for(int i = 0; i < ArraySize(names); i++)
+     {
+      if(names[i] == "")
+         continue;
+      if(GsxRosterContains(out, names[i]))
+         continue;
+      int n = ArraySize(out);
+      ArrayResize(out, n + 1);
+      out[n] = names[i];
+     }
+   ArrayResize(names, ArraySize(out));
+   for(int i = 0; i < ArraySize(out); i++)
+      names[i] = out[i];
   }
 
 bool GsxRosterRemove(string &names[], const string symbol)
@@ -538,6 +1093,24 @@ void GsxRosterFilterByCat(const string &names[],
   }
 
 //+------------------------------------------------------------------+
+void GsxRosterStoreCachePut(const long magic, const string &names[])
+  {
+   g_gsxRosterCacheMagic = magic;
+   g_gsxRosterCacheSeq   = GsxRosterSeqGet(magic);
+   ArrayCopy(g_gsxRosterCacheNames, names);
+  }
+
+bool GsxRosterStoreCacheTry(const long magic, string &names[])
+  {
+   double seq = GsxRosterSeqGet(magic);
+   if(g_gsxRosterCacheMagic != magic ||
+      g_gsxRosterCacheSeq != seq ||
+      ArraySize(g_gsxRosterCacheNames) <= 0)
+      return(false);
+   ArrayCopy(names, g_gsxRosterCacheNames);
+   return(true);
+  }
+
 bool GsxRosterStoreSave(const long magic, const string &names[], const bool bumpSeq = true)
   {
    string path = GsxRosterStorePath(magic);
@@ -546,12 +1119,16 @@ bool GsxRosterStoreSave(const long magic, const string &names[], const bool bump
       return(false);
    if(bumpSeq)
       GsxRosterSeqBump(magic);
+   GsxRosterStoreCachePut(magic, names);
    return(true);
   }
 
 bool GsxRosterStoreLoad(const long magic, string &names[])
   {
    ArrayResize(names, 0);
+   if(GsxRosterStoreCacheTry(magic, names))
+      return(true);
+
    string path = GsxRosterStorePath(magic);
    string body = GsxBusReadAll(path);
    if(body == "")
@@ -562,7 +1139,11 @@ bool GsxRosterStoreLoad(const long magic, string &names[])
    GsxRosterParse(body, names);
    GsxRosterResolve(names);
    GsxRosterSelect(names);
-   return(ArraySize(names) > 0);
+   GsxRosterDedupeInPlace(names);
+   if(ArraySize(names) <= 0)
+      return(false);
+   GsxRosterStoreCachePut(magic, names);
+   return(true);
   }
 
 bool GsxRosterStoreExists(const long magic)

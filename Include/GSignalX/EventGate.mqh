@@ -70,9 +70,9 @@ bool GsxEventCurrencyHitsSymbol(const string currency, const string symbol)
       return(true);
 
    ENUM_GSX_SYM_CLASS cls = GsxSymbolClass(symbol);
+   // Metals/oils sometimes lack ISO base/profit — still treat USD news as relevant.
+   // Do NOT blanket-block all crypto on every USD calendar print (24/7 book).
    if(cls == GSX_CLASS_COMMODITY && ccy == "USD")
-      return(true);
-   if(cls == GSX_CLASS_CRYPTO && (ccy == "USD" || ccy == "USDT"))
       return(true);
 
    string canon = GsxSymbolCanon(symbol);

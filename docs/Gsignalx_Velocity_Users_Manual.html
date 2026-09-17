@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="description" content="Gsignalx Velocity 2.00 — MetaTrader 5 trader &amp; investor manual. Multisymbol Service, Trade Center, Telegram alerts, Prop soft locks, AutoLot, Scouter harvest."/>
+<meta name="description" content="Gsignalx Velocity 2.14 — MT5 prop desk manual. Structured entries, winners-only harvest, FIXED 0.01, Prop soft STOP."/>
 <meta name="color-scheme" content="dark light"/>
-<title>Gsignalx Velocity 2.00 — Trader Manual | Gocity Group</title>
+<title>Gsignalx Velocity 2.14 — Trader Manual | Gocity Group</title>
 <link rel="icon" href="assets/icons/group-icon.svg" type="image/svg+xml"/>
 <link rel="stylesheet" href="assets/css/gsx-docs.css"/>
 <script src="assets/js/gsx-theme.js"></script>
@@ -755,7 +755,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       <img class="brand-mark" src="assets/icons/group-icon.svg" width="120" height="66" alt="Gocity Group"/>
       <div class="brand-text">
         <strong>Gsignalx Velocity</strong>
-        <span>by Gocity Group · MT5 Desk Manual · v2.00</span>
+        <span>by Gocity Group · MT5 Desk Manual · v2.14</span>
       </div>
     </a>
     <nav class="header-tabs" id="headerTabs" aria-label="Manual sections"></nav>
@@ -795,21 +795,22 @@ tr:nth-child(even) td { background: var(--row-stripe); }
     <section class="panel active" id="welcome" data-title="Welcome" data-short="Welcome">
       <div class="kicker">Gocity Group · GSignalX Ecosystem</div>
       <h1>Gsignalx Velocity Trader Manual</h1>
-      <p class="lede">Fund-manager instructions for running the Velocity MT5 desk: structured session entries, winners-only dollar harvest, and disciplined growth from micro capital through prop-firm and small-fund scale.</p>
+      <p class="lede">Run a prop-safe MT5 desk: structured entries, winners-only harvest, soft STOP that never flattens your book.</p>
+      <p class="lede" style="margin-top:0"><strong>Trader:</strong> live DIR, FOLLOW pads, Telegram deals + PROP. <strong>Investor / monitor:</strong> quieter TG (DAILY + PROP), Compact strip, Scouter harvest.</p>
       <div class="meta-row">
-        <span class="chip chip-version">Velocity 2.00 · bus schema v1</span>
+        <span class="chip chip-version">Velocity 2.14 · bus schema v1</span>
         <span class="chip chip-prop">Prop &amp; small fund</span>
-        <span class="chip chip-beginner">Beginner → Advanced</span>
-        <span class="chip chip-perf">Behavioural performance</span>
-        <span class="chip chip-advanced">PolyForm-NC · source-available</span>
+        <span class="chip chip-beginner">Practice $20–$100</span>
       </div>
 
       <div class="callout gold">
-        <strong class="label">Velocity 2.00 prop desk · best use</strong>
-        Production topology: <strong>GsignalX_Service</strong> owns entries, <strong>Multisymbol Trade Center</strong> owns roster / categories / pair state / events / PROP / Telegram / practice coach, <strong>ProfitScouter</strong> owns exits.
-        Recommended prop book: <strong>M5 · fleet 4 · AUTOLOT · EQ 10% · SPREAD · ASAP ≈1% balance · Event SKIP on FX news · START only London–NY FX (+ metals) · CR SUSPEND</strong>.
-        Micro practice ($20 / $50 / $100 · Raw or Standard): load matching <code>Practice_*.set</code> pairs, restart Services, then Trade Center <strong>20/50/100 · RAW/STD · SCALP/DAY/SWING</strong> for coach tips (fleet/cat soft-apply only).
-        Deploy: <code>docs/RELEASE_v2.00_Prop_Desk_Deploy.md</code> · Practice: <code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code>.
+        <strong class="label">Best use · Topology A</strong>
+        <ol style="margin:0.4em 0 0;padding-left:1.2em">
+          <li><strong>Trade Center</strong> DeskExecute ON owns fills (FIXED <strong>0.01</strong>) · Service stopped or Yield ON · no Chart EA entries on same magic.</li>
+          <li><strong>ProfitScouter</strong> owns exits · desk PLAY/STOP never closes tickets.</li>
+          <li>EQ <strong>OFF</strong> unless you want a floating-DD brake · STOP clears pendings · practice packs $20/$50/$100.</li>
+        </ol>
+        <p style="margin:0.6em 0 0">All on-chart controls: <a href="#desk213">System UI Best Use</a> · Deploy: <code>docs/RELEASE_v2.14_Input_Reliability.md</code> · Practice: <code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code></p>
       </div>
 
       <p style="margin:0 0 1.2em">
@@ -930,9 +931,11 @@ tr:nth-child(even) td { background: var(--row-stripe); }
         <li><strong>WAIT</strong>: block new-direction entries while opposite magic exposure remains.</li>
         <li><strong>SPREAD</strong> (default): enforce <code>InpMaxSpreadPt</code> on entries.</li>
         <li><strong>IGN</strong>: bypass the entry spread gate on that chart only (worse fills allowed; Scouter exits unchanged).</li>
-        <li><strong>AUTOLOT</strong> (default): size lots from balance × risk% ÷ ATR stop distance (fail-safe → fixed lot).</li>
-        <li><strong>FIXED</strong>: always use <code>InpFixedLot</code> (clamped by max/broker step).</li>
-        <li><strong>EQ OFF / 5% / 10% / 20%</strong>: account equity drawdown guide — blocks <em>new entries</em> when live DD reaches the threshold (panel shows Account DD).</li>
+        <li><strong>FIXED</strong> (default <strong>0.01</strong>): always use fixed lot. Press <strong>AUTOLOT</strong> only for intentional risk% sizing.</li>
+        <li><strong>AUTOLOT</strong>: size from balance × risk% ÷ ATR stop distance (fail-safe → fixed lot; Experts may log AUTO→FIX).</li>
+        <li><strong>EQ OFF / 5% / 10% / 20%</strong>: Account floating DD guide — OFF shows live DD only; 5/10/20 soft-block new entries at threshold. Prop peak DD is separate (Trade Info).</li>
+        <li><strong>PROP CLEAR</strong>: unlock Prop soft-STOP + equity grace (desk never flattens).</li>
+        <li><strong>REKICK</strong>: re-open drill when DIR live but drill closed.</li>
         <li><strong>Compact panel</strong> (default input): investor outcome strip; <strong>Full</strong> adds engine rows + entry detail (<code>InpPanelDensity</code>).</li>
         <li>Profit path closes <strong>winners only</strong> (minimal set, biggest green first). Losers exit via adverse-bar Auto or catastrophe SL — not via ASAP floors.</li>
         <li>One Scouter instance for “All symbols” — two harvest engines on the same book race.</li>
@@ -954,7 +957,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
 
       <div class="meta-row">
         <span class="chip chip-beginner">Non-tech friendly</span>
-        <span class="chip chip-prop">Velocity 2.00</span>
+        <span class="chip chip-prop">Velocity 2.14</span>
       </div>
 
       <div class="callout gold">
@@ -1057,7 +1060,7 @@ cd GsignalX-Velocity</pre>
           <tr><td>Confirm WARN stale bus</td><td>Start Services; wait ~60s; run Confirm-After-Start again</td></tr>
         </tbody>
       </table>
-      <p>Longer table: <code>docs/WINDOWS_DEPLOY_SIMPLE.md</code> · Gates: <code>DEPLOYMENT_RUNBOOK.md</code> · Sign-off: <code>docs/RELEASE_v2.00_Prop_Desk_Deploy.md</code>.</p>
+      <p>Longer table: <code>docs/WINDOWS_DEPLOY_SIMPLE.md</code> · Gates: <code>DEPLOYMENT_RUNBOOK.md</code> · Sign-off: <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.</p>
 
       <h2>Host this manual on GitHub Pages</h2>
       <ol>
@@ -1170,7 +1173,7 @@ cd GsignalX-Velocity</pre>
         <li><code>deploy/presets/GSignalX_Service_Practice_{20|50|100}_{Raw|Standard}.set</code></li>
         <li><code>deploy/presets/ProfitScouter_Practice_{20|50|100}_{Raw|Standard}.set</code></li>
       </ul>
-      <p>Full maths (expectancy, Kelly proxy, Standard vs Raw floors): <code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code> · plan <code>docs/PLAN_V2.02_Practice_Live_Simulation.md</code>. Demo first; no virtual balance — use a real funded demo near the band.</p>
+      <p>Full maths (expectancy, Kelly proxy, Standard vs Raw floors): <code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code>. Demo first; no virtual balance — use a real funded demo near the band.</p>
     </section>
 
     <!-- SESSIONS -->
@@ -1358,10 +1361,10 @@ cd GsignalX-Velocity</pre>
     </section>
 
     <!-- DESK 2.00 -->
-    <section class="panel" id="desk200" data-title="Multisymbol Desk 2.00" data-short="Desk 2.00">
-      <div class="kicker">Velocity 2.00 · production topology</div>
+    <section class="panel" id="desk200" data-title="Multisymbol Desk" data-short="Desk recipe">
+      <div class="kicker">Session recipe · London–NY</div>
       <h1>Multisymbol Service + Trade Center</h1>
-      <p class="lede">Best production use: one magic, Service owns entries, Dashboard owns roster / categories / pair state / events / prop soft locks, Scouter owns exits. Chart EAs are optional UI.</p>
+      <p class="lede">Session roster recipe (FX START, Event SKIP, practice coach). <strong>How to run the live desk:</strong> <a href="#desk213">System UI Best Use (2.14)</a> · <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.</p>
 
       <h2>Best use case (prop / small fund)</h2>
       <div class="callout gold">
@@ -1395,7 +1398,7 @@ cd GsignalX-Velocity</pre>
         <li>Start <strong>GsignalX_Service</strong>, <strong>ProfitScouter_Service</strong>, <strong>ProfitOpportunity_Grader</strong>.</li>
         <li>Attach <strong>GsignalX_Multisymbol_Dashboard</strong> with seed list + shared magic.</li>
         <li>Optional: M5 chart GSignalX with <code>InpChartEntriesWhenService=false</code> for strip/UI.</li>
-        <li>Run <code>Confirm-After-Start.bat</code> — expect version <strong>2.00</strong> hosts + bus schema <strong>1</strong>.</li>
+        <li>Run <code>Confirm-After-Start.bat</code> — expect Trade Center / Service version <strong>2.14</strong> + bus schema <strong>1</strong>.</li>
       </ol>
 
       <h2>Multisymbol Service</h2>
@@ -1406,16 +1409,15 @@ cd GsignalX-Velocity</pre>
         <li>Hot-reloads roster when Dashboard ADD/REMOVE advances <code>GSX_SVC_ROSTER_SEQ_{magic}</code>.</li>
       </ul>
 
-      <h2>Trade Center UI</h2>
+      <h2>System UI (all surfaces)</h2>
+      <p>Four on-chart UIs. Full maps: <a href="#desk213">System UI Best Use</a>.</p>
       <ul>
-        <li>Category tabs: <strong>ALL / FX / CMD / CRYPTO</strong> — capacity ≥4 per class (soft max 8). Seed supports 4 majors + metals/oils + crypto.</li>
-        <li>Practice row (Full panel): <strong>20 / 50 / 100 · RAW / STD · SCALP / DAY / SWING</strong> — coach + pairs/session tips; soft-applies fleet target and category. Load matching <code>Practice_*.set</code> for ASAP/Prop money knobs (<code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code>).</li>
-        <li>Per-pair <strong>START / STOP / SUSPEND</strong> (cycles on click): START = fills on; STOP = no new fills (still scanned); SUSPEND = no fills / not a fleet candidate. Does not close positions.</li>
-        <li>Illustrative GMT <strong>session clock</strong> (Asia · London · NY · Sydney) — broker <code>MarketGates</code> still gate real trades.</li>
-        <li>Events row: hybrid MT5 Calendar + desk CSV; toggle <strong>TRADE</strong> (notify only) / <strong>SKIP</strong> (block new fills on affected active pairs). Telegram tag <code>[EVENT]</code> ahead of relevant events.</li>
-        <li>ADD / REMOVE symbols; fleet target; paging; PROP / TG status. Objects use <code>GSXMS_</code> prefix; chart compact roster strip optional (<code>InpShowRosterStrip</code>).</li>
-        <li>See <code>docs/PLAN_V1.26_Trade_Center_Categories_Events.md</code>.</li>
+        <li><strong>Trade Center</strong> — cats/fleet/carousel · PLAY/STOP/HALT · FIXED/EQ · REKICK · FollowDir · START/STOP ALL · PROP · practice · VERIFY · per-row MODE/STATE/REM</li>
+        <li><strong>Chart Signal panel</strong> — PLAY/STOP/HALT · flip FOLLOW|WAIT · FollowDir (this symbol) · SPREAD|IGN · FIXED|AUTOLOT · EQ cycle</li>
+        <li><strong>Chart roster strip</strong> — carousel ADD/SWAP/REM · page · per-row STATE/X</li>
+        <li><strong>ProfitScouter</strong> — START/STOP/AUTO · <strong>BANK / CUT / FLAT</strong> (only UI that closes tickets)</li>
       </ul>
+      <p>Default lot is <strong>FIXED 0.01</strong>. Desk/Chart soft STOP never closes — Scouter BANK/CUT/FLAT (or manual) does. Service hosts have no chart buttons.</p>
 
       <h2>Telegram notifier</h2>
       <p>WebRequest Telegram alerts (deals, PROP, EVENT, summaries, engine WARN). Status <strong>NotCfg / Connected / Verified / Error</strong>; Trade Center <strong>VERIFY</strong> button. Full trader vs investor recipes: <a href="#telegram">Telegram Alerts</a>.</p>
@@ -1426,7 +1428,7 @@ cd GsignalX-Velocity</pre>
         <thead><tr><th>Gate</th><th>Typical use</th></tr></thead>
         <tbody>
           <tr><td>Daily loss $ / %</td><td>Challenge daily max loss</td></tr>
-          <tr><td>Equity drawdown %</td><td>Floating DD ceiling</td></tr>
+          <tr><td>Equity drawdown %</td><td>Prop peak equity DD (default <strong>OFF</strong>; set 5–10 for challenge packs). Distinct from Account EQ guide pads.</td></tr>
           <tr><td>Max trades / day</td><td>Overtrading brake</td></tr>
           <tr><td>Consistency share</td><td>Cap one-day P/L share of target</td></tr>
           <tr><td>Daily profit target</td><td>Stop hunting after target</td></tr>
@@ -1440,9 +1442,193 @@ cd GsignalX-Velocity</pre>
       </div>
     </section>
 
+    <!-- SYSTEM UI BEST USE 2.14 -->
+    <section class="panel" id="desk213" data-title="System UI Best Use 2.14" data-short="Best use">
+      <div class="kicker">Velocity 2.14 · current production cut</div>
+      <h1>System UI Best Use</h1>
+      <p class="lede">Every on-chart control: Trade Center, Chart Signal panel, Chart roster strip, ProfitScouter. Bus schema <strong>v1</strong>. Operator note: <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.</p>
+
+      <div class="callout gold">
+        <strong class="label">Preferred live desk (Topology A)</strong>
+        One magic · <strong>DeskExecute ON</strong> · Service stopped (or Yield ON) · Chart EA <strong>not</strong> filling · FIXED <strong>0.01</strong> · EQ <strong>OFF</strong> unless you want a floating-DD entry brake · Scouter owns BANK/CUT/FLAT.
+      </div>
+
+      <h2 id="ui-surfaces">UI surfaces</h2>
+      <table>
+        <thead><tr><th>Surface</th><th>Host</th><th>Prefix</th></tr></thead>
+        <tbody>
+          <tr><td><a href="#ui-trade-center">Trade Center</a></td><td><code>GsignalX_Multisymbol_Dashboard</code></td><td><code>GSXMS_</code></td></tr>
+          <tr><td><a href="#ui-chart">Chart Signal panel</a></td><td><code>GsignalX_GocityGroup</code> (<code>InpShowButtons</code>)</td><td><code>GSX_</code></td></tr>
+          <tr><td><a href="#ui-strip">Chart roster strip</a></td><td>Same Chart EA (<code>InpShowRosterStrip</code>)</td><td><code>GSXMS_</code></td></tr>
+          <tr><td><a href="#ui-scouter">ProfitScouter</a></td><td><code>ProfitScouter_DollarTarget</code></td><td><code>PSBTN_</code></td></tr>
+          <tr><td>GSignalX / Scouter Service</td><td>Chart-free</td><td>— (no buttons)</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Topology A vs B</h2>
+      <table>
+        <thead><tr><th>Mode</th><th>DeskExecute</th><th>Service</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td><strong>A (preferred)</strong></td><td>ON</td><td>Stopped</td><td>Trade Center owns fills</td></tr>
+          <tr><td><strong>B (headless)</strong></td><td>OFF / detached</td><td>Running</td><td>Service owns fills</td></tr>
+          <tr><td>Both</td><td>ON</td><td>Yield ON</td><td>Service idles after Desk OWN + desk heartbeat</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="ui-cross">Cross-surface rules</h2>
+      <ul>
+        <li><strong>STOP vs HALT</strong> (Desk + Chart): STOP = entries off, linked Scouter may keep harvesting; HALT = entries off <em>and</em> Scouter RUN off. Neither closes tickets.</li>
+        <li><strong>Scouter START/STOP</strong> arms harvest only — not the same as desk PLAY/STOP.</li>
+        <li><strong>BANK / CUT / FLAT</strong> on ProfitScouter are the only on-chart flatten controls.</li>
+        <li><strong>FOLLOW</strong> on the run strip = flip-wait. <strong>FOLLOW · BUY · SELL · WAIT</strong> = FollowDir gate (different control).</li>
+        <li>Chart <strong>EQ</strong> cycles OFF→5→10→20. Trade Center EQ uses four discrete pads.</li>
+      </ul>
+
+      <h2 id="ui-trade-center">1 — Trade Center</h2>
+      <h3>A · Telegram / categories / fleet / carousel</h3>
+      <table>
+        <thead><tr><th>Control</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><strong>VERIFY</strong></td><td>Telegram getMe → Verified</td></tr>
+          <tr><td><strong>ALL / FX / CMD / CRYPTO</strong></td><td>Category filter for the roster view</td></tr>
+          <tr><td><strong>− / +</strong> (fleet)</td><td>Decrease / increase fleet target</td></tr>
+          <tr><td><strong>&lt; / &gt;</strong> (page)</td><td>Roster page</td></tr>
+          <tr><td><strong>&lt; / &gt;</strong> (carousel)</td><td>Carousel candidate</td></tr>
+          <tr><td><strong>ADD</strong></td><td>Onboard carousel candidate (does not force PLAY if STOPPED)</td></tr>
+          <tr><td><strong>SWAP</strong></td><td>Swap carousel candidate into the view</td></tr>
+          <tr><td><strong>REM</strong></td><td>Remove carousel pair if on roster + cancel its pendings</td></tr>
+        </tbody>
+      </table>
+      <h3>B · Run strip</h3>
+      <table>
+        <thead><tr><th>Control</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><strong>PLAY</strong></td><td>Allow fleet entries; arm drill; linked Scouter on — <em>does not</em> clear Prop (use PROP CLEAR)</td></tr>
+          <tr><td><strong>STOP</strong></td><td>Cancel roster pendings + pause entries; Scouter keeps running; no closes</td></tr>
+          <tr><td><strong>HALT</strong></td><td>STOP + linked Scouter off; still no closes</td></tr>
+          <tr><td><strong>FOLLOW / WAIT</strong></td><td>Toggle <em>flip-wait</em> only (not FollowDir)</td></tr>
+          <tr><td><strong>SPREAD / IGN</strong></td><td>Enforce vs ignore desk max-spread on new entries</td></tr>
+        </tbody>
+      </table>
+      <h3>C · Lot / EQ</h3>
+      <table>
+        <thead><tr><th>Control</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><strong>FIXED / AUTOLOT</strong></td><td>Default <strong>FIXED 0.01</strong>; AUTOLOT = risk% (survives reattach)</td></tr>
+          <tr><td><strong>EQ OFF · 5% · 10% · 20%</strong></td><td>Account floating-DD entry guide. OFF = show live DD only</td></tr>
+        </tbody>
+      </table>
+      <h3>D · Status chips + REKICK</h3>
+      <table>
+        <thead><tr><th>Control</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><strong>RUN / FOL / EVT / FIX</strong> chips</td><td><em>Labels only</em> — not clickable</td></tr>
+          <tr><td><strong>REKICK</strong></td><td>Re-open drill; <strong>requires PLAY</strong> (else status: REKICK needs PLAY)</td></tr>
+        </tbody>
+      </table>
+      <h3>E · FollowDir (desk-wide)</h3>
+      <table>
+        <thead><tr><th>Control</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><strong>FOLLOW · BUY · SELL · WAIT</strong></td><td>Set FollowDir for <em>all</em> roster pairs</td></tr>
+        </tbody>
+      </table>
+      <h3>F · Bulk pairs / Prop / Events / Practice</h3>
+      <table>
+        <thead><tr><th>Control</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><strong>START ALL / STOP ALL</strong></td><td>Arm or soft-stop pairs in the <em>current category view</em> (STOP ALL cancels their pendings)</td></tr>
+          <tr><td><strong>PROP CLEAR / PROP OK</strong></td><td>CLEAR unlocks Prop soft-STOP + equity grace <em>and arms PLAY</em>; OK = unlocked</td></tr>
+          <tr><td><strong>EVT</strong></td><td>Toggle event mode TRADE/SKIP</td></tr>
+          <tr><td><strong>20 / 50 / 100 · RAW/STD · SCALP/DAY/SWING</strong></td><td>Practice coach band / cost / style (soft fleet/cat tips)</td></tr>
+          <tr><td><strong>Trade Info</strong></td><td>Account DD vs Prop peak DD · session W/L/net (read-only)</td></tr>
+        </tbody>
+      </table>
+      <h3>G · Per-row (paged roster)</h3>
+      <table>
+        <thead><tr><th>Control</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><strong>MODE</strong> (FollowDir chip)</td><td>Cycle FollowDir for that row only</td></tr>
+          <tr><td><strong>START / STOP / SUSPEND</strong></td><td>Cycle pair state; START re-arms onboard+PLAY+drill; STOP/SUSPEND cancel that symbol’s pendings</td></tr>
+          <tr><td><strong>X (REM)</strong></td><td>Remove that row’s symbol + cancel pendings</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="ui-chart">2 — Chart Signal panel</h2>
+      <table>
+        <thead><tr><th>Control</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><strong>PLAY</strong></td><td>Entries on + linked Scouter RUN on</td></tr>
+          <tr><td><strong>STOP</strong></td><td>Entries off; Scouter keeps harvesting</td></tr>
+          <tr><td><strong>HALT</strong></td><td>Entries off + Scouter RUN off; no closes</td></tr>
+          <tr><td><strong>FOLLOW / WAIT</strong></td><td>Flip-wait toggle (this chart)</td></tr>
+          <tr><td><strong>FOLLOW · BUY · SELL · WAIT</strong></td><td>FollowDir for <em>this symbol</em> only</td></tr>
+          <tr><td><strong>SPREAD / IGN</strong></td><td>Per-chart spread ignore</td></tr>
+          <tr><td><strong>FIXED / AUTOLOT</strong></td><td>Per-chart lot mode</td></tr>
+          <tr><td><strong>EQ OFF / EQ n%</strong></td><td><strong>Cycles</strong> OFF → 5% → 10% → 20% → OFF</td></tr>
+        </tbody>
+      </table>
+      <p>Title bar is drag-only. Status rows (STOPPED/RUNNING, Scout, Spread, …) are labels.</p>
+
+      <h2 id="ui-strip">3 — Chart roster strip</h2>
+      <table>
+        <thead><tr><th>Control</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><strong>&lt; / &gt;</strong> carousel</td><td>Step candidate</td></tr>
+          <tr><td><strong>ADD / SWAP / REM</strong></td><td>Same roster hygiene as Trade Center carousel</td></tr>
+          <tr><td><strong>&lt; / &gt;</strong> page</td><td>Roster page</td></tr>
+          <tr><td><strong>STATE</strong> / <strong>X</strong></td><td>Per-row state cycle / remove</td></tr>
+        </tbody>
+      </table>
+      <p>No PLAY / EQ / PROP / practice on the strip — use Trade Center or Chart panel.</p>
+
+      <h2 id="ui-scouter">4 — ProfitScouter</h2>
+      <table>
+        <thead><tr><th>Control</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><strong>START</strong> (dense: GO)</td><td>Scout harvest ON (<code>PS{id}_RUN</code>)</td></tr>
+          <tr><td><strong>STOP</strong></td><td>Scout harvest OFF — panel still updates; no closes until START</td></tr>
+          <tr><td><strong>AUTO ON/OFF</strong></td><td>Adverse-bar auto (<code>PS{id}_ADVEN</code>)</td></tr>
+          <tr><td><strong>BANK +</strong></td><td>Confirm → close <em>winners</em> only</td></tr>
+          <tr><td><strong>CUT −</strong></td><td>Confirm → close <em>losers</em> only</td></tr>
+          <tr><td><strong>FLAT</strong></td><td>Confirm → close <em>all</em> in scope</td></tr>
+        </tbody>
+      </table>
+      <p>Desk/Chart PLAY/HALT write the same <code>PS{id}_RUN</code> when scout-link is enabled. Service Scouter has no buttons (can respect those GVs).</p>
+
+      <h2>EQ vs Prop peak DD</h2>
+      <ul>
+        <li><strong>Account DD</strong> (EQ pads / chart EQ cycle) — floating drawdown guide. <strong>EQ OFF</strong> shows live DD but does not block entries.</li>
+        <li><strong>Prop peak DD</strong> — challenge math from peak equity; independent of Account DD. Leave <code>InpPropMaxEquityDdPct</code> at <strong>0</strong> unless you are on a challenge pack (then 5–10).</li>
+        <li><strong>PROP CLEAR</strong> unlocks soft-STOP, arms equity grace, and arms PLAY. Desk <strong>PLAY</strong> alone does not clear Prop.</li>
+      </ul>
+
+      <h2>Do / Don’t</h2>
+      <table>
+        <thead><tr><th>Do</th><th>Don’t</th></tr></thead>
+        <tbody>
+          <tr><td>Topology A for interactive Trade Center</td><td>Leave Chart EA filling the same magic as Desk</td></tr>
+          <tr><td>REM unused pairs after upgrade; STOP once to clear brackets</td><td>Expect soft STOP alone to kill old pendings</td></tr>
+          <tr><td>Set Prop max equity DD only for challenge accounts</td><td>Leave AUTOLOT on by accident</td></tr>
+          <tr><td>Use Scouter BANK/CUT/FLAT (or manual) to flatten</td><td>Expect desk/chart PLAY/STOP/HALT to close tickets</td></tr>
+          <tr><td>REKICK only while PLAY is on</td><td>Confuse run-strip FOLLOW with FollowDir FOLLOW</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Upgrade after deploy</h2>
+      <ol>
+        <li>Compile all terminals; reattach Trade Center; restart Service if used.</li>
+        <li>Confirm Automation shows <strong>FIXED</strong> and lot <strong>0.01</strong>.</li>
+        <li>Press <strong>STOP</strong> once, then <strong>REM</strong> pairs you do not want.</li>
+        <li><strong>PLAY</strong> / START only the live book. Use <strong>PROP CLEAR</strong> if an old equity rule left LOCK.</li>
+      </ol>
+
+      <p>Session roster recipe remains in <a href="#desk200">Multisymbol Desk</a>. Confirm: <code>Confirm-GSignalX.ps1 -Gate All</code> — expect V2.14 markers.</p>
+    </section>
+
     <!-- TELEGRAM ALERTS -->
     <section class="panel" id="telegram" data-title="Telegram Alerts" data-short="Telegram">
-      <div class="kicker">Notifications · Velocity 2.00 / v1.27</div>
+      <div class="kicker">Notifications · trader &amp; investor</div>
       <h1>Telegram alerts for traders and investors</h1>
       <p class="lede">Know when the book goes online, when risk trips, and when the day is banked — without staring at the terminal. WebRequest-only (Market compliant, no DLLs).</p>
 
@@ -1531,7 +1717,7 @@ cd GsignalX-Velocity</pre>
 
       <div class="callout">
         <strong class="label">Engineering note</strong>
-        Provenance and dual-host ownership table: <code>docs/PLAN_V1.27_Telegram_Dual_Host.md</code>.
+        Recipes below. VERIFY on Trade Center until status shows <strong>Verified</strong>.
       </div>
     </section>
 
@@ -1710,11 +1896,14 @@ cd GsignalX-Velocity</pre>
           <tr><td><strong>STOP</strong></td><td>Pause entries; cancel pendings; <em>never closes</em></td></tr>
           <tr><td><strong>HALT</strong></td><td>Pause entries + linked Scouter; <em>never closes</em></td></tr>
           <tr><td><strong>FOLLOW / WAIT</strong></td><td>Flip-fill policy</td></tr>
-          <tr><td><strong>SPREAD / IGN</strong></td><td>Enforce vs bypass entry max-spread gate (entry-only)</td></tr>
-          <tr><td><strong>AUTOLOT / FIXED</strong></td><td>Risk% sizing vs fixed lot (persists <code>GSX_AUTOLOT_*</code>)</td></tr>
-          <tr><td><strong>EQ OFF / 5% / 10% / 20%</strong></td><td>Equity DD guard for new entries (persists <code>GSX_EQGUARD_*</code>)</td></tr>
+          <tr><td><strong>SPREAD / IGN</strong></td><td>Enforce vs bypass entry max-spread gate</td></tr>
+          <tr><td><strong>FIXED / AUTOLOT</strong></td><td>Default FIXED 0.01; shares desk <code>GSX_MS_AUTOLOT_*</code></td></tr>
+          <tr><td><strong>EQ OFF / 5% / 10% / 20%</strong></td><td>Shares desk <code>GSX_MS_EQGUARD_*</code></td></tr>
         </tbody>
       </table>
+
+      <h2>Trade Center desk buttons (see <a href="#desk213">Best Use</a>)</h2>
+      <p>Automation: FIXED|AUTOLOT · EQ OFF/5/10/20 · REKICK · FollowDir FOLLOW/BUY/SELL/WAIT · PROP CLEAR · START/STOP ALL · ADD/REM. Default lot <strong>FIXED 0.01</strong>.</p>
 
       <h2>ProfitScouter buttons</h2>
       <table>
@@ -1726,7 +1915,7 @@ cd GsignalX-Velocity</pre>
         </tbody>
       </table>
 
-      <h2>Key GSignalX defaults (Velocity 2.00)</h2>
+      <h2>Key GSignalX defaults (Velocity 2.14)</h2>
       <table>
         <thead><tr><th>Input</th><th>Default</th></tr></thead>
         <tbody>
@@ -1737,17 +1926,16 @@ cd GsignalX-Velocity</pre>
           <tr><td><code>InpDrillMinutes</code></td><td>10</td></tr>
           <tr><td><code>InpFleetTargetPairs</code></td><td>4</td></tr>
           <tr><td><code>InpExitMode</code></td><td>Scouter</td></tr>
-          <tr><td><code>InpStrategicStopMult</code></td><td>4.0</td></tr>
-          <tr><td><code>InpRiskPct</code></td><td>1.0</td></tr>
+          <tr><td><code>InpFixedLot</code></td><td><strong>0.01</strong></td></tr>
+          <tr><td><code>InpAutoLotDefault</code></td><td><strong>false</strong> (FIXED; desk seed-if-missing)</td></tr>
+          <tr><td><code>InpRiskPct</code></td><td>1.0 (used when AUTOLOT on)</td></tr>
           <tr><td><code>InpMaxLot</code></td><td>5.0</td></tr>
-          <tr><td><code>InpAutoLotDefault</code></td><td>true (chart AUTOLOT)</td></tr>
-          <tr><td><code>InpMaxDailyDrawdownPct</code></td><td>0 (EQ OFF until chart cycle)</td></tr>
-          <tr><td><code>InpPanelDensity</code></td><td>Compact (investor outcome strip)</td></tr>
+          <tr><td><code>InpPropMaxEquityDdPct</code></td><td>0 (Prop peak DD guide off)</td></tr>
+          <tr><td><code>InpDeskExecute</code></td><td>true (Trade Center owns fills)</td></tr>
+          <tr><td><code>InpPanelDensity</code></td><td>Compact</td></tr>
           <tr><td><code>InpMagic</code></td><td>20260904</td></tr>
           <tr><td><code>InpMaxSpreadPt</code></td><td>40</td></tr>
-          <tr><td><code>InpIgnoreSpreadDefault</code></td><td>false (SPREAD; chart IGN persists)</td></tr>
-          <tr><td><code>InpShowRosterStrip</code></td><td>true (chart compact roster)</td></tr>
-          <tr><td><code>InpChartEntriesWhenService</code></td><td>false (defer while Service OWN)</td></tr>
+          <tr><td><code>InpChartEntriesWhenService</code></td><td>false (defer while Service/Desk OWN)</td></tr>
         </tbody>
       </table>
 
@@ -1779,25 +1967,15 @@ cd GsignalX-Velocity</pre>
       <table>
         <thead><tr><th>Document</th><th>Topic</th></tr></thead>
         <tbody>
-          <tr><td><code>README.md</code></td><td>Toolkit overview</td></tr>
-          <tr><td><code>LICENSE</code> / <code>NOTICE</code></td><td>PolyForm Noncommercial 1.0.0</td></tr>
-          <tr><td><code>CONTRIBUTING.md</code></td><td>Bugs, feedback, PRs</td></tr>
+          <tr><td><code>README.md</code></td><td>Toolkit overview + start here</td></tr>
+          <tr><td><code>docs/RELEASE_v2.14_Input_Reliability.md</code></td><td>Current production cut · Best use</td></tr>
+          <tr><td><code>docs/WINDOWS_DEPLOY_SIMPLE.md</code></td><td>Non-tech Windows install</td></tr>
+          <tr><td><code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code></td><td>Practice $20/$50/$100</td></tr>
+          <tr><td><code>docs/PRESET_100EUR_RawSpread.md</code></td><td>Micro capital preset</td></tr>
+          <tr><td><code>DEPLOYMENT.md</code> / <code>DEPLOYMENT_RUNBOOK.md</code></td><td>Install &amp; Confirm gates</td></tr>
           <tr><td><code>README_ProfitScouter.md</code></td><td>Harvest depth</td></tr>
-          <tr><td><code>DEPLOYMENT.md</code></td><td>Install &amp; verify</td></tr>
-          <tr><td><code>DEPLOYMENT_RUNBOOK.md</code></td><td>Gates G0–G7 with feedback</td></tr>
-          <tr><td><code>docs/WINDOWS_DEPLOY_SIMPLE.md</code></td><td>Non-tech Windows ZIP → double-click → MT5 + error fixes</td></tr>
-          <tr><td><code>docs/RELEASE_v2.00_Prop_Desk_Deploy.md</code></td><td>Velocity 2.00 prop desk deploy + checklist</td></tr>
-          <tr><td><code>docs/RELEASE_v1.21_Commercial_Deploy.md</code></td><td>Historical v1.21 commercial cut</td></tr>
-          <tr><td><code>docs/PLAN_V1.23_Multisymbol_Signal_Service.md</code></td><td>Service provenance</td></tr>
-          <tr><td><code>docs/PLAN_V1.24_Multisymbol_Dashboard_UI.md</code></td><td>Dashboard UI provenance</td></tr>
-          <tr><td><code>docs/PLAN_V1.25_Prop_Firm_Trade_Center.md</code></td><td>Telegram + PropRisk provenance</td></tr>
-          <tr><td><code>docs/PLAN_V1.26_Trade_Center_Categories_Events.md</code></td><td>Categories, pair state, sessions, events</td></tr>
-          <tr><td><code>docs/PLAN_V1.27_Telegram_Dual_Host.md</code></td><td>Telegram dual/tri-host + feature contract</td></tr>
-          <tr><td><code>docs/PRESET_100EUR_RawSpread.md</code></td><td>Micro capital preset rationale</td></tr>
-          <tr><td><code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code></td><td>Practice packs $20/$50/$100 Standard+Raw</td></tr>
-          <tr><td><code>docs/PLAN_V2.02_Practice_Live_Simulation.md</code></td><td>Practice sim decision lock</td></tr>
           <tr><td><code>ARCHITECTURE_CONNECTOR_BUS.md</code></td><td>Bus protocol</td></tr>
-          <tr><td><code>docs/CREED_ALGO_Users_Manual.md</code></td><td>Legacy umbrella manual</td></tr>
+          <tr><td><code>LICENSE</code> / <code>NOTICE</code></td><td>PolyForm Noncommercial 1.0.0</td></tr>
         </tbody>
       </table>
 
@@ -1829,7 +2007,7 @@ cd GsignalX-Velocity</pre>
           <tr><td><strong>Executive</strong></td><td>Cloud confluence signals at gsignalx.cloud</td></tr>
           <tr><td><strong>PLAY / STOP / HALT</strong></td><td>Per-chart arming; never closes tickets</td></tr>
           <tr><td><strong>SPREAD / IGN</strong></td><td>Enforce vs bypass entry max-spread gate (entry-only)</td></tr>
-          <tr><td><strong>AUTOLOT / FIXED</strong></td><td>Risk% lot sizing vs fixed lot</td></tr>
+          <tr><td><strong>FIXED / AUTOLOT</strong></td><td>Default FIXED 0.01; AUTOLOT = risk% (desk <code>GSX_MS_*</code>)</td></tr>
           <tr><td><strong>EQ guide</strong></td><td>Account equity DD% gate for new entries</td></tr>
           <tr><td><strong>Compact / Full</strong></td><td>Panel density — investor strip vs trader engines</td></tr>
           <tr><td><strong>Drill</strong></td><td>Timed window after PLAY for active-direction entries</td></tr>
@@ -1848,15 +2026,15 @@ cd GsignalX-Velocity</pre>
       </table>
 
       <h2>Version alignment</h2>
-      <p>This manual matches toolkit behaviour as of <strong>Gsignalx Velocity 2.00</strong> (hosts <code>#property version "2.00"</code>; FILE_COMMON bus schema still <strong>1</strong>). Includes Multisymbol Service, Trade Center, <a href="#telegram">Telegram Alerts</a> (trader + investor recipes), PropRisk soft STOP, entry sanctity, winners-only ASAP, adverse-bar Auto (min age + once-green), strategic SL, FOLLOW/WAIT, SPREAD/IGN, AUTOLOT/FIXED, EQ guide, Compact/Full, fleet pending-complete, preliminary M5 desk. Prefer these defaults over older CREED notes that still mention account loss-guard flatten.</p>
+      <p>This manual matches <strong>Gsignalx Velocity 2.14</strong> (Trade Center / Service <code>#property version "2.14"</code>; bus schema <strong>1</strong>). Run the desk from <a href="#desk213">System UI Best Use</a>. Operator note: <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.</p>
 
       <div class="callout gold">
         <strong class="label">Executive signals</strong>
-        For confluence conviction and the broader GSignalX trader/investor programs, visit
+        For confluence conviction, visit
         <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">https://www.gsignalx.cloud/</a>.
       </div>
 
-      <p class="footer-note">© Gocity Group — Gsignalx Velocity <strong>2.00</strong> / GSignalX. For research and educational use with MetaTrader 5. Trade responsibly. Past performance is not indicative of future results. Prop desk deploy: <code>docs/RELEASE_v2.00_Prop_Desk_Deploy.md</code>.</p>
+      <p class="footer-note">© Gocity Group — Gsignalx Velocity <strong>2.14</strong>. Research and educational use with MetaTrader 5. Trade responsibly. Past performance is not indicative of future results.</p>
     </section>
 
     <nav class="chapter-nav" aria-label="Chapter navigation">

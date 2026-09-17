@@ -7,13 +7,13 @@ Step-by-step install, compile, run, and verify for the connector bus + opportuni
 **Plain-language Windows path (ZIP or clone → double-click → MT5):**  
 [docs/WINDOWS_DEPLOY_SIMPLE.md](docs/WINDOWS_DEPLOY_SIMPLE.md)
 
-That guide covers download/unzip, which `.bat` to run, what to click in MetaTrader, and a **Problems and fixes** table for the errors people hit most often.
+**Trader / investor manual:** [docs/Gsignalx_Velocity_Users_Manual.html](docs/Gsignalx_Velocity_Users_Manual.html)
 
-**Guided deploy with confirmation gates + feedback:** [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md)
+**Guided deploy with confirmation gates:** [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md)
 
-**Velocity 2.00 prop desk release (Service / Trade Center / Telegram / PropRisk / Scouter):** [docs/RELEASE_v2.00_Prop_Desk_Deploy.md](docs/RELEASE_v2.00_Prop_Desk_Deploy.md)
+**Current production cut (Best use + all UI controls):** [docs/RELEASE_v2.14_Input_Reliability.md](docs/RELEASE_v2.14_Input_Reliability.md) · Manual [System UI](docs/Gsignalx_Velocity_Users_Manual.html#desk213)
 
-**Historical commercial v1.21 (AutoLot / EQ / Compact panel):** [docs/RELEASE_v1.21_Commercial_Deploy.md](docs/RELEASE_v1.21_Commercial_Deploy.md)
+**Upgrade to 2.14:** reattach Trade Center after compile; Automation shows FIXED **0.01**; press STOP once to clear stale pendings; REM unused pairs.
 
 For protocol/schema details see [ARCHITECTURE_CONNECTOR_BUS.md](ARCHITECTURE_CONNECTOR_BUS.md).  
 For Profit Scouter inputs see [README_ProfitScouter.md](README_ProfitScouter.md).

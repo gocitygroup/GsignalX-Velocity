@@ -21,6 +21,8 @@ struct GsxEngineParams
 
 struct GsxEngineState
   {
+   string   symbol;   // owning roster symbol — must match calc source
+   int      tf;       // timeframe used for last successful calc
    int      ppDir[]; int stDir[]; int sbtDir[];
    double   ppLine[]; double stLine[]; double sbtLine[];
    double   ma[]; double atrRisk[];
@@ -30,8 +32,40 @@ struct GsxEngineState
    bool     ready;
    datetime lastBarTime; // last calculated bar open
    int      lastSigDir; int lastSigIdx;
+   datetime lastSigChangeTime; // when lastSigDir last changed (staleness)
    string   status;
   };
+
+// Break MQL5 shared-buffer aliasing on arrays-of-structs with dynamic series.
+void GsxEngStateDetach(GsxEngineState &st)
+  {
+   ArrayFree(st.ppDir);
+   ArrayFree(st.stDir);
+   ArrayFree(st.sbtDir);
+   ArrayFree(st.ppLine);
+   ArrayFree(st.stLine);
+   ArrayFree(st.sbtLine);
+   ArrayFree(st.ma);
+   ArrayFree(st.atrRisk);
+   ArrayFree(st.open);
+   ArrayFree(st.high);
+   ArrayFree(st.low);
+   ArrayFree(st.close);
+   ArrayFree(st.barTime);
+  }
+
+void GsxEngStateClearMeta(GsxEngineState &st)
+  {
+   st.symbol = "";
+   st.tf = 0;
+   st.n = 0;
+   st.ready = false;
+   st.lastBarTime = 0;
+   st.lastSigDir = 0;
+   st.lastSigIdx = -1;
+   st.lastSigChangeTime = 0;
+   st.status = "";
+  }
 
 //+------------------------------------------------------------------+
 //| File-local series helpers (avoid colliding with EA globals)      |
@@ -113,13 +147,30 @@ bool GsxCalcEngines(const string symbol,
                     const GsxEngineParams &p,
                     GsxEngineState &st)
   {
-   st.ready = false;
-   st.n = 0;
-   st.lastSigDir = 0;
-   st.lastSigIdx = -1;
+   int shift  = p.evalClosedBar ? 1 : 0;      // 1 = ignore the forming bar
+   // v2.13: skip full rebuild when same symbol/TF bar already calculated
+   datetime wantBar = iTime(symbol, tf, shift);
+   if(st.ready && st.symbol == symbol && st.tf == (int)tf &&
+      wantBar != 0 && st.lastBarTime == wantBar && st.n > 0)
+     {
+      st.status = "";
+      return(true);
+     }
+
+   // Always detach first — ArrayResize(g_eng[]) can alias dynamic series
+   // across slots so every pair would inherit the chart symbol's direction.
+   GsxEngStateDetach(st);
+   GsxEngStateClearMeta(st);
    st.status = "";
 
-   int shift  = p.evalClosedBar ? 1 : 0;      // 1 = ignore the forming bar
+   if(symbol == "")
+     {
+      st.status = "empty symbol";
+      return(false);
+     }
+
+   SymbolSelect(symbol, true);
+
    int want   = p.lookback;
    int warmup = p.bbLen + p.maLen + p.stLen + p.ppAtrLen + p.riskAtrLen + p.pivotPrd * 4 + 60;
    if(want < warmup + 100)
@@ -130,7 +181,17 @@ bool GsxCalcEngines(const string symbol,
    int n = CopyRates(symbol, tf, shift, want, r);
    if(n < warmup)
      {
+      // Nudge terminal to pull history for off-chart symbols
+      datetime times[];
+      CopyTime(symbol, tf, shift, want, times);
+      ArrayFree(r);
+      n = CopyRates(symbol, tf, shift, want, r);
+     }
+   if(n < warmup)
+     {
       st.status = "waiting for history (" + IntegerToString(n) + " bars)";
+      st.symbol = symbol;
+      st.tf = (int)tf;
       return(false);
      }
 
@@ -331,6 +392,12 @@ bool GsxCalcEngines(const string symbol,
 
    st.n = n;
    st.lastBarTime = r[n - 1].time;
+   if(st.lastSigIdx >= 0 && st.lastSigIdx < n)
+      st.lastSigChangeTime = st.barTime[st.lastSigIdx];
+   else
+      st.lastSigChangeTime = 0;
+   st.symbol = symbol;
+   st.tf = (int)tf;
    st.ready = true;
    st.status = "ok";
    return(true);
@@ -406,6 +473,58 @@ int GsxActiveDirectionUnderRules(const GsxEngineState &st,
       else                             skipWhy = "no active direction";
      }
    return(wanted);
+  }
+
+// Majority among enabled triggers only (ignore disabled engines).
+int GsxEnabledTriggerMajority(const GsxEngineState &st,
+                              const int i,
+                              const bool trigPP,
+                              const bool trigST,
+                              const bool trigSBT)
+  {
+   if(i < 0 || i >= st.n)
+      return(0);
+   int bull = 0, bear = 0, n = 0;
+   if(trigPP)
+     {
+      n++;
+      if(st.ppDir[i] == 1) bull++;
+      else if(st.ppDir[i] == -1) bear++;
+     }
+   if(trigST)
+     {
+      n++;
+      if(st.stDir[i] == 1) bull++;
+      else if(st.stDir[i] == -1) bear++;
+     }
+   if(trigSBT)
+     {
+      n++;
+      if(st.sbtDir[i] == 1) bull++;
+      else if(st.sbtDir[i] == -1) bear++;
+     }
+   if(n <= 0)
+      return(0);
+   if(bull > bear)
+      return(1);
+   if(bear > bull)
+      return(-1);
+   return(0);
+  }
+
+//+------------------------------------------------------------------+
+//| Prefetch history for off-chart symbols (ADD / cold start) v2.13  |
+//+------------------------------------------------------------------+
+void GsxEngPrefetchHistory(const string symbol, const ENUM_TIMEFRAMES tf, const int bars)
+  {
+   if(symbol == "")
+      return;
+   SymbolSelect(symbol, true);
+   int want = MathMax(bars, 200);
+   datetime times[];
+   CopyTime(symbol, tf, 0, want, times);
+   MqlRates r[];
+   CopyRates(symbol, tf, 0, want, r);
   }
 
 #endif // GSX_ENGINES_MQH

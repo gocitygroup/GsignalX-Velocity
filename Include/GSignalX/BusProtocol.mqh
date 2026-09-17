@@ -9,6 +9,7 @@
 #define GSX_BUS_ROOT          "GSignalX\\bus\\v1"
 #define GSX_BUS_TERMINALS     GSX_BUS_ROOT "\\terminals"
 #define GSX_BUS_GRADES_FILE   GSX_BUS_ROOT "\\grades\\latest.json"
+#define GSX_BUS_DESK_SIGNALS  GSX_BUS_ROOT "\\desk\\signals"
 
 string GsxBusTerminalDir(const string tid)
   {
@@ -23,6 +24,13 @@ string GsxBusHeartbeatPath(const string tid)
 string GsxBusSignalPath(const string tid, const string symbolCanon)
   {
    return StringFormat("%s\\signals\\%s.json", GsxBusTerminalDir(tid), symbolCanon);
+  }
+
+// Shared desk mirror (tid-independent) so Trade Center sees Service signals
+// even when attached on a different terminal data path.
+string GsxBusDeskSignalPath(const string symbolCanon)
+  {
+   return StringFormat("%s\\%s.json", GSX_BUS_DESK_SIGNALS, symbolCanon);
   }
 
 string GsxBusScouterPath(const string tid)

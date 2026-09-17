@@ -1,14 +1,24 @@
-﻿# GSignalX MQL5 Trading Toolkit
+﻿# GSignalX Velocity — MT5 Prop Desk Toolkit
 
 [![License: PolyForm-Noncommercial-1.0.0](https://img.shields.io/badge/License-PolyForm--NC--1.0.0-blue.svg)](LICENSE)
 [![GitHub](https://img.shields.io/badge/GitHub-GsignalX--Velocity-469AD4?logo=github)](https://github.com/gocitygroup/GsignalX-Velocity)
 [![Manual](https://img.shields.io/badge/Manual-Gsignalx%20Velocity-FBA927)](docs/Gsignalx_Velocity_Users_Manual.html)
 
-Broker-agnostic MT5 toolkit for signals (GsignalX), profit harvesting (ProfitScouter), and multi-terminal opportunity grading via a FILE_COMMON connector bus. Product desk brand: **Gsignalx Velocity** (Gocity Group). Executive cloud conviction: [gsignalx.cloud](https://www.gsignalx.cloud/).
+**For prop traders, small-fund desks, and practice investors.**  
+Structured entries · winners-only harvest · prop-safe soft STOP · one magic.
 
-**License:** source-available under [PolyForm Noncommercial 1.0.0](LICENSE) — personal, educational, and research use welcome; **commercial use not permitted** under this license (see [NOTICE](NOTICE)). Feedback and contributions: [CONTRIBUTING.md](CONTRIBUTING.md).
+**GSignalX** opens risk. **ProfitScouter** banks winners. Desk PLAY/STOP never closes tickets.  
+Default lot **FIXED 0.01**. Bus schema **v1**. Current cut **Velocity 2.14**.
 
-**Clone:**
+**Start here**
+
+1. [Trader & investor manual](docs/Gsignalx_Velocity_Users_Manual.html)  
+2. [Windows deploy (non-tech)](docs/WINDOWS_DEPLOY_SIMPLE.md)  
+3. [Current RELEASE 2.14 — Best use](docs/RELEASE_v2.14_Input_Reliability.md)
+
+Cloud conviction signals (optional): [gsignalx.cloud](https://www.gsignalx.cloud/)
+
+**License:** [PolyForm Noncommercial 1.0.0](LICENSE) — personal / education / research; commercial use not permitted ([NOTICE](NOTICE)). [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ```bash
 git clone https://github.com/gocitygroup/GsignalX-Velocity.git
@@ -19,70 +29,33 @@ cd GsignalX-Velocity
 
 | Program | Type | Role |
 |---|---|---|
-| `GsignalX_GocityGroup.mq5` | Expert | Multi-engine trend signals + entries; scalping drill; fleet fill; movable panel; bus publisher; compact roster strip (**Velocity 2.00**) |
-| `GsignalX_Multisymbol_Dashboard.mq5` | Expert | Prop Firm Trade Center — categories, pair START/STOP/SUSPEND, session clock, hybrid events, Prop soft-locks, Telegram (**2.00** / v1.26) |
-| `GsignalX_Service.mq5` | Service | Chart-free multisymbol roster scan + fleet fill; entry-only; Scouter closes; hot-reloads live roster (**2.00**) |
-| `ProfitScouter_DollarTarget.mq5` | Expert | Money-target harvest with movable chart panel; profit lock; AUTO adverse exit (**2.00**) |
-| `ProfitScouter_Service.mq5` | Service | Same harvest engine, chart-free, background (**2.00**) |
-| `ProfitOpportunity_Grader.mq5` | Service | Ranks entry + harvest opportunities across terminals (**2.00**) |
+| `GsignalX_Multisymbol_Dashboard.mq5` | Expert | Trade Center — DeskExecute fills, Prop, Telegram (**2.14**) |
+| `GsignalX_Service.mq5` | Service | Headless roster scan + fills; yields to Desk (**2.14**) |
+| `GsignalX_GocityGroup.mq5` | Expert | Chart strip / optional entries (defer when Desk/Service owns magic) |
+| `ProfitScouter_Service.mq5` | Service | Exits — ASAP / BANK / CUT / FLAT |
+| `ProfitScouter_DollarTarget.mq5` | Expert | Same harvest on chart |
+| `ProfitOpportunity_Grader.mq5` | Service | Cross-terminal opportunity grades |
 | `ProfitHarvest_Now.mq5` | Script | One-shot close-at-target |
 
-**Two independent systems (Velocity 2.00):** GSignalX is the **entry engine** (Service and/or chart) and ProfitScouter is the **exit engine**. With `InpExitMode = Scouter` (default) the signal hosts never reverse-close — Profit Scouter owns profit exits. Trade Center PropRisk uses **soft STOP only** (never closes). Telegram (**v1.27**): Service + Dashboard + Chart attach; deals on desk (Chart failover); engine WARN on Service; status NotCfg/Connected/Verified/Error + VERIFY — see [PLAN_V1.27](docs/PLAN_V1.27_Telegram_Dual_Host.md). **Best use:** one magic — Service owns entries, Trade Center owns categories / START·STOP·SUSPEND / Event SKIP / PROP / Telegram desk, Scouter owns exits; London–NY FX+metals START, crypto SUSPEND, M5 · fleet 4 · ASAP $5 — see [RELEASE_v2.00 §3](docs/RELEASE_v2.00_Prop_Desk_Deploy.md). Every cycle ProfitScouter banks thresholds from **winners only** (default ASAP floor **$5**); adverse-bar Auto may cut same-symbol losers (min age + once-green). The **fleet governor** (`InpFleetTargetPairs` default **4**) treats a pair as complete when it has an **open position or working pending**. Unfilled pendings expire by age (`InpPendMaxAgeMin`). Panel/bus show live fleet floating P/L and session outcomes.
+**Best use:** Topology A — Trade Center DeskExecute ON, Service stopped (or Yield ON), FIXED 0.01, EQ OFF unless you want a floating-DD brake, STOP clears pendings, Scouter owns exits. Details: [RELEASE 2.14](docs/RELEASE_v2.14_Input_Reliability.md) · Manual [System UI Best Use](docs/Gsignalx_Velocity_Users_Manual.html#desk213).
 
-**Chart controls never close trades:** **PLAY** / **STOP** / **HALT** / **FOLLOW|WAIT** / **SPREAD|IGN**. STOP pauses entries; HALT pauses entries + linked Scouter; FOLLOW/WAIT toggles flip-fill policy; SPREAD/IGN toggles the entry max-spread gate. Open positions are left for Profit Scouter (plus optional catastrophe SL).
+**Trader:** live DIR, FOLLOW pads, Telegram deals + PROP.  
+**Investor / monitor:** quieter TG (DAILY + PROP), Compact strip, Scouter harvest.
 
-**Spread gate (v1.20):** entries must pass `InpMaxSpreadPt` (default 40) unless you press **IGN** on that chart. Use **IGN** only for deliberate unlocks when the panel is blocked on spread (crypto wide-but-normal, or a signal you will not miss) — then return to **SPREAD**. Prefer raising `InpMaxSpreadPt` for a symbol class over leaving IGN on permanently. Exit/Scouter logic is unchanged.
-
-**Preliminary chart (M5):** attach **GSignalX on M5** as the primary desk timeframe. Match ProfitScouter adverse TF to **M5** (`InpAdverseTimeframe=M5` on the Service, or host DollarTarget on an M5 chart with `PERIOD_CURRENT`) so signal flips, drill pace, and loser cuts stay aligned — best paired performance for entry + harvest. Details: [Velocity manual](docs/Gsignalx_Velocity_Users_Manual.html), [EUR100 M5 preset](docs/PRESET_100EUR_RawSpread.md), [practice $20/$50/$100](docs/PRACTICE_LIVE_SIM_20_50_100.md).
-
-Shared libraries live under `Include/GSignalX/` and `Include/ProfitScouter/`.
-
-**Crypto weekends:** GsignalX v1.11+ auto-detects crypto (path/currency/name) and, with `InpCryptoAllowWeekend=true` (default), skips FX Saturday/Sunday blocks, Friday cut-off, and weekend flatten. Add odd broker names to `InpCryptoExtraList` if needed.
-
-**Order entry (v1.14+):** default is **limit + stop bracket** anchored to the **signal bar open** (`InpPendFromSignalOpen`). Offsets default to **5** pips each (set **4–6** for tight scalp; clamp **4–20**). During the scalping drill window, unfilled pendings stay until the window ends. Set `InpEntryMode=Market` for immediate fills.
-
-**Scalping drill (v1.13+):** each chart is independent. On **PLAY**, a 5–15 minute drill window starts (`InpDrillMinutes`, default 10). While the window is open and engines agree under the bot’s entry rules (MA / MinAgree / AllowLong-Short), GSignalX joins or re-enters that chart’s symbol in the active BUY/SELL direction — not flip-only. After ProfitScouter closes all positions at the account money target, each PLAY chart that goes flat re-arms once (`InpDrillMarchAfterFlat`) and opens again if the signal still says buy or sell. When the drill window expires, behaviour returns to flip-based entries until the next PLAY.
+Practice packs: [PRACTICE $20/$50/$100](docs/PRACTICE_LIVE_SIM_20_50_100.md) · [EUR100 M5 preset](docs/PRESET_100EUR_RawSpread.md)
 
 ## Docs
 
-- [**Gsignalx Velocity Trader Manual (HTML)**](docs/Gsignalx_Velocity_Users_Manual.html) — primary desk manual (**Velocity 2.00**). Telegram for traders vs investors: [Telegram Alerts](docs/Gsignalx_Velocity_Users_Manual.html#telegram). GitHub Pages / Vercel entry: [`docs/index.html`](docs/index.html). Executive cloud signals: [gsignalx.cloud](https://www.gsignalx.cloud/)
-- [WINDOWS_DEPLOY_SIMPLE.md](docs/WINDOWS_DEPLOY_SIMPLE.md) — **non-tech** Windows ZIP/clone → double-click deploy → MT5 on + error fixes
-- [RELEASE_v2.00_Prop_Desk_Deploy.md](docs/RELEASE_v2.00_Prop_Desk_Deploy.md) — prop desk topology, best use, compile/Confirm sign-off
-- [PRACTICE_LIVE_SIM_20_50_100.md](docs/PRACTICE_LIVE_SIM_20_50_100.md) — practice live $20/$50/$100 Standard+Raw (Scalp/Day/Swing)
-- [CREED ALGO Users Manual (legacy)](docs/CREED_ALGO_Users_Manual.md) — prior umbrella guide ([PDF](docs/CREED_ALGO_Users_Manual.pdf))
-- [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md) — **guided gates G0–G7 with feedback blocks** (use this for step-by-step confirm)
-- [DEPLOYMENT.md](DEPLOYMENT.md) — install, compile, first-run, verify
-- [ARCHITECTURE_CONNECTOR_BUS.md](ARCHITECTURE_CONNECTOR_BUS.md) — bus protocol, scoring, demo checklist
-- [README_ProfitScouter.md](README_ProfitScouter.md) — Profit Scouter configuration and behaviour
-- [PRESET_100EUR_RawSpread.md](docs/PRESET_100EUR_RawSpread.md) — micro-capital raw-spread growth preset
+- [Velocity manual (HTML)](docs/Gsignalx_Velocity_Users_Manual.html) — primary  
+- [WINDOWS_DEPLOY_SIMPLE.md](docs/WINDOWS_DEPLOY_SIMPLE.md) — ZIP → double-click → MT5  
+- [RELEASE_v2.14](docs/RELEASE_v2.14_Input_Reliability.md) — current production cut  
+- [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md) — Confirm gates  
+- [DEPLOYMENT.md](DEPLOYMENT.md) — technical install  
+- [ARCHITECTURE_CONNECTOR_BUS.md](ARCHITECTURE_CONNECTOR_BUS.md) · [README_ProfitScouter.md](README_ProfitScouter.md) — engineering
 
-## Deploy docs on Vercel (from GitHub)
+## Deploy
 
-The Vercel site serves the **HTML trader manual only** (`docs/`). MT5 Experts/Services are not hosted there — clone this repo and use `deploy\` on Windows for the toolkit.
+**Non-tech:** [WINDOWS_DEPLOY_SIMPLE.md](docs/WINDOWS_DEPLOY_SIMPLE.md)  
+**Upgrade:** [`deploy\Clean-and-Deploy.bat`](deploy/Clean-and-Deploy.bat) → Algo Trading ON → Trade Center (DeskExecute) + Scouter + Grader → [`Confirm-After-Start.bat`](deploy/Confirm-After-Start.bat)
 
-1. Push `main` to [gocitygroup/GsignalX-Velocity](https://github.com/gocitygroup/GsignalX-Velocity).
-2. In [Vercel](https://vercel.com) → **Add New Project** → Import that GitHub repository.
-3. Framework Preset: **Other**. Root Directory: `.` (repo root). Build Command: leave empty. Output Directory: **`docs`** (already set in [`vercel.json`](vercel.json)).
-4. Deploy. The site root opens the Velocity manual (`/` rewrites to the manual; `docs/index.html` also redirects).
-5. Optional: attach a custom domain in the Vercel project settings.
-
-Config files: [`vercel.json`](vercel.json), [`.vercelignore`](.vercelignore).
-
-## Quick deploy (MT5 toolkit on Windows)
-
-**Not technical?** Follow the plain guide: [docs/WINDOWS_DEPLOY_SIMPLE.md](docs/WINDOWS_DEPLOY_SIMPLE.md) (ZIP/clone → double-click → MT5 checklist → error fixes).
-
-**Easiest upgrade:** double-click [`deploy\Clean-and-Deploy.bat`](deploy/Clean-and-Deploy.bat).  
-**Fresh deploy (no wipe):** [`deploy\Click-and-Run-Deploy.bat`](deploy/Click-and-Run-Deploy.bat).  
-Then in MT5: Algo Trading ON → start `GsignalX_Service` + `ProfitScouter_Service` + `ProfitOpportunity_Grader` → attach Trade Center → [`deploy\Confirm-After-Start.bat`](deploy/Confirm-After-Start.bat).
-
-Or PowerShell:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 -ListTerminals
-powershell -ExecutionPolicy Bypass -File .\deploy\Deploy-GSignalX.ps1 `
-  -TerminalDataPath "$env:APPDATA\MetaQuotes\Terminal\<HASH>" -Compile
-powershell -ExecutionPolicy Bypass -File .\deploy\Confirm-GSignalX.ps1 -Gate All -WriteFeedback
-```
-
-Walk gates with feedback: [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md).
+Vercel serves the HTML manual from `docs/` ([`vercel.json`](vercel.json)).

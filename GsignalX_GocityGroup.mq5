@@ -38,8 +38,10 @@
 #include <GSignalX/LotSizing.mqh>
 #include <GSignalX/ChartPanel.mqh>
 #include <GSignalX/Fleet.mqh>
+#include <GSignalX/ScoutLink.mqh>
 #include <GSignalX/Engines.mqh>
 #include <GSignalX/MarketGates.mqh>
+#include <GSignalX/FollowGate.mqh>
 #include <GSignalX/MultisymbolPanel.mqh>
 #include <GSignalX/RosterStore.mqh>
 #include <GSignalX/TelegramNotifier.mqh>
@@ -160,9 +162,10 @@ input bool        InpDrillMarchAfterFlat = true; // Re-arm entry after harvest/f
 input group "5d) Fleet fill (required active pairs)"
 input bool        InpFleetEnable          = true;  // Keep required active pairs while PLAY
 input int         InpFleetTargetPairs     = 4;     // Required pairs: open OR pending (this magic)
-input int         InpFleetFillCooldownSec= 10;    // Min seconds between fleet fills (anti-stampede)
+input int         InpFleetFillCooldownSec= 3;     // Min seconds between fleet fills (anti-stampede)
 input bool        InpFleetRequireDrill    = false; // Fill only inside the drill window
-input bool        InpChartEntriesWhenService = false; // When Service OWN=1: allow chart auto-entries
+input bool        InpChartEntriesWhenService = false; // When Service OWN=1: allow off-roster chart entries
+input int         InpSignalMaxAgeSec      = 0;    // Reject dir-change entries older than N sec (0=off)
 
 input group "5e) Exit ownership"
 input EnExitMode  InpExitMode          = GSX_EXIT_SCOUTER; // Exit ownership (Scouter = signal never closes)
@@ -172,10 +175,10 @@ input bool        InpFlipWaitDefault   = false; // Initial FOLLOW/WAIT (false=FO
 
 input group "6) Money management"
 input EnRiskMode  InpRiskMode      = GSX_RISK_PCT; // Position sizing (when AUTOLOT on)
-input double      InpFixedLot      = 0.10;         // Fixed lot (FIXED mode / fallback)
+input double      InpFixedLot      = 0.01;         // Fixed lot (FIXED mode / default)
 input double      InpRiskPct       = 1.0;          // Risk per trade (%)
 input double      InpMaxLot        = 5.0;          // Maximum lot cap
-input bool        InpAutoLotDefault = true;        // Chart AUTOLOT/FIXED default (persisted)
+input bool        InpAutoLotDefault = false;       // false=FIXED 0.01; true=risk% AUTOLOT
 input int         InpMaxDailyPositions = 0;        // Max new entries per UTC day (0 = off)
 input double      InpMaxDailyDrawdownPct = 0.0;     // Equity guard: block entries if DD% >= (0 = off)
 
@@ -282,6 +285,8 @@ GsxTgConfig g_chartTgCfg;
 bool     g_chartTgSeeded = false;
 string   gPfx            = "GSX_";
 int      gLastSigDir     = 0;     // direction of the most recent trigger flip
+datetime gSignalEventAt  = 0;     // when current wanted dir-change was first seen
+int      gSignalEventDir = 0;
 int      gLastSigIdx     = -1;    // its index in the calculation arrays
 double   gSignalOpenPx   = 0.0;   // bar open at the active signal (pending anchor)
 string   gBusGradeLine   = "grades: -";
@@ -329,11 +334,18 @@ bool ChartServiceOwnsFleet()
    return(GsxFleetServiceOwns(InpMagic));
   }
 
-// Auto entries/fleet: allowed unless Service owns this magic (unless override).
+// Auto entries/fleet: Service owns magic → chart defers when _Symbol is on
+// the shared roster (single owner). Override only applies off-roster symbols.
 bool ChartAutoEntriesAllowed()
   {
    if(!ChartServiceOwnsFleet())
       return(true);
+   if(GsxRosterStoreExists(InpMagic))
+     {
+      string names[];
+      if(GsxRosterStoreLoad(InpMagic, names) && GsxRosterContains(names, _Symbol))
+         return(false); // Service owns this roster pair — no chart duplicate
+     }
    return(InpChartEntriesWhenService);
   }
 
@@ -691,15 +703,12 @@ bool MagicHasOppositeDir(const int wanted)
    return(false);
   }
 
-// FOLLOW: allow new-dir entries on flat charts. WAIT: block while opposite
-// magic exposure still exists (Scouter / catastrophe SL must clear first).
+// FOLLOW/WAIT + FollowDir (shared EntryExec). Entries only — open positions
+// are never closed by a mode switch.
 bool AllowNewDirEntry(const int wanted)
   {
-   if(wanted == 0)
-      return(false);
-   if(!gFlipWaitMode)
-      return(true);                 // FOLLOW
-   return(!MagicHasOppositeDir(wanted));
+   int followDir = GsxRosterFollowDirGet(InpMagic, _Symbol, GSX_FOLLOW_AUTO);
+   return(GsxAllowEntry(wanted, gFlipWaitMode, InpMagic, followDir));
   }
 
 double NormalizeLot(double lot)
@@ -800,11 +809,12 @@ double MinStopDistance()
 //| Trading                                                          |
 //+------------------------------------------------------------------+
 // Effective entry spread limit: 0 = allow any (IGN on, or InpMaxSpreadPt=0).
+// Class-aware: CMD/CR get higher ceilings than the FX base input.
 int EffectiveMaxSpreadPt()
   {
    if(gIgnoreSpread)
       return(0);
-   return(InpMaxSpreadPt);
+   return(GsxEffectiveMaxSpreadPt(_Symbol, InpMaxSpreadPt));
   }
 
 bool SpreadOK(string &reason)
@@ -1556,9 +1566,8 @@ void FleetFillCheck()
   {
    if(!InpFleetEnable || !gTradingEnabled || !gDataReady)
       return;
-   // Service owns fleet for this magic — chart must not stampede fills.
-   if(ChartServiceOwnsFleet())
-      return;
+   // Single owner: defer on-roster when Service OWN (ChartAutoEntriesAllowed).
+   // Do not short-circuit on OWN alone — off-roster / !OWN chart independence.
    if(!ChartAutoEntriesAllowed())
       return;
 
@@ -1904,6 +1913,21 @@ void EvaluateSignals()
       SignalSkip("Service owns entries (chart deferred)", true);
       return;
      }
+   if(InpSignalMaxAgeSec > 0)
+     {
+      if(wanted != gSignalEventDir)
+        {
+         gSignalEventDir = wanted;
+         gSignalEventAt  = TimeCurrent();
+        }
+      if(gSignalEventAt > 0 &&
+         (TimeCurrent() - gSignalEventAt) > InpSignalMaxAgeSec)
+        {
+         SignalSkip("stale signal age", true);
+         gSignalEventAt = 0;
+         return;
+        }
+     }
    PlaceEntry(wanted);
   }
 
@@ -2157,7 +2181,7 @@ void UpdatePanel(string tradeState)
    const bool compact = (InpPanelDensity == GSX_PANEL_COMPACT);
    int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
 
-   double effScale = GsxPanelFitScale(InpUiScale, 400, 24);
+   double effScale = GsxPanelFitScale(InpUiScale, 520, 24);
    GsxPanelSetScale(effScale);
    GsxPanelSetVision((int)InpUiVision);
    GsxMsPanelSetUiScale(InpUiScale);
@@ -2165,7 +2189,7 @@ void UpdatePanel(string tradeState)
 
    int x = g_panelX;
    int y = g_panelY;
-   g_panelW = GsxSx(400);
+   g_panelW = GsxSx(520);
    GsxPanelClampPos(g_panelX, g_panelY, g_panelW, GsxSx(280));
    x = g_panelX;
    y = g_panelY;
@@ -2175,7 +2199,8 @@ void UpdatePanel(string tradeState)
    g_panelTitleH = g_gsxPnlTitleH;
 
    //--- Chrome BEFORE body rows so RECTANGLE_LABEL BG cannot cover text
-   int btnH = (InpShowButtons ? GsxSx(78) : GsxSx(12));
+   // 3 button rows need real height after UI scale (avoid roster overlap)
+   int btnH = (InpShowButtons ? GsxSx(128) : GsxSx(12));
    int estRows = compact ? 16 : 26;
    if(InpBusEnable)
       estRows++;
@@ -2453,26 +2478,51 @@ void UpdatePanel(string tradeState)
    if(InpShowButtons)
      {
       int by = GsxPanelButtonsY();
-      int bh = GsxSx(24);
+      // Floor height so scaled UI never crushes glyphs
+      int bh = MathMax(22, GsxSf(InpFontSize + 2) + GsxSp(12));
+      int bpad = 1;
+      int gap = MathMax(4, GsxSp(6));
+      color chipIdle = C'32,38,50';
       GsxLayCtx blay;
-      GsxLayBegin(blay, x, by, g_panelW, GsxSp(6));
+      GsxLayBegin(blay, x, by, g_panelW, gap, gap);
       GsxLaySlot bslots[];
 
       GsxLayRowStart(blay, bh);
       GsxLayEqual(blay, 4, bslots);
       if(ArraySize(bslots) >= 4)
         {
-         GsxPanelSlotButton("BTN_RUN", bslots[0], "PLAY",
-                            gTradingEnabled ? InpColBull : InpColPanelBg,
-                            gTradingEnabled ? InpColPanelBg : InpColText);
-         GsxPanelSlotButton("BTN_STOP", bslots[1], "STOP",
-                            gTradingEnabled ? InpColPanelBg : InpColBear,
-                            gTradingEnabled ? InpColText : InpColPanelBg);
-         GsxPanelSlotButton("BTN_FLAT", bslots[2], "HALT", InpColPanelBg, InpColAccent);
-         GsxPanelSlotButton("BTN_FLIP", bslots[3],
-                            gFlipWaitMode ? "WAIT" : "FOLLOW",
-                            gFlipWaitMode ? InpColAccent : InpColBull,
-                            InpColPanelBg);
+         GsxPanelSlotButtonPad("BTN_RUN", bslots[0], "PLAY",
+                               gTradingEnabled ? InpColBull : chipIdle,
+                               gTradingEnabled ? InpColPanelBg : InpColText, bpad);
+         GsxPanelSlotButtonPad("BTN_STOP", bslots[1], "STOP",
+                               gTradingEnabled ? chipIdle : InpColBear,
+                               gTradingEnabled ? InpColText : InpColPanelBg, bpad);
+         GsxPanelSlotButtonPad("BTN_FLAT", bslots[2], "HALT",
+                               chipIdle, InpColAccent, bpad);
+         GsxPanelSlotButtonPad("BTN_FLIP", bslots[3],
+                               gFlipWaitMode ? "WAIT" : "FOLLOW",
+                               gFlipWaitMode ? InpColAccent : InpColBull,
+                               InpColPanelBg, bpad);
+        }
+      GsxLayAdvance(blay, bh);
+
+      int followDir = GsxRosterFollowDirGet(InpMagic, _Symbol, GSX_FOLLOW_AUTO);
+      GsxLayRowStart(blay, bh);
+      GsxLayEqual(blay, 4, bslots);
+      if(ArraySize(bslots) >= 4)
+        {
+         GsxPanelSlotButtonPad("BTN_FDIR_AUTO", bslots[0], "FOLLOW",
+                               followDir == GSX_FOLLOW_AUTO ? InpColBull : chipIdle,
+                               followDir == GSX_FOLLOW_AUTO ? InpColPanelBg : InpColText, bpad);
+         GsxPanelSlotButtonPad("BTN_FDIR_BUY", bslots[1], "BUY",
+                               followDir == GSX_FOLLOW_BUY ? InpColBull : chipIdle,
+                               followDir == GSX_FOLLOW_BUY ? InpColPanelBg : InpColText, bpad);
+         GsxPanelSlotButtonPad("BTN_FDIR_SELL", bslots[2], "SELL",
+                               followDir == GSX_FOLLOW_SELL ? InpColBear : chipIdle,
+                               followDir == GSX_FOLLOW_SELL ? InpColPanelBg : InpColText, bpad);
+         GsxPanelSlotButtonPad("BTN_FDIR_WAIT", bslots[3], "WAIT",
+                               followDir == GSX_FOLLOW_WAIT ? InpColNeutral : chipIdle,
+                               followDir == GSX_FOLLOW_WAIT ? InpColPanelBg : InpColText, bpad);
         }
       GsxLayAdvance(blay, bh);
 
@@ -2480,19 +2530,28 @@ void UpdatePanel(string tradeState)
       GsxLayEqual(blay, 3, bslots);
       if(ArraySize(bslots) >= 3)
         {
-         GsxPanelSlotButton("BTN_SPREAD", bslots[0],
-                            gIgnoreSpread ? "IGN" : "SPREAD",
-                            gIgnoreSpread ? InpColAccent : InpColPanelBg,
-                            gIgnoreSpread ? InpColPanelBg : InpColText);
-         GsxPanelSlotButton("BTN_AUTOLOT", bslots[1],
-                            gAutoLot ? "AUTOLOT" : "FIXED",
-                            gAutoLot ? InpColBull : InpColPanelBg,
-                            gAutoLot ? InpColPanelBg : InpColText);
+         GsxPanelSlotButtonPad("BTN_SPREAD", bslots[0],
+                               gIgnoreSpread ? "IGN" : "SPREAD",
+                               gIgnoreSpread ? InpColAccent : chipIdle,
+                               gIgnoreSpread ? InpColPanelBg : InpColText, bpad);
+         GsxPanelSlotButtonPad("BTN_AUTOLOT", bslots[1],
+                               gAutoLot ? "AUTOLOT" : "FIXED",
+                               gAutoLot ? InpColBull : chipIdle,
+                               gAutoLot ? InpColPanelBg : InpColText, bpad);
          bool eqOn = (gMaxDailyDrawdownPct > 0.0);
          string eqLbl = eqOn ? StringFormat("EQ %.0f%%", gMaxDailyDrawdownPct) : "EQ OFF";
-         GsxPanelSlotButton("BTN_EQGUARD", bslots[2], eqLbl,
-                            eqOn ? InpColAccent : InpColPanelBg,
-                            eqOn ? InpColPanelBg : InpColText);
+         GsxPanelSlotButtonPad("BTN_EQGUARD", bslots[2], eqLbl,
+                               eqOn ? InpColAccent : chipIdle,
+                               eqOn ? InpColPanelBg : InpColText, bpad);
+        }
+
+      // Grow panel to real button stack (fixes black gap / roster collision)
+      int stackH = GsxLayMeasuredH(blay) + GsxSx(8);
+      int needH = g_panelTitleH + GsxPanelRowCount() * g_gsxPnlRh + stackH;
+      if(needH > g_panelLastH)
+        {
+         GsxPanelResizeBg(needH);
+         g_panelLastH = needH;
         }
      }
 
@@ -2537,10 +2596,11 @@ void GsxChartDrawRosterStrip()
 
    GsxMsSnapshot snap;
    GsxMsBuildSnapshot(InpMagic, InpFleetTargetPairs, InpRosterStripPageSize, snap);
+   GsxMsSnapshotApplyScout(snap, InpScoutLinkEnable, InpScoutInstanceID);
    g_msPage = snap.page;
    g_msDefaultFleet = InpFleetTargetPairs;
    g_msShowButtons = true;
-   int ay = g_panelY + g_panelLastH + GsxSx(10);
+   int ay = g_panelY + g_panelLastH + GsxSx(14);
    GsxMsPanelDrawCompact(snap, g_panelX, ay);
 
    // restore ChartPanel prefix for next signal panel paint
@@ -2603,30 +2663,32 @@ void LoadIgnoreSpread()
 
 void LoadAutoLot()
   {
-   string n = AutoLotVarName();
-   if(GlobalVariableCheck(n))
+   // v2.14: desk GSX_MS_AUTOLOT_ is source of truth; migrate legacy per-symbol once
+   string legacy = AutoLotVarName();
+   if(!GlobalVariableCheck(GsxRosterAutoLotVarName(InpMagic)))
      {
-      gAutoLot = (GlobalVariableGet(n) > 0.5);
-      return;
+      if(GlobalVariableCheck(legacy))
+         GsxRosterAutoLotSet(InpMagic, GlobalVariableGet(legacy) > 0.5);
+      else
+         GsxRosterAutoLotSeed(InpMagic, InpAutoLotDefault);
      }
-   gAutoLot = InpAutoLotDefault;
-   GlobalVariableSet(n, gAutoLot ? 1.0 : 0.0);
+   gAutoLot = GsxRosterAutoLotGet(InpMagic, InpAutoLotDefault);
+   GlobalVariableSet(legacy, gAutoLot ? 1.0 : 0.0);
   }
 
 void LoadEquityGuard()
   {
-   string n = EquityGuardVarName();
-   if(GlobalVariableCheck(n))
+   // v2.14: bridge to desk EQ pads (0/5/10/20)
+   string legacy = EquityGuardVarName();
+   if(!GlobalVariableCheck(GsxRosterEqGuardVarName(InpMagic)))
      {
-      gMaxDailyDrawdownPct = GlobalVariableGet(n);
-      if(gMaxDailyDrawdownPct < 0.0)
-         gMaxDailyDrawdownPct = 0.0;
-      return;
+      if(GlobalVariableCheck(legacy))
+         GsxRosterEqGuardSet(InpMagic, GlobalVariableGet(legacy));
+      else
+         GsxRosterEqGuardSeed(InpMagic, InpMaxDailyDrawdownPct);
      }
-   gMaxDailyDrawdownPct = InpMaxDailyDrawdownPct;
-   if(gMaxDailyDrawdownPct < 0.0)
-      gMaxDailyDrawdownPct = 0.0;
-   GlobalVariableSet(n, gMaxDailyDrawdownPct);
+   gMaxDailyDrawdownPct = GsxRosterEqGuardGet(InpMagic, 0.0);
+   GlobalVariableSet(legacy, gMaxDailyDrawdownPct);
   }
 
 void SetFlipWaitMode(const bool waitMode, const bool announce)
@@ -2681,6 +2743,7 @@ void SetIgnoreSpread(const bool on, const bool announce)
 void SetAutoLot(const bool on, const bool announce)
   {
    gAutoLot = on;
+   GsxRosterAutoLotSet(InpMagic, on);
    GlobalVariableSet(AutoLotVarName(), on ? 1.0 : 0.0);
    if(announce)
      {
@@ -2696,7 +2759,8 @@ void SetAutoLot(const bool on, const bool announce)
 
 void SetEquityGuardPct(const double pct, const bool announce)
   {
-   gMaxDailyDrawdownPct = (pct < 0.0) ? 0.0 : pct;
+   GsxRosterEqGuardSet(InpMagic, pct);
+   gMaxDailyDrawdownPct = GsxRosterEqGuardGet(InpMagic, 0.0);
    GlobalVariableSet(EquityGuardVarName(), gMaxDailyDrawdownPct);
    if(announce)
      {
@@ -2741,14 +2805,12 @@ void CycleEquityGuardPct(const bool announce)
 //    any open position. HALT uses it for the one-click full stop.
 string ScoutRunVarName()
   {
-   return(StringFormat("PS%d_RUN", InpScoutInstanceID));
+   return(GsxScoutRunVarName(InpScoutInstanceID));
   }
 
 void SetScoutRun(const bool on)
   {
-   if(!InpScoutLinkEnable)
-      return;
-   GlobalVariableSet(ScoutRunVarName(), on ? 1.0 : 0.0);
+   GsxScoutRunSetLinked(InpScoutLinkEnable, InpScoutInstanceID, on);
   }
 
 void SetRunState(bool on, bool announce)
@@ -2809,16 +2871,22 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
 
    if(id == CHARTEVENT_OBJECT_CLICK)
      {
-      if(sparam == gPfx + "BTN_RUN")
+      string click = sparam;
+      // Flat chip text labels end with _TX — route to parent button name
+      if(StringLen(click) > 3 && StringSubstr(click, StringLen(click) - 3) == "_TX")
+         click = StringSubstr(click, 0, StringLen(click) - 3);
+      ObjectSetInteger(0, click, OBJPROP_SELECTED, false);
+
+      if(click == gPfx + "BTN_RUN")
         {
          SetScoutRun(true);   // linked: resume the scouter harvest as well
          SetRunState(true, true);
         }
       else
-         if(sparam == gPfx + "BTN_STOP")
+         if(click == gPfx + "BTN_STOP")
             SetRunState(false, true);   // entries only - scouter keeps managing exits
          else
-            if(sparam == gPfx + "BTN_FLAT")
+            if(click == gPfx + "BTN_FLAT")
               {
                SetRunState(false, false);
                SetScoutRun(false);
@@ -2830,29 +2898,48 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                UpdatePanel(g_lastPanelState);
               }
             else
-               if(sparam == gPfx + "BTN_FLIP")
+               if(click == gPfx + "BTN_FLIP")
                   SetFlipWaitMode(!gFlipWaitMode, true);
                else
-                  if(sparam == gPfx + "BTN_SPREAD")
+                  if(click == gPfx + "BTN_FDIR_AUTO" ||
+                     click == gPfx + "BTN_FDIR_BUY" ||
+                     click == gPfx + "BTN_FDIR_SELL" ||
+                     click == gPfx + "BTN_FDIR_WAIT")
+                    {
+                     int mode = GSX_FOLLOW_AUTO;
+                     if(click == gPfx + "BTN_FDIR_BUY")  mode = GSX_FOLLOW_BUY;
+                     if(click == gPfx + "BTN_FDIR_SELL") mode = GSX_FOLLOW_SELL;
+                     if(click == gPfx + "BTN_FDIR_WAIT") mode = GSX_FOLLOW_WAIT;
+                     GsxRosterFollowDirSet(InpMagic, _Symbol, mode);
+                     gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                                   " Follow " + GsxRosterFollowDirLabel(mode) +
+                                   " (new entries only)";
+                     Notify("Follow " + GsxRosterFollowDirLabel(mode) +
+                            ": affects new entries only — open positions unchanged");
+                     GsxUiMarkDirty();
+                     UpdatePanel(g_lastPanelState);
+                    }
+                  else
+                  if(click == gPfx + "BTN_SPREAD")
                      SetIgnoreSpread(!gIgnoreSpread, true);
                   else
-                     if(sparam == gPfx + "BTN_AUTOLOT")
+                     if(click == gPfx + "BTN_AUTOLOT")
                         SetAutoLot(!gAutoLot, true);
                      else
-                        if(sparam == gPfx + "BTN_EQGUARD")
+                        if(click == gPfx + "BTN_EQGUARD")
                            CycleEquityGuardPct(true);
                         else
-                           if(sparam == gPfx + "TITLE")
+                           if(click == gPfx + "TITLE")
                              {
                               g_panelDragging = true;
                               g_panelDragOffSet = false;
-                              ObjectSetInteger(0, sparam, OBJPROP_STATE, false);
+                              ObjectSetInteger(0, click, OBJPROP_SELECTED, false);
                               return;
                              }
                            else
                               return;
 
-      ObjectSetInteger(0, sparam, OBJPROP_STATE, false);
+      ObjectSetInteger(0, click, OBJPROP_SELECTED, false);
       ChartRedraw();
       return;
      }
@@ -3040,13 +3127,39 @@ int OnInit()
    // v1.24 compact roster strip (same magic as Service / Dashboard)
    g_msDefaultFleet = InpFleetTargetPairs;
    GsxMsPanelInit(InpMagic, InpRosterStripPageSize, true, InpUiScale, (int)InpUiVision);
-   if(InpShowRosterStrip)
-     {
-      string seed[];
-      // do not overwrite existing CSV — Ensure only seeds when missing
+   GsxMsPanelSetScoutLink(InpScoutLinkEnable, InpScoutInstanceID);
+
+   // Chart attach: only ActivatePair when this chart symbol is NEW to the roster.
+   // Re-activating an existing multi-desk pair forced PLAY+drill and re-fired old pairs.
+   {
+      string roster[];
       if(!GsxRosterStoreExists(InpMagic))
-         GsxRosterStoreEnsure(InpMagic, _Symbol, seed);
-     }
+         GsxRosterStoreEnsure(InpMagic, _Symbol, roster);
+      else
+         GsxRosterStoreLoad(InpMagic, roster);
+      int cap = GsxRosterClassMaxGet(InpMagic);
+      if(cap < 4)
+         cap = 8;
+      string actWhy = "";
+      bool already = GsxRosterContains(roster, _Symbol);
+      if(already)
+        {
+         if(InpVerboseSignals)
+            Print("GsignalX: chart attach — ", _Symbol,
+                  " already on shared roster (no re-PLAY / no onboard kick)");
+        }
+      else if(GsxRosterActivatePair(InpMagic, _Symbol, roster, cap, true, actWhy))
+        {
+         gTradingEnabled = true;
+         GlobalVariableSet(RunStateVarName(), 1.0);
+         if(InpDrillEnable && gDrillStart == 0)
+            StartDrillWindow();
+         if(InpVerboseSignals)
+            Print("GsignalX: chart activate — ", actWhy);
+        }
+      else if(InpVerboseSignals)
+         Print("GsignalX: chart activate skipped — ", actWhy);
+   }
 
    gInitBarTime = iTime(_Symbol, _Period, InpEvalClosedBar ? 1 : 0);
    gLastBarTime = 0;
@@ -3071,6 +3184,7 @@ int OnInit()
          " | stratSL: ", (ScouterOwnsExits() && InpStrategicStopEnable
                          ? DoubleToString(InpStrategicStopMult, 1) + "xATR" : "off"),
          " | flip: ", (gFlipWaitMode ? "WAIT" : "FOLLOW"),
+         " | follow: ", GsxRosterFollowDirLabel(GsxRosterFollowDirGet(InpMagic, _Symbol, GSX_FOLLOW_AUTO)),
          " | fleet: ", (InpFleetEnable ? IntegerToString(InpFleetTargetPairs) + " pairs" : "off"),
          " | svcOwn: ", (ChartServiceOwnsFleet() ? "YES" : "no"),
          " | chartEntries@svc: ", (InpChartEntriesWhenService ? "ON" : "OFF"));

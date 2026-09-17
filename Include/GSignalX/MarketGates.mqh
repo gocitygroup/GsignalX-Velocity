@@ -6,6 +6,7 @@
 #define GSX_MARKET_GATES_MQH
 
 #include <GSignalX/SymbolCanon.mqh>
+#include <GSignalX/SymbolClass.mqh>
 
 //+------------------------------------------------------------------+
 bool GsxCryptoWeekendExempt(const string symbol,
@@ -15,6 +16,35 @@ bool GsxCryptoWeekendExempt(const string symbol,
    if(!allowWeekend)
       return(false);
    return(GsxIsCryptoSymbolEx(symbol, cryptoExtraList));
+  }
+
+// Class-aware spread ceiling: FX uses base; metals/oils/crypto need wider points.
+// baseLimit<=0 means gate off (same as IGN).
+int GsxEffectiveMaxSpreadPt(const string symbol, const int baseLimit)
+  {
+   if(baseLimit <= 0)
+      return(0);
+
+   ENUM_GSX_SYM_CLASS cls = GsxSymbolClass(symbol);
+   if(cls == GSX_CLASS_CRYPTO)
+      return((int)MathMax(baseLimit, 1500));
+
+   if(cls == GSX_CLASS_COMMODITY)
+     {
+      string upper = symbol;
+      StringToUpper(upper);
+      string canon = GsxSymbolCanon(symbol);
+      if(StringFind(upper, "OIL") >= 0 || StringFind(canon, "OIL") >= 0 ||
+         StringFind(upper, "XTI") >= 0 || StringFind(canon, "XTI") >= 0 ||
+         StringFind(upper, "XBR") >= 0 || StringFind(canon, "XBR") >= 0 ||
+         StringFind(upper, "WTI") >= 0 || StringFind(upper, "BRENT") >= 0 ||
+         StringFind(upper, "NGAS") >= 0 || StringFind(upper, "NATGAS") >= 0)
+         return((int)MathMax(baseLimit, 500));
+      // metals / other commodities
+      return((int)MathMax(baseLimit, 200));
+     }
+
+   return(baseLimit);
   }
 
 //+------------------------------------------------------------------+
@@ -56,6 +86,10 @@ bool GsxIsMarketOpen(const string symbol,
 
    if(useSessions)
      {
+      // Crypto with live ticks trades 24/7 — ignore incomplete broker session tables
+      if(cryptoExempt)
+         return(true);
+
       datetime from, to;
       int  sessions = 0;
       bool inSession = false;
@@ -72,11 +106,6 @@ bool GsxIsMarketOpen(const string symbol,
         }
       if(sessions > 0 && !inSession)
         { reason = "outside broker trading session"; return(false); }
-
-      // crypto brokers often omit Sat/Sun session rows while ticks still flow
-      if(sessions == 0 && cryptoExempt &&
-         (dow == SATURDAY || dow == SUNDAY))
-         return(true);
      }
 
    return(true);
@@ -97,7 +126,8 @@ bool GsxTimeFilterOK(const string symbol,
    TimeToStruct(TimeCurrent(), dt);
    bool cryptoExempt = GsxCryptoWeekendExempt(symbol, allowCryptoWeekend, cryptoExtra);
 
-   if(useHourFilter)
+   // Crypto is 24/7 — do not apply FX London–NY hour windows
+   if(useHourFilter && !cryptoExempt)
      {
       bool ok;
       if(startH <= endH)
@@ -121,13 +151,14 @@ bool GsxSpreadOK(const string symbol,
                  const bool ignoreSpread,
                  string &reason)
   {
-   int lim = ignoreSpread ? 0 : maxSpreadPt;
+   int lim = ignoreSpread ? 0 : GsxEffectiveMaxSpreadPt(symbol, maxSpreadPt);
    if(lim <= 0)
       return(true);
    long spread = SymbolInfoInteger(symbol, SYMBOL_SPREAD);
    if(spread > lim)
      {
-      reason = "spread " + IntegerToString((int)spread) + " > limit";
+      reason = "spread " + IntegerToString((int)spread) + " > limit " +
+               IntegerToString(lim);
       return(false);
      }
    return(true);

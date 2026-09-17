@@ -10,6 +10,7 @@
 #include <GSignalX/Engines.mqh>
 #include <GSignalX/LotSizing.mqh>
 #include <GSignalX/Fleet.mqh>
+#include <GSignalX/FollowGate.mqh>
 
 #define GSX_ENTRY_MARKET 0
 #define GSX_ENTRY_LIMIT  1
@@ -156,14 +157,31 @@ double GsxSignalAnchorOpen(const string symbol,
                            const bool pendFromSignalOpen,
                            const int fallbackIdx)
   {
+   double mid = (SymbolInfoDouble(symbol, SYMBOL_ASK) + SymbolInfoDouble(symbol, SYMBOL_BID)) * 0.5;
+   double base = 0.0;
    if(pendFromSignalOpen)
      {
       if(st.lastSigIdx >= 0 && st.lastSigIdx < st.n && st.open[st.lastSigIdx] > 0.0)
-         return(st.open[st.lastSigIdx]);
+         base = st.open[st.lastSigIdx];
      }
-   if(fallbackIdx >= 0 && fallbackIdx < st.n && st.open[fallbackIdx] > 0.0)
-      return(st.open[fallbackIdx]);
-   return((SymbolInfoDouble(symbol, SYMBOL_ASK) + SymbolInfoDouble(symbol, SYMBOL_BID)) * 0.5);
+   if(base <= 0.0 && fallbackIdx >= 0 && fallbackIdx < st.n && st.open[fallbackIdx] > 0.0)
+      base = st.open[fallbackIdx];
+   if(base <= 0.0)
+      return(mid);
+
+   // v2.10: if signal bar is too far from market, re-anchor so BOTH can place
+   double atr = 0.0;
+   if(st.ready && st.n >= 1 && fallbackIdx >= 0 && fallbackIdx < st.n)
+      atr = st.atrRisk[fallbackIdx];
+   if(atr <= 0.0 && st.ready && st.n >= 1)
+      atr = st.atrRisk[st.n - 1];
+   if(atr > 0.0 && MathAbs(base - mid) > 2.0 * atr)
+     {
+      if(fallbackIdx >= 0 && fallbackIdx < st.n && st.open[fallbackIdx] > 0.0)
+         return(st.open[fallbackIdx]);
+      return(mid);
+     }
+   return(base);
   }
 
 //+------------------------------------------------------------------+
@@ -222,6 +240,43 @@ void GsxDeletePendings(CTrade &trade, const string symbol, const long magic, con
      }
   }
 
+// Cancel magic pendings whose symbol is not on the live roster (stale pair hygiene).
+int GsxCleanupOrphanPendings(CTrade &trade, const long magic, const string &roster[])
+  {
+   int killed = 0;
+   for(int i = OrdersTotal() - 1; i >= 0; i--)
+     {
+      ulong ticket = OrderGetTicket(i);
+      if(ticket == 0)
+         continue;
+      if(OrderGetInteger(ORDER_MAGIC) != magic)
+         continue;
+      string sym = OrderGetString(ORDER_SYMBOL);
+      if(sym == "")
+         continue;
+      bool onRoster = false;
+      for(int r = 0; r < ArraySize(roster); r++)
+        {
+         if(roster[r] == "" )
+            continue;
+         if(roster[r] == sym)
+           {
+            onRoster = true;
+            break;
+           }
+        }
+      if(onRoster)
+         continue;
+      if(trade.OrderDelete(ticket))
+        {
+         killed++;
+         Print("GsignalX EntryExec: orphan pending #", ticket, " ", sym,
+               " deleted (not on roster)");
+        }
+     }
+   return(killed);
+  }
+
 void GsxCleanupStalePendings(CTrade &trade, const long magic, const int maxAgeMin)
   {
    if(maxAgeMin <= 0)
@@ -276,34 +331,6 @@ void GsxCleanupStalePendings(CTrade &trade,
                   " delete failed retcode=", trade.ResultRetcode());
         }
      }
-  }
-
-bool GsxMagicHasOppositeDir(const long magic, const int wanted)
-  {
-   if(wanted == 0)
-      return(false);
-   for(int i = PositionsTotal() - 1; i >= 0; i--)
-     {
-      ulong ticket = PositionGetTicket(i);
-      if(ticket == 0 || !PositionSelectByTicket(ticket))
-         continue;
-      if(PositionGetInteger(POSITION_MAGIC) != magic)
-         continue;
-      long ptype = PositionGetInteger(POSITION_TYPE);
-      int  dir   = (ptype == POSITION_TYPE_BUY) ? 1 : -1;
-      if(dir != wanted)
-         return(true);
-     }
-   return(false);
-  }
-
-bool GsxAllowNewDirEntry(const int wanted, const bool flipWaitMode, const long magic)
-  {
-   if(wanted == 0)
-      return(false);
-   if(!flipWaitMode)
-      return(true);                 // FOLLOW
-   return(!GsxMagicHasOppositeDir(magic, wanted));
   }
 
 bool GsxTradeAllowedNow(const string symbol, const bool tradingEnabled, string &reason)
@@ -376,9 +403,9 @@ bool GsxOpenMarket(CTrade &trade,
    double price = (dir == 1) ? ask : bid;
    int    digits = (int)SymbolInfoInteger(symbol, SYMBOL_DIGITS);
 
-   // sizing distance from ATR; broker SL is catastrophe only (Scouter)
+   // sizing distance from ATR (Scouter path: always size when ATR ready — v2.14 parity)
    double stopDist = 0.0;
-   if(atr > 0.0 && p.useStop)
+   if(atr > 0.0)
       stopDist = p.stopMult * atr;
    double minDist = GsxMinStopDistance(symbol);
    if(stopDist > 0.0 && stopDist < minDist)
@@ -392,6 +419,9 @@ bool GsxOpenMarket(CTrade &trade,
    if(stratDist > 0.0)
       sl = (dir == 1) ? price - stratDist : price + stratDist;
    sl = (sl > 0.0) ? NormalizeDouble(sl, digits) : 0.0;
+
+   if(p.autoLot && stopDist <= 0.0 && p.verbose)
+      PrintFormat("GsignalX Entry: AUTO→FIX fallback on %s (no ATR sizing distance)", symbol);
 
    double lot = GsxCalcLot(symbol, stopDist, p.autoLot, p.riskMode,
                            p.riskPct, p.fixedLot, p.maxLot, p.verbose);
@@ -458,7 +488,7 @@ bool GsxPlacePending(CTrade &trade,
    price = GsxNormalizePendingPrice(symbol, dir, isStop, price);
 
    double stopDist = 0.0;
-   if(atr > 0.0 && p.useStop)
+   if(atr > 0.0)
       stopDist = p.stopMult * atr;
    if(stopDist > 0.0 && stopDist < minD)
       stopDist = minD;
@@ -471,6 +501,9 @@ bool GsxPlacePending(CTrade &trade,
    if(stratDist > 0.0)
       sl = (dir == 1) ? price - stratDist : price + stratDist;
    sl = (sl > 0.0) ? NormalizeDouble(sl, digits) : 0.0;
+
+   if(p.autoLot && stopDist <= 0.0 && p.verbose)
+      PrintFormat("GsignalX Entry: AUTO→FIX fallback on %s pending (no ATR sizing distance)", symbol);
 
    double lot = GsxCalcLot(symbol, stopDist, p.autoLot, p.riskMode,
                            p.riskPct, p.fixedLot, p.maxLot, p.verbose);
@@ -556,6 +589,9 @@ bool GsxPlaceEntry(CTrade &trade,
    double base = GsxSignalAnchorOpen(symbol, st, p.pendFromSignalOpen, st.n - 1);
    bool placed = false;
    string lastAct = "";
+
+   // Clean same-symbol pendings before placing a fresh BOTH bracket
+   GsxDeletePendings(trade, symbol, p.magic, "pre-bracket");
 
    if(p.entryMode == GSX_ENTRY_LIMIT || p.entryMode == GSX_ENTRY_BOTH)
      {

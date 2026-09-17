@@ -2,15 +2,15 @@
 
 A money-based profit monitoring and harvesting engine for MetaTrader 5. It does **not** open trades. It watches every open position and closes them when a money target or a peak-profit give-back rule fires.
 
-**Velocity 2.00 host version:** `ProfitScouter_DollarTarget` / `ProfitScouter_Service` ship as `#property version "2.00"` (bus schema remains `"version":1`). Prop desk topology: [docs/RELEASE_v2.00_Prop_Desk_Deploy.md](docs/RELEASE_v2.00_Prop_Desk_Deploy.md).
+**Velocity hosts:** `ProfitScouter_DollarTarget` / `ProfitScouter_Service` (bus schema `"version":1`). Desk topology: [docs/RELEASE_v2.14_Input_Reliability.md](docs/RELEASE_v2.14_Input_Reliability.md).
 
-**Adverse experience gates (shipped in prior 1.22, retained in 2.00):** loser Auto still requires signal + opposing closed-bar streak, plus **min hold age** (`InpAdverseMinAgeMin`, default **15** minutes) and **once-green protect** (`InpAdverseProtectOnceGreen`, default **ON** — skips tickets that already peaked green / lock-armed). Service adverse TF default is **M5**. Account/pair layers no longer early-return when a target is notionally hit but zero winners meet `InpMinWinProfit`. Audit: [docs/AUDIT_ProfitScouter_Loser_Close_2026-09-14.md](docs/AUDIT_ProfitScouter_Loser_Close_2026-09-14.md).
+**Adverse experience gates:** loser Auto requires signal + opposing closed-bar streak, plus **min hold age** (`InpAdverseMinAgeMin`, default **15** minutes) and **once-green protect** (`InpAdverseProtectOnceGreen`, default **ON**). Service adverse TF default is **M5**. Account/pair layers no longer early-return when a target is notionally hit but zero winners meet `InpMinWinProfit`.
 
 **Winner floor = ASAP 5:** defaults align so winners do not bank below **5** account currency (USD/EUR when `InpTargetCurrency` is blank): `InpAccTargetMoney=5`, `InpMinWinProfit=5`, `InpProfitLockArm=5`, and profit-lock floor is `max(keep-% of peak, MinWinProfit)`. Re-attach or **Reset** EA inputs if the chart still shows an old floor of 2 / MinWin 0.10.
 
 **v1.18 movable panel:** the EA dashboard is an on-chart object panel (not `Comment`). Drag the title bar (**PROFIT SCOUTER · drag to move**) to reposition. **START / STOP / AUTO** are standalone chart buttons (`InpBtnX` / `InpBtnY`) so they stay visible while the panel moves. Panel position persists in `PS{InstanceID}_PNLX` / `PS{InstanceID}_PNLY`.
 
-**v1.16 / v1.17 adverse-bar Auto loss exit:** when scout is START-armed, each cycle may close **same-symbol losers** if the last GSignalX bus signal conflicts with consecutive closed OHLC bars: BUY + selling bars > `InpAdverseMinBars` (default 2 → fire at ≥3), or SELL + buying bars > N. Winners are left for profit targeting at set levels. Default `CloseTicket` still refuses losses; only the `ADVERSE-BAR` path may pass `allowLoss`. Fire is once per symbol per bar (`PS{id}_ADV_{canon}`). Chart **AUTO** button (v1.17) toggles the feature via `PS{id}_ADVEN`. **v1.22** adds min hold age + once-green protect. Plan: [docs/PLAN_V1.18_Adverse_Bar_Auto_Exit.md](docs/PLAN_V1.18_Adverse_Bar_Auto_Exit.md).
+**v1.16 / v1.17 adverse-bar Auto loss exit:** when scout is START-armed, each cycle may close **same-symbol losers** if the last GSignalX bus signal conflicts with consecutive closed OHLC bars: BUY + selling bars > `InpAdverseMinBars` (default 2 → fire at ≥3), or SELL + buying bars > N. Winners are left for profit targeting at set levels. Default `CloseTicket` still refuses losses; only the `ADVERSE-BAR` path may pass `allowLoss`. Fire is once per symbol per bar (`PS{id}_ADV_{canon}`). Chart **AUTO** button (v1.17) toggles the feature via `PS{id}_ADVEN`. **v1.22** adds min hold age + once-green protect.
 
 **v1.15 default close guard:** account loss-guard inputs were removed. `CloseTicket` / `ClosePartial` re-read live profit (incl. swap + commission) and **refuse negatives** unless an explicit Auto path opts in (`allowLoss` — adverse-bar only in v1.16).
 
@@ -93,19 +93,24 @@ Requires MetaTrader 5 build 3000+ (uses `input group`, `CTrade`, millisecond tim
 
 **Run one instance only** if the scope is "All symbols". Two instances monitoring the same positions will race each other. If you want several instances (e.g. one per strategy magic number), give each a different `InpInstanceID` so their stored peaks stay separate, and use `InpUseMagicFilter` so their position sets do not overlap.
 
-### Standalone START / STOP (v1.12+)
+### Standalone buttons (EA host)
 
 Profit Scouter does **not** need GSignalX. Attach the EA alone to harvest any eligible open positions:
 
 | Button | Effect |
 |---|---|
-| **START** | Arm scouting — money targets / ASAP closes run |
-| **STOP** | Pause closes — panel still updates floating P/L; no closes at all until START again |
-| **AUTO** | Toggle adverse-bar loss exit (ON/OFF). Does not pause profit targeting. |
+| **START** (dense: **GO**) | Arm scouting — money targets / ASAP closes run (`PS{id}_RUN`) |
+| **STOP** | Pause closes — panel still updates floating P/L; no closes until START again |
+| **AUTO** | Toggle adverse-bar loss exit ON/OFF (`PS{id}_ADVEN`). Does not pause profit targeting |
+| **BANK +** | Confirm → close **winners** only |
+| **CUT −** | Confirm → close **losers** only |
+| **FLAT** | Confirm → close **all** in scope |
+
+**Only Scouter UI closes tickets.** Desk/Chart PLAY/STOP/HALT never flatten. Full system map: [Manual § System UI — ProfitScouter](docs/Gsignalx_Velocity_Users_Manual.html#ui-scouter).
 
 State is stored in terminal global variables `PS{InpInstanceID}_RUN` (scout) and `PS{InpInstanceID}_ADVEN` (adverse Auto) and survives recompile/restart. Default arm on first attach: `InpScoutStartArmed=true`, `InpAdverseExitEnable=true`.
 
-If you also run `ProfitScouter_Service` with the **same** `InpInstanceID` and `InpRespectChartRunState=true`, pressing **STOP** / **AUTO** on the chart EA updates Service closes as well.
+If you also run `ProfitScouter_Service` with the **same** `InpInstanceID` and `InpRespectChartRunState=true`, pressing **STOP** / **AUTO** on the chart EA updates Service closes as well. Trade Center / Chart **PLAY** / **HALT** write the same `_RUN` when scout-link is enabled (desk **STOP** leaves Scouter harvesting).
 
 ### Making it survive terminal restarts
 The EA is bound to its chart, and MT5 saves charts automatically:

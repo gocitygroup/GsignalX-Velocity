@@ -41,7 +41,9 @@ string GsxSignalBusFingerprint(const string symbol,
                                const bool ignoreSpread,
                                const int swingStartH,
                                const int swingEndH,
-                               const string cryptoExtra)
+                               const string cryptoExtra,
+                               const bool fridayStop = true,
+                               const int fridayStopHr = 20)
   {
    string reason = "";
    bool marketOpen = GsxIsMarketOpen(symbol, staleTickSec, false, true,
@@ -53,7 +55,8 @@ string GsxSignalBusFingerprint(const string symbol,
    TimeToStruct(TimeCurrent(), dt);
    if((dt.day_of_week == SATURDAY || dt.day_of_week == SUNDAY) && !cryptoExempt)
       weekend = true;
-   if(!cryptoExempt && dt.day_of_week == FRIDAY && dt.hour >= 20)
+   int friHr = (fridayStopHr < 0 ? 20 : fridayStopHr);
+   if(fridayStop && !cryptoExempt && dt.day_of_week == FRIDAY && dt.hour >= friHr)
       fridayLate = true;
 
    int bull = 0, bear = 0, direction = 0;
@@ -78,10 +81,11 @@ string GsxSignalBusFingerprint(const string symbol,
    bool swing = GsxInSwingWindow(TimeCurrent(), swingStartH, swingEndH);
    int effMax = ignoreSpread ? 0 : maxSpreadPt;
 
-   return StringFormat("%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d",
+   return StringFormat("%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d",
                        direction, bull, bear, minAgree,
                        (marketOpen ? 1 : 0), (weekend ? 1 : 0), (fridayLate ? 1 : 0),
-                       (swing ? 1 : 0), (int)spread, effMax, (stale ? 1 : 0));
+                       (swing ? 1 : 0), (int)spread, effMax, (stale ? 1 : 0),
+                       st.lastSigDir);
   }
 
 //+------------------------------------------------------------------+
@@ -102,7 +106,11 @@ bool GsxSignalBusWriteSymbolEx(const string symbol,
                                const int closedLosses,
                                const double closedRealized,
                                const string fleetOwner,
-                               const GsxBusFleetSnap &fleetSnap)
+                               const GsxBusFleetSnap &fleetSnap,
+                               const string fillSkip = "",
+                               const int joinDirOverride = 999,
+                               const bool fridayStop = true,
+                               const int fridayStopHr = 20)
   {
    if(!busEnable)
       return(false);
@@ -120,7 +128,8 @@ bool GsxSignalBusWriteSymbolEx(const string symbol,
    if(dt.day_of_week == SATURDAY || dt.day_of_week == SUNDAY)
       calendarWeekend = true;
    weekend = calendarWeekend && !cryptoExempt;
-   if(!cryptoExempt && dt.day_of_week == FRIDAY && dt.hour >= 20)
+   int friHr = (fridayStopHr < 0 ? 20 : fridayStopHr);
+   if(fridayStop && !cryptoExempt && dt.day_of_week == FRIDAY && dt.hour >= friHr)
       fridayLate = true;
 
    int bull = 0, bear = 0, direction = 0;
@@ -131,11 +140,17 @@ bool GsxSignalBusWriteSymbolEx(const string symbol,
              (st.stDir[last] == 1 ? 1 : 0) +
              (st.sbtDir[last] == 1 ? 1 : 0);
       bear = 3 - bull;
+     }
+
+   // v2.10: when caller passes joinDir (Service Core), desk DIR matches fill
+   if(joinDirOverride != 999)
+      direction = joinDirOverride;
+   else if(st.ready && st.n >= 1)
+     {
       if(bull > bear)
          direction = 1;
-      else
-         if(bear > bull)
-            direction = -1;
+      else if(bear > bull)
+         direction = -1;
       if(st.lastSigDir != 0)
          direction = st.lastSigDir;
      }
@@ -173,6 +188,7 @@ bool GsxSignalBusWriteSymbolEx(const string symbol,
    j += GsxJsonKV_S("symbol", symbol);
    j += GsxJsonKV_S("symbol_canon", canon);
    j += GsxJsonKV_I("direction", direction);
+   j += GsxJsonKV_I("last_sig_dir", st.lastSigDir);
    j += GsxJsonKV_I("bull", bull);
    j += GsxJsonKV_I("bear", bear);
    j += GsxJsonKV_I("min_agree", minAgree);
@@ -193,12 +209,15 @@ bool GsxSignalBusWriteSymbolEx(const string symbol,
    j += GsxJsonKV_I("closed_count", closedCount);
    j += GsxJsonKV_I("closed_wins", closedWins);
    j += GsxJsonKV_I("closed_losses", closedLosses);
-   j += GsxJsonKV_D("closed_realized", closedRealized, false);
+   j += GsxJsonKV_D("closed_realized", closedRealized, true);
+   j += GsxJsonKV_S("fill_skip", fillSkip, false);
    j += "}";
 
    if(!GsxBusWriteAtomic(GsxBusSignalPath(tid, canon), j))
       return(false);
    GsxBusRegisterSignal(tid, canon);
+   // Tid-independent desk mirror for Multi-Symbol UI on any terminal
+   GsxBusWriteAtomic(GsxBusDeskSignalPath(canon), j);
    return(true);
   }
 
@@ -230,7 +249,7 @@ bool GsxSignalBusWriteSymbol(const string symbol,
                                     maxSpreadPt, staleTickSec, ignoreSpread,
                                     swingStartH, swingEndH, cryptoExtra, busEnable,
                                     closedCount, closedWins, closedLosses,
-                                    closedRealized, fleetOwner, snap);
+                                    closedRealized, fleetOwner, snap, "");
   }
 
 //+------------------------------------------------------------------+

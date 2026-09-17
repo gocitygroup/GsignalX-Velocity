@@ -185,7 +185,17 @@ void GsxPropEnsureDayWeek(GsxPropState &st)
       st.dayPeakEquity   = eq;
       st.dayRealized     = 0.0;
       st.tradesToday     = 0;
-      // sticky lock survives day rollover (user must PLAY)
+      // v2.14: clear sticky day money/trade locks on UTC day rollover (re-eval fresh)
+      if(st.locked)
+        {
+         string r = st.reason;
+         if(r == "DAILY_LOSS_MONEY" || r == "DAILY_LOSS_PCT" ||
+            r == "MAX_TRADES" || r == "CONSISTENCY" || r == "PROFIT_TARGET")
+           {
+            st.locked = false;
+            st.reason = "";
+           }
+        }
      }
 
    if(st.weekKey != weekStart)
@@ -311,6 +321,26 @@ bool GsxPropEvaluate(const GsxPropConfig &cfg, GsxPropState &st, bool &becameLoc
    if(eq > st.dayPeakEquity)
       st.dayPeakEquity = eq;
 
+   // v2.13.1: clear EQUITY_DD lock when gate is off (0) — guidance stays display-only
+   if(cfg.maxEquityDdPct <= 0.0 && st.locked && st.reason == "EQUITY_DD")
+     {
+      st.locked = false;
+      st.reason = "";
+     }
+
+   // v2.13.1: EQUITY_DD recovers with hysteresis (not sticky forever while underwater)
+   if(st.locked && st.reason == "EQUITY_DD" && cfg.maxEquityDdPct > 0.0 &&
+      st.dayPeakEquity > 0.0)
+     {
+      double ddPct = 100.0 * (st.dayPeakEquity - eq) / st.dayPeakEquity;
+      double recoverBelow = cfg.maxEquityDdPct * 0.85; // must improve ~15% of limit
+      if(ddPct < recoverBelow)
+        {
+         st.locked = false;
+         st.reason = "";
+        }
+     }
+
    // --- sticky money / trade / target / consistency gates ---
    if(!st.locked)
      {
@@ -324,7 +354,9 @@ bool GsxPropEvaluate(const GsxPropConfig &cfg, GsxPropState &st, bool &becameLoc
             GsxPropApplySoftStop(cfg, st, "DAILY_LOSS_PCT", becameLocked);
         }
 
-      if(!st.locked && cfg.maxEquityDdPct > 0.0 && st.dayPeakEquity > 0.0)
+      // EQUITY_DD: soft block — skipped during operator grace after PLAY/CLEAR
+      if(!st.locked && cfg.maxEquityDdPct > 0.0 && st.dayPeakEquity > 0.0 &&
+         !GsxPropEquityGraceActive(cfg.magic))
         {
          double ddPct = 100.0 * (st.dayPeakEquity - eq) / st.dayPeakEquity;
          if(ddPct >= cfg.maxEquityDdPct)
@@ -351,7 +383,16 @@ bool GsxPropEvaluate(const GsxPropConfig &cfg, GsxPropState &st, bool &becameLoc
         }
      }
 
-   // --- Friday / news: sticky soft STOP (until PLAY) ---
+   // --- Friday / news: soft STOP while in window; auto-clear when window ends (v2.13) ---
+   if(st.locked && (st.reason == "FRIDAY" || st.reason == "NEWS"))
+     {
+      if(!GsxPropInFridayBlock(cfg) && !GsxPropInNewsWindow(cfg))
+        {
+         st.locked = false;
+         st.reason = "";
+        }
+     }
+
    if(!st.locked)
      {
       if(GsxPropInFridayBlock(cfg))
@@ -362,13 +403,43 @@ bool GsxPropEvaluate(const GsxPropConfig &cfg, GsxPropState &st, bool &becameLoc
      }
    else
      {
-      // already locked: keep RUN=0 if somehow re-enabled without clearing lock
+      // sticky money/trade locks + in-window Friday/NEWS: keep RUN=0
       if(GsxFleetServiceRunGet(cfg.magic))
          GsxFleetServiceRunSet(cfg.magic, false);
      }
 
    GsxPropSave(cfg.magic, st);
    return(st.locked);
+  }
+
+//+------------------------------------------------------------------+
+//| Operator clear: unlock Prop soft-STOP and arm RUN (v2.13.1).     |
+//| Equity DD uses a short grace so PLAY is not instantly re-locked. |
+//+------------------------------------------------------------------+
+string GsxPropGraceVarName(const long magic)
+  { return("GSX_PROP_EQ_GRACE_" + IntegerToString((int)magic)); }
+
+void GsxPropGrantEquityGrace(const long magic, const int sec = 120)
+  {
+   GlobalVariableSet(GsxPropGraceVarName(magic),
+                     (double)(TimeCurrent() + MathMax(30, sec)));
+  }
+
+bool GsxPropEquityGraceActive(const long magic)
+  {
+   string n = GsxPropGraceVarName(magic);
+   if(!GlobalVariableCheck(n))
+      return(false);
+   return(TimeCurrent() < (datetime)GlobalVariableGet(n));
+  }
+
+void GsxPropClearLock(const GsxPropConfig &cfg, GsxPropState &st, const bool armRun)
+  {
+   st.locked = false;
+   st.reason = "";
+   GsxPropSave(cfg.magic, st);
+   if(armRun)
+      GsxFleetServiceRunSet(cfg.magic, true);
   }
 
 //+------------------------------------------------------------------+
@@ -379,13 +450,61 @@ void GsxPropOnNewEntry(GsxPropState &st)
   }
 
 //+------------------------------------------------------------------+
+//| Peak-equity day drawdown % (Prop EQUITY_DD math; 0 if no peak).  |
+//+------------------------------------------------------------------+
+double GsxPropPeakDdPct(const GsxPropState &st)
+  {
+   double eq = AccountInfoDouble(ACCOUNT_EQUITY);
+   if(st.dayPeakEquity <= 0.0)
+      return(0.0);
+   double dd = 100.0 * (st.dayPeakEquity - eq) / st.dayPeakEquity;
+   return(dd < 0.0 ? 0.0 : dd);
+  }
+
+//+------------------------------------------------------------------+
 string GsxPropStatusText(const GsxPropState &st)
   {
+   double peakDd = GsxPropPeakDdPct(st);
    if(!st.locked)
-      return("OK");
+      return(StringFormat("OK · peakDD %.1f%%", peakDd));
    if(st.reason == "")
-      return("LOCK: PROP");
-   return("LOCK: " + st.reason);
+      return(StringFormat("LOCK · PROP · peakDD %.1f%%", peakDd));
+   return(StringFormat("LOCK · %s · peakDD %.1f%%", st.reason, peakDd));
+  }
+
+//+------------------------------------------------------------------+
+//| Closed-deal session outcomes for magic since from (guidance).    |
+//+------------------------------------------------------------------+
+void GsxPropSessionOutcomes(const long magic, const datetime from,
+                            int &wins, int &losses, double &netPl)
+  {
+   wins = 0;
+   losses = 0;
+   netPl = 0.0;
+   datetime to = TimeCurrent();
+   if(from <= 0 || to < from)
+      return;
+   if(!HistorySelect(from, to))
+      return;
+
+   int total = HistoryDealsTotal();
+   for(int i = 0; i < total; i++)
+     {
+      ulong ticket = HistoryDealGetTicket(i);
+      if(ticket == 0)
+         continue;
+      if((long)HistoryDealGetInteger(ticket, DEAL_MAGIC) != magic)
+         continue;
+      long entry = HistoryDealGetInteger(ticket, DEAL_ENTRY);
+      if(entry != DEAL_ENTRY_OUT && entry != DEAL_ENTRY_OUT_BY && entry != DEAL_ENTRY_INOUT)
+         continue;
+      double pl = HistoryDealGetDouble(ticket, DEAL_PROFIT)
+                + HistoryDealGetDouble(ticket, DEAL_SWAP)
+                + HistoryDealGetDouble(ticket, DEAL_COMMISSION);
+      netPl += pl;
+      if(pl > 0.0) wins++;
+      else if(pl < 0.0) losses++;
+     }
   }
 
 #endif // GSX_PROP_RISK_MQH

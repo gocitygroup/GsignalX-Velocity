@@ -17,6 +17,58 @@ int    g_gsxBusCachedTidN = 0;
 string g_gsxBusCachedSigKeys[GSX_BUS_REG_CACHE_MAX];
 int    g_gsxBusCachedSigN = 0;
 
+// v2.07: short-lived freshest-signal cache (reduce STALE flicker / I/O)
+// v2.13: per-canon map cache (was single-slot thrash across roster rows)
+#define GSX_BUS_FRESHEST_CACHE_MAX  48
+string   g_gsxFreshestCanon = "";
+string   g_gsxFreshestBody  = "";
+datetime g_gsxFreshestTs    = 0;
+ulong    g_gsxFreshestTick  = 0;
+string   g_gsxFreshestCanons[GSX_BUS_FRESHEST_CACHE_MAX];
+string   g_gsxFreshestBodies[GSX_BUS_FRESHEST_CACHE_MAX];
+datetime g_gsxFreshestTsArr[GSX_BUS_FRESHEST_CACHE_MAX];
+ulong    g_gsxFreshestTicks[GSX_BUS_FRESHEST_CACHE_MAX];
+int      g_gsxFreshestMapN  = 0;
+
+int GsxBusFreshestCacheFind(const string symbolCanon)
+  {
+   for(int i = 0; i < g_gsxFreshestMapN; i++)
+      if(g_gsxFreshestCanons[i] == symbolCanon)
+         return(i);
+   return(-1);
+  }
+
+void GsxBusFreshestCachePut(const string symbolCanon, const string body, const datetime ts)
+  {
+   ulong now = GetTickCount();
+   int idx = GsxBusFreshestCacheFind(symbolCanon);
+   if(idx < 0)
+     {
+      if(g_gsxFreshestMapN < GSX_BUS_FRESHEST_CACHE_MAX)
+        {
+         idx = g_gsxFreshestMapN;
+         g_gsxFreshestMapN++;
+        }
+      else
+         idx = (int)(now % GSX_BUS_FRESHEST_CACHE_MAX); // overwrite round-robin slot
+      g_gsxFreshestCanons[idx] = symbolCanon;
+     }
+   g_gsxFreshestBodies[idx] = body;
+   g_gsxFreshestTsArr[idx]  = ts;
+   g_gsxFreshestTicks[idx]  = now;
+   // keep legacy single-slot warm for callers that still check it
+   g_gsxFreshestCanon = symbolCanon;
+   g_gsxFreshestBody  = body;
+   g_gsxFreshestTs    = ts;
+   g_gsxFreshestTick  = now;
+  }
+
+// v2.13: read without Sleep (UI snapshot path)
+string GsxBusReadAllNoSleep(const string relativePath)
+  {
+   return(GsxBusReadAll(relativePath));
+  }
+
 bool GsxEnsureFolderTree(const string relativeFilePath)
   {
    string parts[];
@@ -239,6 +291,135 @@ int GsxBusListTerminalIds(string &tids[])
       tids[m] = t;
      }
    return ArraySize(tids);
+  }
+
+// Prefer freshest signal JSON for a canon: desk mirror first, then local/all tids.
+// v2.13: per-canon 250ms cache; desk-mirror-only when fresher than peers skip is optional.
+string GsxBusReadFreshestSignal(const string symbolCanon, datetime &bestTs)
+  {
+   bestTs = 0;
+   string best = "";
+   if(symbolCanon == "")
+      return("");
+
+   int cidx = GsxBusFreshestCacheFind(symbolCanon);
+   if(cidx >= 0 &&
+      g_gsxFreshestTicks[cidx] != 0 &&
+      (GetTickCount() - g_gsxFreshestTicks[cidx]) < 250 &&
+      g_gsxFreshestBodies[cidx] != "")
+     {
+      bestTs = g_gsxFreshestTsArr[cidx];
+      return(g_gsxFreshestBodies[cidx]);
+     }
+
+   // Desk mirror first (tid-independent; Service/Desk writes here every publish)
+   string deskPath = GsxBusDeskSignalPath(symbolCanon);
+   string deskBody = GsxBusReadAllNoSleep(deskPath);
+   datetime deskTs = 0;
+   if(deskBody != "" && GsxJsonVersionOk(deskBody))
+     {
+      long ts = GsxJsonGetLong(deskBody, "ts", 0);
+      if(ts > 0)
+        {
+         deskTs = (datetime)ts;
+         // Fast path: fresh desk mirror — skip peer tid scan
+         // v2.14.1: ≤15s (was 2s) matches default signal max-age; Service/Desk write mirror every publish
+         if((TimeCurrent() - deskTs) <= 15)
+           {
+            bestTs = deskTs;
+            GsxBusFreshestCachePut(symbolCanon, deskBody, bestTs);
+            return(deskBody);
+           }
+         bestTs = deskTs;
+         best = deskBody;
+        }
+     }
+
+   string candidates[];
+   ArrayResize(candidates, 0);
+
+   string localTid = GsxMakeTid();
+   int n = ArraySize(candidates);
+   ArrayResize(candidates, n + 1);
+   candidates[n] = GsxBusSignalPath(localTid, symbolCanon);
+
+   string tids[];
+   GsxBusListTerminalIds(tids);
+   for(int i = 0; i < ArraySize(tids); i++)
+     {
+      if(tids[i] == localTid)
+         continue;
+      n = ArraySize(candidates);
+      ArrayResize(candidates, n + 1);
+      candidates[n] = GsxBusSignalPath(tids[i], symbolCanon);
+     }
+
+   for(int i = 0; i < ArraySize(candidates); i++)
+     {
+      string body = GsxBusReadAllNoSleep(candidates[i]);
+      if(body == "" || !GsxJsonVersionOk(body))
+         continue;
+      long ts = GsxJsonGetLong(body, "ts", 0);
+      if(ts <= 0)
+         continue;
+      if((datetime)ts >= bestTs)
+        {
+         bestTs = (datetime)ts;
+         best = body;
+        }
+     }
+
+   GsxBusFreshestCachePut(symbolCanon, best, bestTs);
+   return(best);
+  }
+
+// v2.13: require heartbeat source containing needle (e.g. "gsignalx-desk").
+// Empty needle = any source (legacy).
+bool GsxBusHeartbeatFreshFromSource(const int maxAgeSec, const string sourceNeedle)
+  {
+   int ageLim = (maxAgeSec > 0 ? maxAgeSec : 5);
+   string localTid = GsxMakeTid();
+   string paths[];
+   ArrayResize(paths, 1);
+   paths[0] = GsxBusHeartbeatPath(localTid);
+
+   string tids[];
+   GsxBusListTerminalIds(tids);
+   for(int i = 0; i < ArraySize(tids); i++)
+     {
+      if(tids[i] == localTid)
+         continue;
+      int n = ArraySize(paths);
+      ArrayResize(paths, n + 1);
+      paths[n] = GsxBusHeartbeatPath(tids[i]);
+     }
+
+   datetime now = TimeCurrent();
+   for(int i = 0; i < ArraySize(paths); i++)
+     {
+      string body = GsxBusReadAllNoSleep(paths[i]);
+      if(body == "")
+         continue;
+      long ts = GsxJsonGetLong(body, "ts", 0);
+      if(ts <= 0)
+         continue;
+      if((now - (datetime)ts) > ageLim)
+         continue;
+      if(sourceNeedle != "")
+        {
+         string src = GsxJsonGetString(body, "source", "");
+         if(StringFind(src, sourceNeedle) < 0)
+            continue;
+        }
+      return(true);
+     }
+   return(false);
+  }
+
+// True if any terminal heartbeat is fresher than maxAgeSec (Service alive).
+bool GsxBusHeartbeatFresh(const int maxAgeSec)
+  {
+   return(GsxBusHeartbeatFreshFromSource(maxAgeSec, ""));
   }
 
 int GsxBusListSignals(const string tid, string &files[])

@@ -1,10 +1,10 @@
 # Windows deploy — simple guide (non-technical)
 
-**Product:** Gsignalx Velocity 2.00  
-**Goal:** Get the toolkit onto your Windows PC and into MetaTrader 5 **without coding**.
+**Product:** Gsignalx Velocity **2.14**  
+**Goal:** Toolkit on Windows → MetaTrader 5 **without coding**.
 
-If something fails, jump to [Problems and fixes](#problems-and-fixes).  
-Full technical detail: [DEPLOYMENT.md](../DEPLOYMENT.md) · Gates: [DEPLOYMENT_RUNBOOK.md](../DEPLOYMENT_RUNBOOK.md) · Desk sign-off: [RELEASE_v2.00_Prop_Desk_Deploy.md](RELEASE_v2.00_Prop_Desk_Deploy.md)
+Stuck? [Problems and fixes](#problems-and-fixes).  
+Manual: [Gsignalx_Velocity_Users_Manual.html](Gsignalx_Velocity_Users_Manual.html) · Current cut: [RELEASE_v2.14](RELEASE_v2.14_Input_Reliability.md) · Tech: [DEPLOYMENT.md](../DEPLOYMENT.md)
 
 ---
 
@@ -111,16 +111,18 @@ Aim for **SUMMARY: PASS**. Yellow WARN about stale bus is normal if Services wer
 
 ---
 
-## Recommended first desk (Velocity 2.00)
+## Recommended first desk (Velocity 2.14)
 
 | Role | Program | Closes trades? |
 |---|---|---|
-| Entries | `GsignalX_Service` | No |
-| Desk UI / Prop / Telegram | `GsignalX_Multisymbol_Dashboard` | No (soft STOP only) |
+| Entries (Topology A) | Trade Center DeskExecute ON | No |
+| Entries (Topology B) | `GsignalX_Service` | No |
 | Exits | `ProfitScouter_Service` | **Yes** |
 | Grades | `ProfitOpportunity_Grader` | No |
 
-More detail: [RELEASE_v2.00_Prop_Desk_Deploy.md](RELEASE_v2.00_Prop_Desk_Deploy.md) · Manual: [Gsignalx_Velocity_Users_Manual.html](Gsignalx_Velocity_Users_Manual.html)
+**After start:** FIXED **0.01** · EQ **OFF** (unless wanted) · STOP once (clear pendings) · PROP CLEAR if LOCK · Scouter ON · REM unused pairs.
+
+Full Best use: [RELEASE_v2.14](RELEASE_v2.14_Input_Reliability.md) · [Manual § System UI Best Use](Gsignalx_Velocity_Users_Manual.html#desk213)
 
 ---
 
@@ -174,7 +176,8 @@ More detail: [RELEASE_v2.00_Prop_Desk_Deploy.md](RELEASE_v2.00_Prop_Desk_Deploy.
 - [ ] Compile lines show **0 errors, 0 warnings**  
 - [ ] MT5 Algo Trading **ON**  
 - [ ] Started `GsignalX_Service`, `ProfitScouter_Service`, `ProfitOpportunity_Grader`  
-- [ ] Attached `GsignalX_Multisymbol_Dashboard` (same magic)  
+- [ ] Attached `GsignalX_Multisymbol_Dashboard` (same magic) — DeskExecute ON for Topology A  
+- [ ] Automation shows **FIXED 0.01**; STOP once to clear stale pendings; PROP CLEAR if needed  
 - [ ] Ran `Confirm-After-Start.bat` → PASS (or PASS + idle WARN)  
 - [ ] Practising on **demo** before live / challenge  
 
