@@ -6,6 +6,12 @@
 Stuck? [Problems and fixes](#problems-and-fixes).  
 Manual: [Gsignalx_Velocity_Users_Manual.html](Gsignalx_Velocity_Users_Manual.html) · Current cut: [RELEASE_v2.14](RELEASE_v2.14_Input_Reliability.md) · Tech: [DEPLOYMENT.md](../DEPLOYMENT.md)
 
+### Best use after deploy (commercial desk)
+
+1. **Profit Scouter** — stock **Profit CASH +100**; leave **CASH** mode ON for scalps; keep **Loss CASH OFF** until you want −N auto cuts. Teachable recipe: [Manual · Profit CASH](Gsignalx_Velocity_Users_Manual.html#profit-cash).  
+2. **Telegram** — numeric chat IDs only, each user `/start`s the bot, allow `https://api.telegram.org`, press Trade Center **VERIFY** until **Verified** (soft: ≥1 chat OK). Recipe: [Manual · Telegram](Gsignalx_Velocity_Users_Manual.html#telegram).  
+3. Micro/practice books: load matching `deploy/presets/*Practice*` / `*100EUR*` sets so floors match balance — do not leave stock 100 on a €20 account.
+
 ---
 
 ## What you need first
@@ -81,7 +87,9 @@ Do these in order. Names must match **Navigator** exactly.
 3. Menu: **Tools → Options → Expert Advisors**  
    - Tick **Allow algorithmic trading**  
    - (Optional Telegram) Allow WebRequest for: `https://api.telegram.org`  
-   - After enabling TG on Trade Center: press **VERIFY** until status shows **Verified** (see [Velocity Telegram Alerts](Gsignalx_Velocity_Users_Manual.html#telegram))
+   - Inputs: `InpTgEnable=true`, bot token, **numeric** chat IDs only (not `@username`)  
+   - Each recipient must open the bot and send `/start` before VERIFY  
+   - Press Trade Center **VERIFY** until status shows **Verified** (probe message `[TG] verify` per chat) — see [Velocity Telegram Alerts](Gsignalx_Velocity_Users_Manual.html#telegram)
 
 ### C2 — Start the background services
 
@@ -155,8 +163,13 @@ Full Best use: [RELEASE_v2.14](RELEASE_v2.14_Input_Reliability.md) · [Manual §
 | No entries | Service not started, STOP/Prop LOCK, or weekend FX | Check Service running; Dashboard PROP=OK; PLAY/RUN; use liquid session |
 | Positions never close | Scouter not started | Start `ProfitScouter_Service` (or attach DollarTarget and START) |
 | Telegram fails / WebRequest error | URL not allowed or bad token | Tools → Options → Expert Advisors → allow `https://api.telegram.org`; Trade Center **VERIFY** until Verified ([Telegram Alerts](Gsignalx_Velocity_Users_Manual.html#telegram)) |
+| TG VERIFY fail · chat not found | Wrong id, `@username` used, or user never `/start`ed bot | Use numeric chat IDs only; each person opens the bot and sends `/start`; drop invalid IDs; re-VERIFY |
+| TG Verified but one chat silent | That chat id dead / never started | Remove bad id from ChatId2/3; fix `/start`; VERIFY fails until every configured chat accepts the probe |
+| Token leaked / rotated | BotFather issued a new token | Update `InpTgBotToken` on Dashboard (+ Service if TG on); never commit tokens; VERIFY again |
 | Bus / Grades WARN “stale” | Publishers not running yet | Start Service + Scouter + Grader; wait 1 minute; `Confirm-After-Start.bat` again |
 | Two harvest engines fighting | Two Scouters on same book | Keep **one** ProfitScouter (Service **or** chart EA), not both on All symbols |
+
+**Telegram input recipe (desk):** `InpTgEnable=true` · numeric `InpTgChatId1` / `2` / `3` only · leave unused chat slots empty · each recipient `/start`s the bot first · allow `https://api.telegram.org` · Trade Center **VERIFY**. VERIFY is **soft**: status becomes **Verified** if at least one chat receives `[TG] verify`; dead chats are skipped for sends (strip may show `skip chat …`). Prefer clearing unused/dead IDs. Never put `@username` in ChatId fields. If a token was shared outside MT5, revoke it in BotFather and paste the new token only into inputs.
 
 ### Confirm script
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="description" content="Gsignalx Velocity 2.14 — MT5 prop desk manual. Structured entries, winners-only harvest, FIXED 0.01, Prop soft STOP."/>
+<meta name="description" content="Gsignalx Velocity 2.14 — commercial MT5 prop desk. Profit CASH bank, opt-in Loss CASH, Telegram soft VERIFY, FIXED 0.01, Prop soft STOP."/>
 <meta name="color-scheme" content="dark light"/>
 <title>Gsignalx Velocity 2.14 — Trader Manual | Gocity Group</title>
 <link rel="icon" href="assets/icons/group-icon.svg" type="image/svg+xml"/>
@@ -795,8 +795,8 @@ tr:nth-child(even) td { background: var(--row-stripe); }
     <section class="panel active" id="welcome" data-title="Welcome" data-short="Welcome">
       <div class="kicker">Gocity Group · GSignalX Ecosystem</div>
       <h1>Gsignalx Velocity Trader Manual</h1>
-      <p class="lede">Run a prop-safe MT5 desk: structured entries, winners-only harvest, soft STOP that never flattens your book.</p>
-      <p class="lede" style="margin-top:0"><strong>Trader:</strong> live DIR, FOLLOW pads, Telegram deals + PROP. <strong>Investor / monitor:</strong> quieter TG (DAILY + PROP), Compact strip, Scouter harvest.</p>
+      <p class="lede">Run a commercial prop-safe MT5 desk: structured entries, <strong>cash-target harvest</strong> (winners only), and Telegram that proves delivery — soft STOP that never flattens your book.</p>
+      <p class="lede" style="margin-top:0"><strong>Trader:</strong> live DIR, FOLLOW pads, deal + PROP alerts. <strong>Investor / monitor:</strong> quieter TG (DAILY + PROP), Compact strip, Scouter banking closed P/L with process.</p>
       <div class="meta-row">
         <span class="chip chip-version">Velocity 2.14 · bus schema v1</span>
         <span class="chip chip-prop">Prop &amp; small fund</span>
@@ -804,11 +804,20 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       </div>
 
       <div class="callout gold">
+        <strong class="label">What’s in this desk capability update</strong>
+        <ul style="margin:0.4em 0 0;padding-left:1.2em">
+          <li><strong>Profit CASH</strong> — stock bank floor <strong>+100</strong> account/target currency; one clear number for scalp harvest (<a href="#system">how to use</a>).</li>
+          <li><strong>Loss CASH</strong> — optional cut at <strong>−100</strong>; arm stays <strong>OFF</strong> until you turn LOSS ON (no surprise auto-flatten).</li>
+          <li><strong>Telegram soft VERIFY</strong> — Verified when ≥1 numeric chat receives the probe; dead chats are skipped for sends (<a href="#telegram">recipe</a>).</li>
+        </ul>
+      </div>
+
+      <div class="callout gold">
         <strong class="label">Best use · Topology A</strong>
         <ol style="margin:0.4em 0 0;padding-left:1.2em">
           <li><strong>Trade Center</strong> DeskExecute ON owns fills (FIXED <strong>0.01</strong>) · Service stopped or Yield ON · no Chart EA entries on same magic.</li>
-          <li><strong>ProfitScouter</strong> owns exits · desk PLAY/STOP never closes tickets.</li>
-          <li>EQ <strong>OFF</strong> unless you want a floating-DD brake · STOP clears pendings · practice packs $20/$50/$100.</li>
+          <li><strong>ProfitScouter</strong> owns exits · desk PLAY/STOP never closes tickets · set <strong>Profit CASH</strong> to your book, leave <strong>CASH</strong> mode ON for scalps.</li>
+          <li>EQ <strong>OFF</strong> unless you want a floating-DD brake · STOP clears pendings · practice packs $20/$50/$100 · press TG <strong>VERIFY</strong> until green.</li>
         </ol>
         <p style="margin:0.6em 0 0">All on-chart controls: <a href="#desk213">System UI Best Use</a> · Deploy: <code>docs/RELEASE_v2.14_Input_Reliability.md</code> · Practice: <code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code></p>
       </div>
@@ -831,7 +840,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
         </div>
         <div class="card">
           <h3>🔶 Velocity (this toolkit)</h3>
-          <p>Local MT5 momentum engines + ProfitScouter money targets. Use it to <em>execute the session</em> and bank closed P/L with process.</p>
+          <p>Local MT5 momentum engines + ProfitScouter <strong>cash floors</strong>. Use it to <em>execute the session</em> and bank closed P/L with process — then get the ping on Telegram.</p>
           <p>Runs on your Windows terminal — no cloud order routing in this build.</p>
         </div>
       </div>
@@ -845,9 +854,9 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       <table>
         <thead><tr><th>Desk</th><th>How to use Velocity</th><th>Telegram posture</th></tr></thead>
         <tbody>
-          <tr><td>Beginner / funded challenge</td><td>Service + Scouter Service, Trade Center PropRisk soft locks, FX tab only (1–2 majors START), Event SKIP, hour filter ON, STOP at session end. Micro accounts: Practice packs $20/$50/$100 (Raw preferred for scalp).</td><td>Investor-quiet: Dashboard TG · DAILY + PROP · silent overnight · <a href="#telegram">recipe</a></td></tr>
-          <tr><td>Prop trader (small–medium firm)</td><td>Fleet 2–4, FX+CMD on START during London–NY; SUSPEND crypto overnight; ASAP ≈ 1% balance. Use Trade Center practice coach when sizing a small live/demo book.</td><td>Trader-live: Service + Dashboard · EVENT + PROP + deals · <a href="#telegram">recipe</a></td></tr>
-          <tr><td>Fund / desk lead / investor monitor</td><td>One magic, Service OWN, category capacity ≥4, Confirm gates, grades advisory; Compact strip OK.</td><td>Investor: Dashboard (or Chart failover) · summaries + PROP · VERIFY green · <a href="#telegram">recipe</a></td></tr>
+          <tr><td>Beginner / funded challenge</td><td>Service + Scouter Service, Trade Center PropRisk soft locks, FX tab only (1–2 majors START), Event SKIP, hour filter ON, STOP at session end. Size <strong>Profit CASH</strong> to the book (micro/demo often 5–20; mid-size books use stock <strong>100</strong>). Practice packs $20/$50/$100 (Raw preferred for scalp).</td><td>Investor-quiet: Dashboard TG · DAILY + PROP · silent overnight · <a href="#telegram">recipe</a></td></tr>
+          <tr><td>Prop trader (small–medium firm)</td><td>Fleet 2–4, FX+CMD on START during London–NY; SUSPEND crypto overnight; <strong>Profit CASH ≈ 0.5–1% of balance</strong> (stock default 100 for mid-size). CASH mode ON for scalps. Use Trade Center practice coach when sizing a small live/demo book.</td><td>Trader-live: Service + Dashboard · EVENT + PROP + deals · VERIFY green · <a href="#telegram">recipe</a></td></tr>
+          <tr><td>Fund / desk lead / investor monitor</td><td>One magic, Service OWN, category capacity ≥4, Confirm gates, grades advisory; Compact strip OK; watch Scouter Profit CASH / Loss arm on the chart panel.</td><td>Investor: Dashboard (or Chart failover) · summaries + PROP · VERIFY green (skip warn OK until ChatId2/3 <code>/start</code>) · <a href="#telegram">recipe</a></td></tr>
         </tbody>
       </table>
 
@@ -861,7 +870,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
         <span class="arrow">→</span>
         <span class="node">Positions</span>
         <span class="arrow">→</span>
-        <span class="node bull">ProfitScouter bank</span>
+        <span class="node bull">Profit CASH bank</span>
         <span class="arrow">→</span>
         <span class="node">Closed P/L</span>
       </div>
@@ -871,7 +880,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
     <section class="panel" id="system" data-title="System Map" data-short="System">
       <div class="kicker">Architecture</div>
       <h1>System map</h1>
-      <p class="lede">Two independent engines: GSignalX opens risk; ProfitScouter banks winners. Trade Center and chart buttons never close trades. Bus JSON schema stays <strong>v1</strong>.</p>
+      <p class="lede">Two independent engines: GSignalX opens risk; ProfitScouter banks winners at a clear <strong>Profit CASH</strong> floor. Trade Center and chart buttons never close trades. Bus JSON schema stays <strong>v1</strong>.</p>
 
       <div class="callout gold">
         <strong class="label">Preliminary desk = M5</strong>
@@ -890,9 +899,9 @@ tr:nth-child(even) td { background: var(--row-stripe); }
        ▼
  ┌─────────────┐   advisory    ┌─────────────┐
  │ ProfitScout │◄──────────────┤   Grader    │
- │ ASAP / lock │               │  ranks only │
+ │ CASH / lock │               │  ranks only │
  └──────┬──────┘               └─────────────┘
-        │ bank winners at money floor
+        │ bank winners at Profit CASH floor
         ▼
  Flat → Service/chart re-entry if RUN + signal still valid</pre>
 
@@ -937,15 +946,49 @@ tr:nth-child(even) td { background: var(--row-stripe); }
         <li><strong>PROP CLEAR</strong>: unlock Prop soft-STOP + equity grace (desk never flattens).</li>
         <li><strong>REKICK</strong>: re-open drill when DIR live but drill closed.</li>
         <li><strong>Compact panel</strong> (default input): investor outcome strip; <strong>Full</strong> adds engine rows + entry detail (<code>InpPanelDensity</code>).</li>
-        <li>Profit path closes <strong>winners only</strong> (minimal set, biggest green first). Losers exit via adverse-bar Auto or catastrophe SL — not via ASAP floors.</li>
+        <li>Profit path closes <strong>winners only</strong> (minimal set, biggest green first). Losers exit via adverse-bar Auto, opt-in <strong>Loss CASH</strong>, manual CUT/FLAT, or catastrophe SL — not via Profit CASH floors.</li>
         <li>One Scouter instance for “All symbols” — two harvest engines on the same book race.</li>
         <li><strong>Trade Center / PropRisk</strong> soft STOP never closes tickets; only Scouter (or Harvest script) may close.</li>
         <li><strong>Service OWN</strong> and chart entries must not double-fill the same magic.</li>
       </ul>
 
+      <h2 id="profit-cash">Profit CASH &amp; Loss CASH — best use</h2>
+      <p class="lede" style="margin-top:0">One cash number the desk can teach, set, and trust. Stock Scouter default: <strong>Profit CASH +100</strong> (account or target currency). Micro/demo books still ladder smaller floors — see <a href="#growth">Fund Growth</a>.</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h3>What you get</h3>
+          <p><strong>Profit CASH</strong> banks winners when floating P/L hits your floor (biggest greens first; losers stay). <strong>CASH mode</strong> collapses account + pair + position hard targets to that single floor — ideal for scalps.</p>
+        </div>
+        <div class="card">
+          <h3>What stays safe</h3>
+          <p><strong>Loss CASH</strong> defaults <strong>OFF</strong>. Amount stock <strong>−100</strong>, but nothing auto-cuts losers until you arm <strong>LOSS ON</strong>. Adverse <strong>AUTO</strong> and manual <strong>CUT</strong> remain available without it.</p>
+        </div>
+      </div>
+
+      <h3>Three steps (scalp desk)</h3>
+      <ol>
+        <li>Set <code>InpAccTargetMoney</code> (Profit CASH) and align <code>InpMinWinProfit</code> / lock arm to the same floor.</li>
+        <li>Leave chart mode <strong>CASH ON</strong> (single floor). Use <strong>LAYER</strong> only when you intentionally want trail / window / partial %.</li>
+        <li>Press <strong>START</strong>. Watch panel lines <code>Profit CASH +N</code> and <code>Loss CASH −N · OFF|ARMED</code>.</li>
+      </ol>
+
+      <h3>Scouter chart buttons</h3>
+      <table>
+        <thead><tr><th>Button</th><th>What it does</th><th>Best use</th></tr></thead>
+        <tbody>
+          <tr><td><strong>START / STOP</strong></td><td>Arm or pause harvest closes</td><td>STOP = watch P/L only; tickets stay open</td></tr>
+          <tr><td><strong>AUTO</strong></td><td>Adverse-bar loser exit on/off</td><td>Keep ON for M5 desk with signal + age gates</td></tr>
+          <tr><td><strong>BANK / CUT / FLAT</strong></td><td>Manual confirm closes</td><td>BANK winners · CUT losers · FLAT all</td></tr>
+          <tr><td><strong>CASH / LAYER</strong></td><td>Toggle single cash floor vs layered rules</td><td>Scalps → CASH; trail/window books → LAYER</td></tr>
+          <tr><td><strong>LOSS ON / OFF</strong></td><td>Arm opt-in account Loss CASH cut</td><td>OFF by default; arm only when you want −N auto cut</td></tr>
+        </tbody>
+      </table>
+      <p>Persists: <code>PS&#123;id&#125;_RUN</code>, <code>_ADVEN</code>, <code>_CASH</code>, <code>_LOSS</code>. Service with the same Instance ID honors chart toggles when <code>InpRespectChartRunState=true</code>.</p>
+
       <div class="callout bear">
         <strong class="label">Removed — do not chase old docs</strong>
-        Account loss-guard inputs (<code>InpAccLossGuardEnable</code> / <code>InpAccMaxLossMoney</code>) are gone. Use chart <strong>EQ</strong> for floating equity DD on new entries, and prop daily loss as <em>trader discipline</em> (HALT / STOP / position count) — not an automatic flatten of all tickets.
+        Account loss-guard inputs (<code>InpAccLossGuardEnable</code> / <code>InpAccMaxLossMoney</code>) are gone. Prefer opt-in <strong>Loss CASH</strong> (Scouter), chart <strong>EQ</strong> for floating equity DD on new entries, and prop daily loss as <em>trader discipline</em> (HALT / STOP / position count) — not a legacy flatten-all API.
       </div>
     </section>
 
@@ -1076,11 +1119,11 @@ cd GsignalX-Velocity</pre>
     <section class="panel" id="growth" data-title="Fund Growth €10+" data-short="Growth">
       <div class="kicker">Capital ladder</div>
       <h1>Grow the fund from €10 / $10</h1>
-      <p class="lede">ASAP floors and fleet size must scale with balance. Stock defaults (~5 currency units) assume roughly mid-hundreds of capital — micro accounts need the ladder below.</p>
+      <p class="lede">Profit CASH floors and fleet size must scale with balance. Stock Scouter default is now <strong>+100</strong> for mid-size books — micro accounts and practice presets still use the ladder below (or load matching <code>.set</code> files).</p>
 
       <div class="callout gold">
         <strong class="label">Fund manager rule</strong>
-        Floor ≈ <strong>1% of balance</strong> per harvest cycle. Never widen catastrophe SL above <strong>4.0×ATR</strong>. Re-ladder monthly or every +50% equity, whichever comes first.
+        Floor ≈ <strong>0.5–1% of balance</strong> per harvest cycle (challenge desks often prefer the lower end). Never widen catastrophe SL above <strong>4.0×ATR</strong>. Re-ladder monthly or every +50% equity, whichever comes first.
       </div>
 
       <h2>Growth ladder (sample)</h2>
@@ -1088,7 +1131,7 @@ cd GsignalX-Velocity</pre>
         <thead>
           <tr>
             <th>Balance</th>
-            <th>ASAP / Lock arm</th>
+            <th>Profit CASH / lock arm</th>
             <th>MinWin</th>
             <th>Fleet pairs</th>
             <th>MaxLot</th>
@@ -1122,16 +1165,16 @@ cd GsignalX-Velocity</pre>
           </tr>
           <tr>
             <td>€500</td>
-            <td>5.00 (stock)</td>
-            <td>2.50</td>
+            <td>5–10 (practice)</td>
+            <td>floor ÷ 2</td>
             <td>4</td>
             <td>0.50</td>
             <td>XAUUSD becomes viable at 0.01</td>
           </tr>
           <tr>
-            <td>€1,000+</td>
-            <td>≈1% balance</td>
-            <td>floor ÷ 2</td>
+            <td>€1,000+ / mid-size</td>
+            <td><strong>100 stock</strong> or ≈0.5–1% balance</td>
+            <td>match floor</td>
             <td>4</td>
             <td>risk-sized + hard cap</td>
             <td>Full Velocity roster ≤ 4 concurrent</td>
@@ -1140,19 +1183,19 @@ cd GsignalX-Velocity</pre>
       </table>
 
       <h2>€100 raw-spread sample (production preset)</h2>
-      <p>Load from Inputs → Load:</p>
+      <p>Load from Inputs → Load (overrides stock 100 when you need a micro floor):</p>
       <ul>
         <li><code>deploy/presets/GSignalX_100EUR_RawSpread.set</code></li>
         <li><code>deploy/presets/ProfitScouter_100EUR_RawSpread.set</code></li>
       </ul>
       <table>
-        <thead><tr><th>Knob</th><th>Stock</th><th>EUR 100 preset</th><th>Why</th></tr></thead>
+        <thead><tr><th>Knob</th><th>Stock Scouter</th><th>EUR 100 preset</th><th>Why</th></tr></thead>
         <tbody>
-          <tr><td><code>InpAccTargetMoney</code></td><td>5.0</td><td>1.0</td><td>1% harvest; stock 5 ≈ 50 pips at 0.01</td></tr>
-          <tr><td><code>InpMinWinProfit</code></td><td>5.0</td><td>0.50</td><td>Dust winners can jointly bank the floor</td></tr>
+          <tr><td><code>InpAccTargetMoney</code> (Profit CASH)</td><td>100.0</td><td>1.0</td><td>≈1% harvest on €100; stock 100 suits mid-size books</td></tr>
+          <tr><td><code>InpMinWinProfit</code></td><td>100.0</td><td>0.50</td><td>Dust winners can jointly bank the floor</td></tr>
           <tr><td><code>InpFleetTargetPairs</code></td><td>4</td><td>2</td><td>Cap correlated loser wave</td></tr>
           <tr><td><code>InpUseHourFilter</code></td><td>false</td><td>true 7–20</td><td>Skip rollover</td></tr>
-          <tr><td><code>InpAdverseTimeframe</code></td><td>M15 Service</td><td>M5</td><td>Faster loser cut on M5 desk</td></tr>
+          <tr><td><code>InpAdverseTimeframe</code></td><td>M15 Service / chart CURRENT</td><td>M5</td><td>Faster loser cut on M5 desk</td></tr>
           <tr><td><code>InpMaxLot</code></td><td>5.0</td><td>0.10</td><td>Hard sanity</td></tr>
         </tbody>
       </table>
@@ -1164,7 +1207,7 @@ cd GsignalX-Velocity</pre>
 
       <div class="callout">
         <strong class="label">Advanced</strong>
-        Keep <code>InpIncludeCommission</code> and <code>InpIncludeSwap</code> <strong>true</strong> on raw accounts so ASAP floors are net. Percent-of-balance on the account layer only <em>lowers</em> the floor when combined with a fixed target — ladder fixed money manually.
+        Keep <code>InpIncludeCommission</code> and <code>InpIncludeSwap</code> <strong>true</strong> on raw accounts so Profit CASH floors are net. Percent-of-balance on the account layer only <em>lowers</em> the floor when combined with a fixed target — ladder fixed money manually.
       </div>
 
       <h2>Practice live packs — $20 / $50 / $100 (Standard + Raw)</h2>
@@ -1219,7 +1262,7 @@ cd GsignalX-Velocity</pre>
         <thead><tr><th>Server hour</th><th>Desk action</th></tr></thead>
         <tbody>
           <tr><td>07:00–08:00</td><td>Pre-flight: spreads, Algo ON, Scouter START, floors check</td></tr>
-          <tr><td>08:00–12:00</td><td>PLAY core pairs; drill windows; bank ASAP cycles</td></tr>
+          <tr><td>08:00–12:00</td><td>PLAY core pairs; drill windows; bank Profit CASH cycles</td></tr>
           <tr><td>12:00–17:00</td><td>Swing band — grades richer; optional add pair if fleet room</td></tr>
           <tr><td>17:00–20:00</td><td>Reduce roster; widen spread filter awareness</td></tr>
           <tr><td>≥20:00 Friday</td><td>No new FX; STOP / optional flatten</td></tr>
@@ -1240,21 +1283,21 @@ cd GsignalX-Velocity</pre>
 
       <div class="day-card">
         <header>
-          <h3>Sample demo day — €500 notionals</h3>
-          <span class="chip chip-beginner">ASAP 5</span>
+          <h3>Sample demo day — size the floor to the book</h3>
+          <span class="chip chip-beginner">Scaled CASH</span>
         </header>
-        <p><strong>Inputs snapshot:</strong> Bracket Both 5+5 pips · Drill 10 min · ASAP <code>InpAccTargetMoney=5</code> · Fleet 2 · Hour filter 8–17 · Instance ID 1 · <strong>Adverse TF M5</strong></p>
+        <p><strong>Inputs snapshot:</strong> Bracket Both 5+5 pips · Drill 10 min · <strong>Profit CASH</strong> sized to demo (micro often <code>InpAccTargetMoney=5</code>–<code>20</code>; mid-size books use stock <strong>100</strong>) · Fleet 2 · Hour filter 8–17 · Instance ID 1 · <strong>Adverse TF M5</strong> · Loss CASH <strong>OFF</strong></p>
         <ol>
-          <li>Start <strong>ProfitScouter_Service</strong> (ASAP armed, START state respected; set <code>InpAdverseTimeframe=M5</code>).</li>
+          <li>Start <strong>ProfitScouter_Service</strong> (CASH mode seeded ON; START state respected; set <code>InpAdverseTimeframe=M5</code>).</li>
           <li>Start <strong>ProfitOpportunity_Grader</strong>.</li>
           <li>Attach GSignalX on EURUSD <strong>M5</strong> and GBPUSD <strong>M5</strong> (preliminary chart); Algo Trading allowed.</li>
           <li>At session open → <strong>PLAY</strong> on each chart. Watch drill countdown.</li>
           <li>Confirm Working pendings or Position; Status RUNNING.</li>
-          <li>When combined floating P/L ≥ 5 → Scouter banks <strong>winners only</strong>; losers stay.</li>
+          <li>When combined floating P/L ≥ your Profit CASH floor → Scouter banks <strong>winners only</strong>; losers stay.</li>
           <li>If PLAY still on and signal agrees → march-after-flat may re-open.</li>
           <li>Session end → <strong>STOP</strong> every chart. Leave Friday rules ON.</li>
         </ol>
-        <p>You just ran: <strong>signal → entry → scout → harvest → optional re-entry</strong>.</p>
+        <p>You just ran: <strong>signal → entry → scout → harvest → optional re-entry</strong>. Commercial stock default is <strong>+100</strong>; practice/micro books keep smaller floors via presets — see <a href="#growth">Fund Growth</a>.</p>
       </div>
 
       <h2>First settings that matter</h2>
@@ -1265,7 +1308,7 @@ cd GsignalX-Velocity</pre>
           <tr><td>Drill</td><td>Enabled, <strong>10</strong> minutes</td></tr>
           <tr><td>Exit mode</td><td><code>GSX_EXIT_SCOUTER</code> (default)</td></tr>
           <tr><td>Strategic SL</td><td>ON · <strong>4.0×ATR</strong> · TP open</td></tr>
-          <tr><td>ProfitScouter</td><td>Scalp ASAP · floor sized to account · commission/swap ON</td></tr>
+          <tr><td>ProfitScouter</td><td><strong>CASH mode</strong> · floor sized to account (stock 100; micro 5–20) · Loss CASH OFF · commission/swap ON</td></tr>
           <tr><td>Scope</td><td>All symbols · <strong>one</strong> Service instance</td></tr>
           <tr><td>Flip policy</td><td>FOLLOW</td></tr>
         </tbody>
@@ -1375,7 +1418,7 @@ cd GsignalX-Velocity</pre>
       <ol>
         <li><strong>Seed</strong> multi-class list (4 FX + metals/oils + crypto). Service + Dashboard + Scouter share one <code>InpMagic</code>. Micro practice: seed the preset symbol list (often EURUSD or EURUSD+GBPUSD only).</li>
         <li><strong>FX tab</strong> — START only the 2–4 pairs you will trade this session (e.g. EURUSD, GBPUSD, USDJPY, XAUUSD on CMD). STOP the rest; SUSPEND crypto overnight. At $20–$50 keep CMD/CRYPTO SUSPEND.</li>
-        <li><strong>Fleet target = 4</strong> (or 2 on funded challenge / $100 practice; <strong>1</strong> on $20). M5 Service; Scouter adverse TF = M5; ASAP ≈ 1% balance (demo often $5; practice packs scale ASAP — see playbook).</li>
+        <li><strong>Fleet target = 4</strong> (or 2 on funded challenge / $100 practice; <strong>1</strong> on $20). M5 Service; Scouter adverse TF = M5; <strong>Profit CASH ≈ 0.5–1% balance</strong> (stock 100 for mid-size; practice packs scale floors — see playbook).</li>
         <li><strong>Events = SKIP</strong> while calendar is enabled; Telegram <code>[EVENT]</code> on. Flip to TRADE only when the desk is watching and will hold through the print.</li>
         <li><strong>Session clock</strong> is awareness only — still use broker hour filter / Friday stop for hard gates. PLAY into London–NY (scalp: LDN·NY overlap; swing: grade band 12–17); fleet STOP at your cut-off (Scouter keeps managing open risk).</li>
         <li><strong>Practice coach</strong> — after loading the matching Raw/Standard <code>.set</code>, restart Services; panel buttons refresh coach + tip lines (expectancy / loss budget / secondary pairs). Do not expect buttons to hot-load Prop money inputs.</li>
@@ -1489,7 +1532,7 @@ cd GsignalX-Velocity</pre>
       <table>
         <thead><tr><th>Control</th><th>What it does</th></tr></thead>
         <tbody>
-          <tr><td><strong>VERIFY</strong></td><td>Telegram getMe → Verified</td></tr>
+          <tr><td><strong>VERIFY</strong></td><td>Telegram soft health: getMe + plain <code>[TG] verify</code> per chat → Verified if ≥1 chat delivers (dead chats skipped)</td></tr>
           <tr><td><strong>ALL / FX / CMD / CRYPTO</strong></td><td>Category filter for the roster view</td></tr>
           <tr><td><strong>− / +</strong> (fleet)</td><td>Decrease / increase fleet target</td></tr>
           <tr><td><strong>&lt; / &gt;</strong> (page)</td><td>Roster page</td></tr>
@@ -1630,11 +1673,11 @@ cd GsignalX-Velocity</pre>
     <section class="panel" id="telegram" data-title="Telegram Alerts" data-short="Telegram">
       <div class="kicker">Notifications · trader &amp; investor</div>
       <h1>Telegram alerts for traders and investors</h1>
-      <p class="lede">Know when the book goes online, when risk trips, and when the day is banked — without staring at the terminal. WebRequest-only (Market compliant, no DLLs).</p>
+      <p class="lede">Know fills, PROP locks, and desk health without watching MT5. Commercial desk alerts are plain-text WebRequest (Market compliant, no DLLs) — and <strong>VERIFY proves delivery</strong>, not just a valid bot token.</p>
 
       <div class="callout gold">
         <strong class="label">Two postures</strong>
-        <strong>Trader / prop desk</strong> wants live deals + news + engine WARN. <strong>Investor / monitor</strong> wants daily summaries + PROP + online/offline — quieter chat, Compact strip is enough.
+        <strong>Trader / prop desk</strong> wants live deals + news + engine WARN. <strong>Investor / monitor</strong> wants daily summaries + PROP + online/offline — quieter chat, Compact strip is enough. Both need <strong>VERIFY green</strong>.
       </div>
 
       <h2>What you get</h2>
@@ -1645,8 +1688,8 @@ cd GsignalX-Velocity</pre>
           <tr><td>Summaries</td><td><code>[DAILY]</code> / <code>[WEEKLY]</code> with win rate, drawdown, balance</td></tr>
           <tr><td>Lifecycle</td><td><code>[START]</code> / <code>[STOP]</code> — EA online / offline + session P/L</td></tr>
           <tr><td>Risk &amp; news</td><td><code>[PROP]</code> soft lock · <code>[EVENT]</code> calendar/desk ahead · <code>[WARN]</code> / <code>[ERROR]</code></td></tr>
-          <tr><td>Delivery</td><td>Up to 3 chat IDs · queue 10 · 3 retries · rate 20/min · silent hours GMT · Markdown tags</td></tr>
-          <tr><td>Health</td><td>Status <strong>NotCfg</strong> / <strong>Connected</strong> / <strong>Verified</strong> / <strong>Error</strong> · Trade Center <strong>VERIFY</strong> (getMe)</td></tr>
+          <tr><td>Delivery</td><td>Up to 3 <strong>numeric</strong> chat IDs · queue 10 · 3 retries · rate 20/min · silent hours GMT · plain-text alerts</td></tr>
+          <tr><td>Health</td><td><strong>Soft VERIFY</strong>: getMe + plain <code>[TG] verify</code> per chat · Verified if ≥1 chat delivers · dead chats skipped for sends (strip may show <code>skip …</code>)</td></tr>
         </tbody>
       </table>
 
@@ -1663,11 +1706,11 @@ cd GsignalX-Velocity</pre>
 
       <h2>Setup (5 steps)</h2>
       <ol>
-        <li>Create a bot with <strong>BotFather</strong>; copy the token.</li>
-        <li>Open a chat with the bot (or add it to a group); copy up to <strong>3 chat IDs</strong>.</li>
+        <li>Create a bot with <strong>BotFather</strong>; copy the token (never commit tokens; rotate if shared outside MT5).</li>
+        <li>Each recipient opens the bot and sends <code>/start</code>; copy up to <strong>3 numeric chat IDs</strong> (never <code>@username</code>). Leave unused slots <strong>empty</strong>.</li>
         <li>In MT5: Tools → Options → Expert Advisors → allow WebRequest URL <code>https://api.telegram.org</code>.</li>
         <li>Enable Telegram inputs on the host(s) you need (Dashboard and/or Service and/or Chart).</li>
-        <li>On Trade Center press <strong>VERIFY</strong> until status shows <strong>Verified</strong> (you should get a test + START message).</li>
+        <li>On Trade Center press <strong>VERIFY</strong> until status shows <strong>Verified</strong>. You should get <code>[TG] verify</code> on working chats. If the strip shows <code>skip chat …</code>, that ID is dead until <code>/start</code> — alerts still go to healthy chats.</li>
       </ol>
 
       <h2>Trader best use (active prop desk)</h2>
@@ -1680,8 +1723,8 @@ cd GsignalX-Velocity</pre>
           <li>Enable TG on <strong>Service + Dashboard</strong> (same token/chats).</li>
           <li>Expect OPEN/CLOSE/MODIFY, PROP, EVENT, and Service WARN in the chat.</li>
           <li>Keep Event mode <strong>SKIP</strong> with <code>[EVENT]</code> ahead; flip to TRADE only when you are watching the print.</li>
-          <li>Silent hours: off or narrow during the session; widen overnight if you sleep.</li>
-          <li>Press <strong>VERIFY</strong> after every token change, VPS move, or WebRequest allowlist edit.</li>
+          <li>Silent hours: off or narrow during the session; widen overnight if you sleep. Equal start/end hour = silent <em>off</em>.</li>
+          <li>Press <strong>VERIFY</strong> after every token change, VPS move, or WebRequest allowlist edit. Green + optional <code>skip</code> warn is OK until ChatId2/3 complete <code>/start</code>.</li>
           <li>Micro / practice book: pick band + Raw/Std on Trade Center after loading the matching presets; Scalp → LDN·NY; Day → 07–20; Swing → M15 grades 12–17.</li>
         </ol>
       </div>
@@ -1695,8 +1738,8 @@ cd GsignalX-Velocity</pre>
         <ol>
           <li>Enable TG on <strong>Dashboard only</strong> — or Chart alone for a single-symbol book.</li>
           <li>Lean on <code>[DAILY]</code> / <code>[WEEKLY]</code>, <code>[PROP]</code>, and <code>[START]</code>/<code>[STOP]</code>. Leave Service TG off unless you are debugging fills.</li>
-          <li>Set silent hours for overnight GMT; keep default rate 20/min; one personal chat ID is enough.</li>
-          <li>Watch Compact roster strip <code>TG:Verified</code> — you do not need Full engine panels.</li>
+          <li>Set silent hours for overnight GMT; keep default rate 20/min; one personal numeric chat ID is enough.</li>
+          <li>Watch Compact roster strip <code>TG Verified</code> — you do not need Full engine panels. Ignore <code>skip …</code> until secondary recipients are onboarded.</li>
           <li>If Trade Center is closed, Chart failover can still report closes — attach Chart TG only when you want that backup.</li>
         </ol>
       </div>
@@ -1710,14 +1753,14 @@ cd GsignalX-Velocity</pre>
           <tr><td><code>[EVENT]</code></td><td>Upcoming news relevant to START pairs</td><td>Confirm SKIP vs TRADE; watch the print if TRADE</td></tr>
           <tr><td><code>[WARN]</code> fill fail</td><td>Service could not fill (spread/gates/busy)</td><td>Check spread, sessions, pair START state</td></tr>
           <tr><td><code>[START]</code> / <code>[STOP]</code></td><td>Host online / offline</td><td>Investor: confirm desk is live; trader: confirm intended host</td></tr>
-          <tr><td><code>[DAILY]</code> / <code>[WEEKLY]</code></td><td>Win rate, DD, balance snapshot</td><td>Investor review; adjust ASAP / roster next session</td></tr>
-          <tr><td><code>[ERROR]</code> / status Error</td><td>Token, allowlist, or WebRequest failed</td><td>Fix allowlist → VERIFY again</td></tr>
+          <tr><td><code>[DAILY]</code> / <code>[WEEKLY]</code></td><td>Win rate, DD, balance snapshot</td><td>Investor review; adjust Profit CASH / roster next session</td></tr>
+          <tr><td><code>[ERROR]</code> / status Error</td><td>Token, allowlist, WebRequest, or <em>no</em> chat delivered</td><td>Fix allowlist / numeric IDs / <code>/start</code> → VERIFY again</td></tr>
         </tbody>
       </table>
 
       <div class="callout">
-        <strong class="label">Engineering note</strong>
-        Recipes below. VERIFY on Trade Center until status shows <strong>Verified</strong>.
+        <strong class="label">Commercial tip</strong>
+        Soft VERIFY means one working chat is enough for <strong>Verified</strong>. Prefer clearing unused ChatId slots rather than leaving dead IDs that only produce <code>skip</code> warnings.
       </div>
     </section>
 
@@ -1730,8 +1773,8 @@ cd GsignalX-Velocity</pre>
       <div class="card-grid">
         <div class="card">
           <div class="num">1%</div>
-          <h3>ASAP floor vs balance</h3>
-          <p>Each banked cycle ≈ +1% when laddered. Size so a normal adverse loser (&lt; catastrophe SL) stays inside daily loss limit.</p>
+          <h3>Profit CASH vs balance</h3>
+          <p>Each banked cycle ≈ +0.5–1% when laddered. Size so a normal adverse loser (&lt; catastrophe SL) stays inside daily loss limit.</p>
         </div>
         <div class="card">
           <div class="num">1</div>
@@ -1861,7 +1904,7 @@ cd GsignalX-Velocity</pre>
           <span class="chip chip-advanced">Fund growth</span>
         </header>
         <ul>
-          <li>ASAP ≈ 10 · MinWin 5 · Fleet 4 · MaxLot 1.0 hard cap</li>
+          <li>Profit CASH ≈ 10 · MinWin match floor · Fleet 4 · MaxLot 1.0 hard cap</li>
           <li>Risk mode % balance 0.5–1.0 with ATR sizing span</li>
           <li>Hour filter 8–17; swing grades 12–17</li>
           <li>FOLLOW in trend days; WAIT when book splits after news</li>
@@ -2012,11 +2055,12 @@ cd GsignalX-Velocity</pre>
           <tr><td><strong>Compact / Full</strong></td><td>Panel density — investor strip vs trader engines</td></tr>
           <tr><td><strong>Drill</strong></td><td>Timed window after PLAY for active-direction entries</td></tr>
           <tr><td><strong>March-after-flat</strong></td><td>Re-arm after Scouter flats the chart</td></tr>
-          <tr><td><strong>ASAP floor</strong></td><td>Bank winners when floating P/L hits account minimum</td></tr>
+          <tr><td><strong>ASAP / Profit CASH floor</strong></td><td>Bank winners when floating P/L hits account cash minimum (stock default <strong>100</strong>; CASH mode)</td></tr>
+          <tr><td><strong>Loss CASH</strong></td><td>Opt-in cut when floating ≤ −N (stock amount 100; arm OFF until LOSS ON)</td></tr>
           <tr><td><strong>Fleet</strong></td><td>Max concurrent pairs (open or pending)</td></tr>
           <tr><td><strong>Strategic SL</strong></td><td>Catastrophe broker stop (default 4×ATR)</td></tr>
           <tr><td><strong>Trade Center</strong></td><td>Multisymbol Dashboard — roster, PROP, Telegram desk</td></tr>
-          <tr><td><strong>VERIFY</strong></td><td>Trade Center button — Telegram getMe health check → Verified or Error</td></tr>
+          <tr><td><strong>VERIFY</strong></td><td>Trade Center — soft Telegram health: getMe + plain probe per chat; Verified if ≥1 chat delivers</td></tr>
           <tr><td><strong>Deal failover</strong></td><td>Chart sends OPEN/CLOSE only when Trade Center desk heartbeat is stale</td></tr>
           <tr><td><strong>TG host tags</strong></td><td><code>svc</code> Service · <code>desk</code> Trade Center · <code>chart</code> Chart EA</td></tr>
           <tr><td><strong>Soft STOP</strong></td><td>PropRisk / operator pause entries; never closes</td></tr>
@@ -2026,7 +2070,7 @@ cd GsignalX-Velocity</pre>
       </table>
 
       <h2>Version alignment</h2>
-      <p>This manual matches <strong>Gsignalx Velocity 2.14</strong> (Trade Center / Service <code>#property version "2.14"</code>; bus schema <strong>1</strong>). Run the desk from <a href="#desk213">System UI Best Use</a>. Operator note: <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.</p>
+      <p>This manual matches <strong>Gsignalx Velocity 2.14</strong> (Trade Center / Service <code>#property version "2.14"</code>; bus schema <strong>1</strong>) plus current Scouter <strong>Profit CASH / Loss CASH</strong> and Telegram <strong>soft VERIFY</strong> desk behaviour. Run the desk from <a href="#desk213">System UI Best Use</a>. Operator note: <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.</p>
 
       <div class="callout gold">
         <strong class="label">Executive signals</strong>
@@ -2034,7 +2078,7 @@ cd GsignalX-Velocity</pre>
         <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">https://www.gsignalx.cloud/</a>.
       </div>
 
-      <p class="footer-note">© Gocity Group — Gsignalx Velocity <strong>2.14</strong>. Research and educational use with MetaTrader 5. Trade responsibly. Past performance is not indicative of future results.</p>
+      <p class="footer-note">© Gocity Group — Gsignalx Velocity <strong>2.14</strong>. Commercial research and educational use with MetaTrader 5. Trade responsibly. Past performance is not indicative of future results.</p>
     </section>
 
     <nav class="chapter-nav" aria-label="Chapter navigation">

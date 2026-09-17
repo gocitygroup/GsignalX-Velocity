@@ -7,9 +7,9 @@
 #property copyright "Profit Scouter"
 #property version   "2.00"
 #property description "Gsignalx Velocity 2.00 — Profit Scouter Dollar Target (Service edition)"
-#property description "Scalp ASAP; profit lock; honors chart START/STOP/AUTO via shared Instance ID."
-#property description "Profit harvest: winners-only at set levels. Adverse-bar Auto can close same-symbol losers."
-#property description "Default CloseTicket refuses losses; only ADVERSE-BAR Auto may allowLoss."
+#property description "Fixed cash floors; profit lock; honors chart START/STOP/AUTO/CASH/LOSS via Instance ID."
+#property description "Profit CASH: winners-only at set cash levels. Loss CASH: opt-in cut at cash floor."
+#property description "Default CloseTicket refuses losses; ADVERSE-BAR Auto and LOSS CASH may allowLoss."
 
 #define PS_HOST_SERVICE
 
@@ -42,22 +42,36 @@ input bool    InpIncludeSwap       = true;
 input bool    InpIncludeCommission = true;
 input int     InpSlippagePoints    = 30;
 input int     InpMaxRetries        = 3;
-input bool    InpScalpAsapAccountOnly = true; // ASAP hard floor at account+pair+pos (skip trail/window)
-input bool    InpRespectChartRunState = true; // Honor PS{id}_RUN from chart START/STOP
+input bool    InpScalpAsapAccountOnly = true; // Seed CASH mode (single floor) if no PS{id}_CASH GV
+input bool    InpRespectChartRunState = true; // Honor PS{id}_RUN / ADVEN / CASH / LOSS from chart
 
-input group "=== 2. Per-position target ==="
+input group "=== 2. Profit CASH floor (account) ==="
+input bool    InpAccTargetEnable   = true;
+input double  InpAccTargetMoney    = 100.0;   // Profit CASH floor in target ccy (blank InpTargetCurrency = account USD/EUR)
+input double  InpAccTargetPctBal   = 0.0;
+input bool    InpAccTrailEnable    = false;   // Layered only (ignored in CASH mode)
+input double  InpAccTrailArm       = 50.0;
+input double  InpAccTrailGiveMoney = 15.0;
+input double  InpAccTrailGivePct   = 30.0;
+input ENUM_PS_TRAIL InpAccTrailMode = PS_TRAIL_ANY;
+
+input group "=== 2b. Loss CASH floor (account) ==="
+input bool    InpAccCashLossEnable = false;   // Initial LOSS arm if no PS{id}_LOSS GV (chart LOSS toggles)
+input double  InpAccCashLossMoney  = 100.0;   // Cut losers when floating <= -this (target ccy)
+
+input group "=== 3. Per-position target (Layered) ==="
 input bool    InpPosTargetEnable   = false;
 input double  InpPosTargetMoney    = 10.0;
 input double  InpPosPartialPct     = 0.0;
 
-input group "=== 3. Per-position trailing ==="
+input group "=== 4. Per-position trailing (Layered) ==="
 input bool    InpPosTrailEnable    = false;
 input double  InpPosTrailArm       = 5.0;
 input double  InpPosTrailGiveMoney = 2.0;
 input double  InpPosTrailGivePct   = 30.0;
 input ENUM_PS_TRAIL InpPosTrailMode = PS_TRAIL_ANY;
 
-input group "=== 4. Per-pair (symbol basket) target ==="
+input group "=== 5. Per-pair basket target (Layered) ==="
 input bool    InpSymTargetEnable   = false;
 input double  InpSymTargetMoney    = 25.0;
 input bool    InpSymTrailEnable    = false;
@@ -66,17 +80,8 @@ input double  InpSymTrailGiveMoney = 4.0;
 input double  InpSymTrailGivePct   = 30.0;
 input ENUM_PS_TRAIL InpSymTrailMode = PS_TRAIL_ANY;
 
-input group "=== 5. Account-level target ==="
-input bool    InpAccTargetEnable   = true;
-input double  InpAccTargetMoney    = 5.0;     // ASAP floor in target ccy (blank InpTargetCurrency = account USD/EUR)
-input double  InpAccTargetPctBal   = 0.0;
-input bool    InpAccTrailEnable    = false;
-input double  InpAccTrailArm       = 50.0;
-input double  InpAccTrailGiveMoney = 15.0;
-input double  InpAccTrailGivePct   = 30.0;
-input ENUM_PS_TRAIL InpAccTrailMode = PS_TRAIL_ANY;
-input group "=== 6. Time-from-open window ==="
-input bool    InpWindowEnable      = false;   // scalp ASAP: do not gate on age
+input group "=== 6. Time-from-open window (Layered) ==="
+input bool    InpWindowEnable      = false;   // CASH mode: do not gate on age
 input int     InpWindowStartMin    = 0;
 input int     InpWindowEndMin      = 60;
 input bool    InpTrailAfterWindow  = true;
@@ -91,9 +96,9 @@ input bool    InpPersistPeaks         = true;
 
 input group "=== 7b. Profit lock & winner floor ==="
 input bool    InpProfitLockEnable     = true;    // Lock green trades: never close once-profitable on a loss
-input double  InpProfitLockArm        = 5.0;     // Arm lock when peak >= ASAP floor (target ccy)
+input double  InpProfitLockArm        = 100.0;   // Arm lock when peak >= Profit CASH floor (target ccy)
 input double  InpProfitLockKeepPct    = 50.0;    // Lock floor = max(keep-% of peak, MinWinProfit)
-input double  InpMinWinProfit         = 5.0;     // Winner close min per ticket (= ASAP floor; target ccy)
+input double  InpMinWinProfit         = 100.0;   // Winner close min per ticket (= Profit CASH floor; target ccy)
 
 input group "=== 7c. Adverse-bar Auto loss exit ==="
 input bool            InpAdverseExitEnable       = true;         // Initial AUTO arm if no saved PS{id}_ADVEN (chart toggles)
@@ -121,10 +126,10 @@ void OnStart()
    PsInitEngine();
 
    int ms = (int)MathMax(100, InpCheckIntervalMs);
-   PrintFormat("ProfitScouter service #%d started | ccy=%s | target=%s | floor=%.2f | factor=%.5f | interval=%dms | bus=%s | scalpASAP=%s | chartRun=%s",
-               InpInstanceID, g_accCcy, TargetCcy(), Money(InpAccTargetMoney), g_ccyFactor, ms,
+   PrintFormat("ProfitScouter service #%d started | ccy=%s | target=%s | profitCash=%.2f | lossCash=%.2f | factor=%.5f | interval=%dms | bus=%s | cashMode=%s | chartRun=%s",
+               InpInstanceID, g_accCcy, TargetCcy(), ProfitCashFloor(), LossCashFloor(), g_ccyFactor, ms,
                (InpBusEnable ? "ON" : "OFF"),
-               (InpScalpAsapAccountOnly ? "acc+pair+pos" : "OFF"),
+               (EffectiveCashMode() ? "CASH" : "LAYER"),
                (InpRespectChartRunState ? "honor" : "ignore"));
 
    while(!IsStopped())
@@ -138,11 +143,15 @@ void OnStart()
         {
          PsLoadScoutEnabled();
          PsLoadAdverseEnabled();
+         PsLoadCashMode();
+         PsLoadCashLossArmed();
         }
       else
         {
          gScoutEnabled = true;
          gAdverseEnabled = InpAdverseExitEnable;
+         gCashMode = InpScalpAsapAccountOnly;
+         gCashLossArmed = InpAccCashLossEnable;
         }
       Monitor();
       Sleep(ms);

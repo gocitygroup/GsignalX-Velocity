@@ -644,15 +644,28 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
      {
       g_tgCfg = DashBuildTgConfig();
       string err;
+      // Soft VERIFY: Verified if ≥1 chat delivers; dead chats skipped for sends
       if(GsxTgVerifyConnection(g_tgCfg, err))
         {
-         GsxTgSendNow(g_tgCfg, "TG", "Re-verified — " + GsxTgEscapeMarkdown("desk"));
-         g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " TG VERIFY ok";
+         if(err != "")
+           {
+            string warn = err;
+            if(StringLen(warn) > 56)
+               warn = StringSubstr(warn, 0, 56);
+            g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                             " TG VERIFY ok · " + warn;
+           }
+         else
+            g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " TG VERIFY ok";
         }
       else
         {
          g_tgLastError = err;
-         g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " TG VERIFY fail";
+         string detail = err;
+         if(StringLen(detail) > 72)
+            detail = StringSubstr(detail, 0, 72);
+         g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                          " TG VERIFY fail · " + detail;
         }
       GsxTgPublishStatus(InpMagic);
       DashRefreshPanel(true);

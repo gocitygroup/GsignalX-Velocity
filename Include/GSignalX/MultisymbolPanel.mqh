@@ -929,6 +929,19 @@ void GsxMsDrawStatusRow(GsxLayCtx &lay, const GsxMsSnapshot &snap)
      {
       string tgFull = StringFormat("TG %s · %d/%d q%d",
                                    snap.tgStatus, snap.tgSent, snap.tgFail, snap.tgQueue);
+      string localErr = GsxTgLastError();
+      bool showErr = (localErr != "" &&
+                      (snap.tgStatus == "Error" ||
+                       snap.tgStatus == "Connected" ||
+                       StringFind(localErr, "skip ") == 0 ||
+                       (snap.tgFail > 0 && snap.tgStatus != "Verified")));
+      if(showErr)
+        {
+         string clip = localErr;
+         if(StringLen(clip) > 28)
+            clip = StringSubstr(clip, 0, 28);
+         tgFull = StringFormat("TG %s · %s", snap.tgStatus, clip);
+        }
       string tgTxt = (g_msDense || s.w < GsxMsTextChipW(tgFull, fs, GsxSx(120)))
                      ? ("TG " + snap.tgStatus)
                      : tgFull;

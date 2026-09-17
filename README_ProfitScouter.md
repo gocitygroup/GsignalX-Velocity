@@ -1,28 +1,24 @@
 # Profit Scouter — Dollar Target (MT5 / MQL5)
 
-A money-based profit monitoring and harvesting engine for MetaTrader 5. It does **not** open trades. It watches every open position and closes them when a money target or a peak-profit give-back rule fires.
+A money-based profit monitoring and harvesting engine for MetaTrader 5. It does **not** open trades. It watches open positions and banks **winners** when a clear **Profit CASH** floor (or layered trail/window rules) fires.
 
-**Velocity hosts:** `ProfitScouter_DollarTarget` / `ProfitScouter_Service` (bus schema `"version":1`). Desk topology: [docs/RELEASE_v2.14_Input_Reliability.md](docs/RELEASE_v2.14_Input_Reliability.md).
+**Velocity hosts:** `ProfitScouter_DollarTarget` / `ProfitScouter_Service` (bus schema `"version":1`). Desk topology: [docs/RELEASE_v2.14_Input_Reliability.md](docs/RELEASE_v2.14_Input_Reliability.md) · Trader manual: [docs/Gsignalx_Velocity_Users_Manual.html](docs/Gsignalx_Velocity_Users_Manual.html#profit-cash).
+
+**Profit CASH (stock default +100):** `InpAccTargetMoney`, `InpMinWinProfit`, and `InpProfitLockArm` default to **100** account/target currency (blank `InpTargetCurrency` = account USD/EUR). **CASH mode** (seeded by `InpScalpAsapAccountOnly`, toggled on chart as **CASH / LAYER**, persisted `PS{id}_CASH`) drives account + pair + position hard targets from that single floor and skips trail/window. **LAYER** restores per-layer targets, trail, and window rules.
+
+**Loss CASH (opt-in):** `InpAccCashLossMoney` default **100**; arm `InpAccCashLossEnable` default **false**. Chart **LOSS** toggles `PS{id}_LOSS`. When armed and floating ≤ −floor, Scouter cuts scoped losers (`ACC-CASH-LOSS`). Default stays OFF so there is no surprise auto-flatten.
 
 **Adverse experience gates:** loser Auto requires signal + opposing closed-bar streak, plus **min hold age** (`InpAdverseMinAgeMin`, default **15** minutes) and **once-green protect** (`InpAdverseProtectOnceGreen`, default **ON**). Service adverse TF default is **M5**. Account/pair layers no longer early-return when a target is notionally hit but zero winners meet `InpMinWinProfit`.
 
-**Winner floor = ASAP 5:** defaults align so winners do not bank below **5** account currency (USD/EUR when `InpTargetCurrency` is blank): `InpAccTargetMoney=5`, `InpMinWinProfit=5`, `InpProfitLockArm=5`, and profit-lock floor is `max(keep-% of peak, MinWinProfit)`. Re-attach or **Reset** EA inputs if the chart still shows an old floor of 2 / MinWin 0.10.
+**Chart buttons:** **START / STOP / AUTO** · **BANK / CUT / FLAT** · **CASH / LAYER** · **LOSS ON / OFF**. Panel shows `Profit CASH +N` and `Loss CASH −N`. Drag the title bar to move; position persists in `PS{InstanceID}_PNLX` / `PNLY`.
 
-**v1.18 movable panel:** the EA dashboard is an on-chart object panel (not `Comment`). Drag the title bar (**PROFIT SCOUTER · drag to move**) to reposition. **START / STOP / AUTO** are standalone chart buttons (`InpBtnX` / `InpBtnY`) so they stay visible while the panel moves. Panel position persists in `PS{InstanceID}_PNLX` / `PS{InstanceID}_PNLY`.
+**Winner harvest:** profit path closes the **smallest set of green tickets** that covers the threshold — biggest winners first. Losers are never touched by Profit CASH. Intentional loss closes: adverse **AUTO**, opt-in **Loss CASH**, manual **CUT / FLAT**.
 
-**v1.16 / v1.17 adverse-bar Auto loss exit:** when scout is START-armed, each cycle may close **same-symbol losers** if the last GSignalX bus signal conflicts with consecutive closed OHLC bars: BUY + selling bars > `InpAdverseMinBars` (default 2 → fire at ≥3), or SELL + buying bars > N. Winners are left for profit targeting at set levels. Default `CloseTicket` still refuses losses; only the `ADVERSE-BAR` path may pass `allowLoss`. Fire is once per symbol per bar (`PS{id}_ADV_{canon}`). Chart **AUTO** button (v1.17) toggles the feature via `PS{id}_ADVEN`. **v1.22** adds min hold age + once-green protect.
+**Default close guard:** `CloseTicket` / `ClosePartial` refuse negatives unless `allowLoss` (adverse, Loss CASH, or manual CUT/FLAT). Old account loss-guard input names are **not** restored.
 
-**v1.15 default close guard:** account loss-guard inputs were removed. `CloseTicket` / `ClosePartial` re-read live profit (incl. swap + commission) and **refuse negatives** unless an explicit Auto path opts in (`allowLoss` — adverse-bar only in v1.16).
+**v1.12+ chart START / STOP / AUTO:** run state persists in `PS{InstanceID}_RUN`; adverse Auto in `PS{InstanceID}_ADVEN`. Service honors chart RUN / ADVEN / CASH / LOSS when `InpRespectChartRunState=true` and Instance ID matches.
 
-**v1.14 categorised buckets + minimal threshold harvest:** every cycle splits the monitored set into a **winners bucket** and a **losers bucket** (visible on the panel, in the Service status block, and on the connector bus). When a threshold fires, the engine closes **the smallest set of green tickets that covers the threshold** — biggest winners first — and then stops. Remaining winners keep running toward their own targets and **losers are never touched by a profit close**.
-
-**v1.14 default = Scalp ASAP multi-layer (winners-only harvest):** one money floor (`InpAccTargetMoney`, default **5**, recommended band **2–10** in account currency or `InpTargetCurrency` USD/EUR). Each cycle checks **account → pair → position**. Profit targets bank the floor **from winners only** (minimal set). Trail/window rules stay off in ASAP. After harvest, remaining / new opens continue the cycle. Pair with GSignalX scalping drill so PLAY charts re-open after flat.
-
-**v1.13 profit lock & winner floor:** the engine tracks each position's peak every cycle. Once peak reaches `InpProfitLockArm` (default **5**), lock arms; close when profit falls to `max(keep-% of peak, MinWinProfit)`. The **winner floor** `InpMinWinProfit` (default **5**, same as ASAP) blocks harvests and lock closes below that amount. Loss path unchanged (adverse / catastrophe only for reds).
-
-**v1.12+ chart START / STOP / AUTO:** the EA edition is a **standalone** harvest tool. Chart buttons **START** (arm profit closes), **STOP** (watch P/L only), and **AUTO** (toggle adverse-bar loss exit). Run state persists in `PS{InstanceID}_RUN`; adverse Auto in `PS{InstanceID}_ADVEN`. The Service honors both when `InpRespectChartRunState=true` and `InpInstanceID` matches the chart EA.
-
-**v1.10+** shares one Core engine (`Include/ProfitScouter/Core.mqh`) between the EA and Service, and can publish structured snapshots to the **FILE_COMMON connector bus** so every terminal can be graded together.
+**v1.10+** shares one Core engine (`Include/ProfitScouter/Core.mqh`) between the EA and Service, and can publish structured snapshots to the **FILE_COMMON connector bus** so every terminal can be graded together (`cash_mode`, `profit_cash`, `loss_cash`, `loss_cash_armed`).
 
 - Deploy: [DEPLOYMENT.md](DEPLOYMENT.md)  
 - Bus protocol: [ARCHITECTURE_CONNECTOR_BUS.md](ARCHITECTURE_CONNECTOR_BUS.md)
@@ -33,31 +29,20 @@ A money-based profit monitoring and harvesting engine for MetaTrader 5. It does 
 
 | Layer | Hard target | Trailing (peak → give-back) |
 |---|---|---|
-| **Per position** | Close (or partially close) a single green ticket at N in profit | Arm at N, close after give-back in money or % of peak |
-| **Per pair (basket)** | Bank the basket target from that pair's winners (minimal set) when their combined P/L hits N | Same, on the symbol's combined P/L |
-| **Account** | Bank the target from the **winners bucket** when total floating P/L hits N (minimal set; losers stay open on profit path) | Same on total floating P/L — profit path never closes losers |
+| **Per position** | Close (or partially close) a single green ticket at N in profit | Arm at N, close after give-back in money or % of peak (**LAYER** only) |
+| **Per pair (basket)** | Bank the basket target from that pair's winners (minimal set) when their combined P/L hits N | Same, on the symbol's combined P/L (**LAYER** only) |
+| **Account** | Bank **Profit CASH** from the winners bucket when total floating P/L hits N (minimal set; losers stay on profit path) | Same on total floating P/L (**LAYER** only) |
 
-Evaluation order each cycle: **adverse-bar Auto (optional) → account → pair → position**. Profit harvest never closes red tickets — enforced by the default `CloseTicket` guard. Adverse Auto may close same-symbol losers when signal vs consecutive closed bars conflict. A profit close takes the **smallest set of winners** whose cumulative profit covers the threshold — other winners keep running toward their own targets. Winning pairs/positions can still harvest at the ASAP floor without waiting for net account P/L.
-
-Profit includes swap and commission when those options are on (commission is read once from the position's opening deal and cached).
+Evaluation order each cycle: **adverse-bar Auto (optional) → Loss CASH (if armed) → account → pair → position**. Profit harvest never closes red tickets — enforced by the default `CloseTicket` guard.
 
 ### Time-from-open window
-`InpWindowStartMin` / `InpWindowEndMin` define the age band in which trailing is active (layered mode). **Scalp ASAP defaults leave `InpWindowEnable = false`** so hard money targets fire immediately with no age gate.
-
-When the window is enabled (layered presets often use 30 → 60 minutes):
-
-- age < start → peaks are still tracked, but no trail close (avoids being shaken out early)
-- inside the band → trailing armed and live
-- age > end → keeps trailing if `InpTrailAfterWindow = true`, otherwise stops
-- `InpCloseAtWindowEnd = true` force-closes anything still green when the window expires
-
-For baskets and the account level, "age" is the age of the **oldest** position in the group.
+`InpWindowStartMin` / `InpWindowEndMin` define the age band in which trailing is active (**LAYER** mode). **CASH mode defaults leave `InpWindowEnable = false`** so hard money targets fire immediately with no age gate.
 
 ### Currency
-Targets are entered in `InpTargetCurrency`. If it differs from the account currency, the EA finds a conversion rate by scanning Market Watch for a symbol whose base/profit currencies match (direct, or bridged through USD/EUR/GBP) and refreshes it every 60 seconds. Leave it blank to use the account currency directly.
+Targets are entered in `InpTargetCurrency`. If it differs from the account currency, the EA finds a conversion rate by scanning Market Watch. Leave it blank to use the account currency directly.
 
 ### Persistence
-Peak values are stored in terminal **global variables** (`PS<ID>_P_<ticket>`, `PS<ID>_S_<symbol>`, `PS<ID>_A_0`). If the terminal restarts, a position that had already run up to +40 keeps its peak instead of restarting from zero. Stale entries for positions that no longer exist are deleted on init. Adverse Auto last-fire stamps use `PS<ID>_ADV_<canon>` (one fire per symbol per bar). Chart AUTO on/off uses `PS<ID>_ADVEN`.
+Peaks: `PS<ID>_P_<ticket>`, `PS<ID>_S_<symbol>`, `PS<ID>_A_0`. Arms: `PS<ID>_RUN`, `PS<ID>_ADVEN`, `PS<ID>_CASH`, `PS<ID>_LOSS`. Adverse fire stamps: `PS<ID>_ADV_<canon>`.
 
 ---
 
@@ -99,18 +84,20 @@ Profit Scouter does **not** need GSignalX. Attach the EA alone to harvest any el
 
 | Button | Effect |
 |---|---|
-| **START** (dense: **GO**) | Arm scouting — money targets / ASAP closes run (`PS{id}_RUN`) |
+| **START** (dense: **GO**) | Arm scouting — Profit CASH / LAYER closes run (`PS{id}_RUN`) |
 | **STOP** | Pause closes — panel still updates floating P/L; no closes until START again |
 | **AUTO** | Toggle adverse-bar loss exit ON/OFF (`PS{id}_ADVEN`). Does not pause profit targeting |
 | **BANK +** | Confirm → close **winners** only |
 | **CUT −** | Confirm → close **losers** only |
 | **FLAT** | Confirm → close **all** in scope |
+| **CASH / LAYER** | Toggle single Profit CASH floor vs layered trail/window (`PS{id}_CASH`) |
+| **LOSS ON / OFF** | Arm opt-in Loss CASH cut at −`InpAccCashLossMoney` (`PS{id}_LOSS`) |
 
-**Only Scouter UI closes tickets.** Desk/Chart PLAY/STOP/HALT never flatten. Full system map: [Manual § System UI — ProfitScouter](docs/Gsignalx_Velocity_Users_Manual.html#ui-scouter).
+**Only Scouter UI closes tickets.** Desk/Chart PLAY/STOP/HALT never flatten. Full system map: [Manual § Profit CASH](docs/Gsignalx_Velocity_Users_Manual.html#profit-cash).
 
-State is stored in terminal global variables `PS{InpInstanceID}_RUN` (scout) and `PS{InpInstanceID}_ADVEN` (adverse Auto) and survives recompile/restart. Default arm on first attach: `InpScoutStartArmed=true`, `InpAdverseExitEnable=true`.
+State survives recompile/restart: `PS{InpInstanceID}_RUN`, `_ADVEN`, `_CASH`, `_LOSS`. Default arm on first attach: scout START, adverse ON, CASH mode seeded from `InpScalpAsapAccountOnly=true`, Loss CASH OFF.
 
-If you also run `ProfitScouter_Service` with the **same** `InpInstanceID` and `InpRespectChartRunState=true`, pressing **STOP** / **AUTO** on the chart EA updates Service closes as well. Trade Center / Chart **PLAY** / **HALT** write the same `_RUN` when scout-link is enabled (desk **STOP** leaves Scouter harvesting).
+If you also run `ProfitScouter_Service` with the **same** `InpInstanceID` and `InpRespectChartRunState=true`, chart toggles update Service closes as well. Trade Center / Chart **PLAY** / **HALT** write the same `_RUN` when scout-link is enabled (desk **STOP** leaves Scouter harvesting).
 
 ### Making it survive terminal restarts
 The EA is bound to its chart, and MT5 saves charts automatically:
@@ -128,52 +115,54 @@ A desktop terminal must stay running and logged in. For unattended operation, re
 
 ## 4. Suggested starting configuration
 
-### Scalp ASAP (default in v1.14+) — multi-layer profit cycle
+### Profit CASH mode (stock default) — single-floor profit cycle
 
-One floor (`InpAccTargetMoney`) drives **account, pair, and position** hard closes. Raise it in the **2–10** band for larger takes. No trail give-back and no age window in ASAP.
+One floor (`InpAccTargetMoney`, stock **100**) drives **account, pair, and position** hard closes in **CASH** mode. Micro/demo books: lower the floor (or load practice / EUR100 presets). Mid-size commercial books: keep **100** or ≈0.5–1% of balance. No trail give-back and no age window in CASH mode.
 
 - **Profit hit:** bank the floor from the winners bucket — biggest green tickets first, and only as many as needed to cover the threshold. Losers stay open on the profit path.
-- **Adverse-bar Auto (v1.16+, default ON):** BUY signal + selling closed bars > `InpAdverseMinBars` (or SELL + buying bars) closes **same-symbol losers only** after **min hold age** and unless **once-green protect** skips them (v1.22); winners continue to set levels. Profit `CloseTicket` still refuses losses unless `allowLoss` (adverse path).
-- Symbol basket targets bank the floor from **that pair's green tickets only** — other pairs are untouched.
+- **Adverse-bar Auto (default ON):** BUY signal + selling closed bars > `InpAdverseMinBars` (or SELL + buying bars) closes **same-symbol losers only** after **min hold age** and unless **once-green protect** skips them; winners continue to set levels.
+- **Loss CASH:** leave OFF unless you want automatic loser cuts at −`InpAccCashLossMoney` (stock 100).
 
 GSignalX charts on PLAY then re-enter if the signal still says buy/sell (`InpDrillMarchAfterFlat`).
 
 ```
 InpScope                   = All symbols
 InpCheckIntervalMs         = 100
-InpScalpAsapAccountOnly    = true
+InpScalpAsapAccountOnly    = true    (seeds CASH mode / PS{id}_CASH)
 InpTargetCurrency          =      (blank = account ccy; or USD / EUR)
 
-InpPosTargetEnable         = false   (ignored in ASAP — floor always armed)
+InpPosTargetEnable         = false   (ignored in CASH — floor always armed)
 InpPosTrailEnable          = false
-InpSymTargetEnable         = false   (ignored in ASAP — floor always armed)
+InpSymTargetEnable         = false   (ignored in CASH — floor always armed)
 InpSymTrailEnable          = false
 
 InpAccTargetEnable         = true
-InpAccTargetMoney          = 5       (scalp default; band 2–10)
+InpAccTargetMoney          = 100     (stock Profit CASH; micro: 5–20 or load preset)
 InpAccTrailEnable          = false
+InpAccCashLossEnable       = false   (Loss CASH arm OFF)
+InpAccCashLossMoney        = 100
 
 InpAdverseExitEnable       = true
 InpAdverseMinBars          = 2       (fire when streak > 2, i.e. ≥3 closed bars)
-InpAdverseTimeframe        = CURRENT (EA) / M15 (Service stock)
+InpAdverseTimeframe        = CURRENT (EA) / M5 (Service stock)
 InpAdverseRequireSignal    = true    (skip if bus direction missing)
 
 InpWindowEnable            = false
 InpTargetsWindowOnly       = false
 
 InpProfitLockEnable        = true
-InpProfitLockArm           = 5      (arm when peak >= ASAP floor)
-InpProfitLockKeepPct       = 50     (floor = max(50% of peak, MinWinProfit))
-InpMinWinProfit            = 5.0    (no winner close below ASAP floor)
+InpProfitLockArm           = 100     (arm when peak >= Profit CASH floor)
+InpProfitLockKeepPct       = 50      (floor = max(50% of peak, MinWinProfit))
+InpMinWinProfit            = 100.0   (no winner close below Profit CASH floor)
 ```
 
 **Preliminary desk with GSignalX:** run signal charts on **M5** and set Service `InpAdverseTimeframe = PERIOD_M5` (the EUR100 RawSpread preset already does). For the chart EA, leave `PERIOD_CURRENT` and host it on an **M5** chart. That pairing keeps bus direction and adverse-bar cuts on the same clock — best performance for entry + harvest. Do not mix M15 signal charts with M5 adverse (or the reverse) unless you intentionally accept mismatched exit speed.
 
-Cycle: adverse Auto may cut same-symbol reds when signal vs bars conflict; ticket or pair hits **5** → bank from winners (≥5 each); account net hits **5** → bank **5** from winners (biggest first, minimal set); remaining / new opens continue the cycle.
+Cycle: adverse Auto may cut same-symbol reds when signal vs bars conflict; optional Loss CASH may cut losers at −N; ticket or pair hits Profit CASH → bank from winners; account net hits floor → bank from winners (biggest first, minimal set); remaining / new opens continue the cycle.
 
 ### Layered harvest (optional)
 
-Turn `InpScalpAsapAccountOnly = false` and enable the classic pos / pair / account trail stack:
+Turn CASH mode **OFF** (chart **LAYER**, or `InpScalpAsapAccountOnly = false` before first GV) and enable the classic pos / pair / account trail stack:
 
 ```
 InpScope                = All symbols
@@ -213,7 +202,7 @@ Rule of thumb for layered mode: the arm level should be ~2–3× the give-back, 
 - **Market closed / trade disabled**: closes are retried `InpMaxRetries` times per cycle, then retried again on the next cycle. Retcodes `MARKET_CLOSED`, `TRADE_DISABLED` and `NO_MONEY` break the inner retry loop instead of hammering the server.
 - **Partial closes** are skipped when the requested slice or the remainder would fall below the symbol's minimum volume; the EA then closes in full at target.
 - The account-level peak resets to zero whenever the monitored set becomes empty (flat), so each new trading run starts clean.
-- Scalp ASAP **profit** closes only tickets with floating P/L > 0 (biggest first) and takes the **minimal set** that covers the threshold. Red tickets are never closed on a profit target. Default `CloseTicket` refuses negatives; **v1.16 adverse-bar Auto** is the only path that may close same-symbol losers (`allowLoss` + `ADVERSE-BAR`).
+- Profit CASH closes only tickets with floating P/L > 0 (biggest first) and takes the **minimal set** that covers the threshold. Red tickets are never closed on a profit target. Default `CloseTicket` refuses negatives; **adverse-bar Auto**, opt-in **Loss CASH**, and manual **CUT/FLAT** may close losers (`allowLoss`).
 - Millisecond intervals: default **100 ms** for scalpers; below ~50 ms adds CPU with little extra fill quality.
 
 ---

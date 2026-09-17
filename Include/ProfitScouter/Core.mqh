@@ -112,12 +112,15 @@ int            g_closedSession  = 0;   // positions closed since the host starte
 double         g_realizedSession = 0.0; // profit banked at those closes
 bool           gScoutEnabled = true;   // START/STOP scout arm (chart UI + GV)
 bool           gAdverseEnabled = true; // AUTO adverse-bar loss exit arm (chart UI + GV)
+bool           gCashMode = true;       // CASH single-floor vs LAYER trail/window (chart UI + GV)
+bool           gCashLossArmed = false; // LOSS CASH arm: cut losers at -InpAccCashLossMoney
 string         g_btnPfx      = "PSBTN_";
 string         g_pnlPfx      = "PSPNL_";
 //--- adverse-bar Auto visibility (real-time bus / panel)
 string         g_adverseLastSym    = "";
 int            g_adverseLastStreak = 0;
 int            g_adverseClosedCycle = 0;
+int            g_cashLossClosedCycle = 0;
 #ifdef PS_HOST_EA
 int            g_panelX = 10;
 int            g_panelY = 18;
@@ -179,11 +182,18 @@ void Monitor()
   {
    RefreshCurrencyFactor(false);
 #ifdef PS_HOST_EA
-   // Live desk sync: Trade Center HALT/PLAY writes PS{id}_RUN / ADVEN
+   // Live desk sync: Trade Center HALT/PLAY writes PS{id}_RUN / ADVEN;
+   // chart CASH / LOSS buttons share PS{id}_CASH / PS{id}_LOSS with Service.
    gScoutEnabled = GsxScoutRunGet(InpInstanceID, gScoutEnabled);
    string advN = StringFormat("PS%d_ADVEN", InpInstanceID);
    if(GlobalVariableCheck(advN))
       gAdverseEnabled = (GlobalVariableGet(advN) > 0.5);
+   string cashN = StringFormat("PS%d_CASH", InpInstanceID);
+   if(GlobalVariableCheck(cashN))
+      gCashMode = (GlobalVariableGet(cashN) > 0.5);
+   string lossN = StringFormat("PS%d_LOSS", InpInstanceID);
+   if(GlobalVariableCheck(lossN))
+      gCashLossArmed = (GlobalVariableGet(lossN) > 0.5);
 #endif
 
    //--- 1. collect eligible positions -------------------------------
@@ -284,13 +294,23 @@ void Monitor()
       return;
      }
 
-   //--- 1b. adverse-bar Auto loss exit (per symbol), then profit targeting
+   //--- 1b. adverse-bar Auto loss exit (per symbol), then cash loss, then profit
    if(HandleAdverseBarLossCut())
      {
       accProfit = 0.0;
       for(int i = 0; i < ArraySize(g_live); i++)
          accProfit += g_live[i].profit;
       g_lastAccProfit = accProfit;
+     }
+
+   //--- 1c. opt-in account Loss CASH cut (all scoped losers; allowLoss)
+   if(HandleAccountCashLoss(accProfit))
+     {
+      double remLoss = 0.0;
+      for(int i = 0; i < ArraySize(g_live); i++)
+         remLoss += g_live[i].profit;
+      PsAfterCycle(remLoss, ArraySize(g_live));
+      return;
      }
 
    //--- 2. account level ---------------------------------------------
@@ -304,7 +324,7 @@ void Monitor()
       return;
      }
 
-   //--- 3. per-pair level (ASAP: hard floor only; layered: full rules)
+   //--- 3. per-pair level (CASH: hard floor only; layered: full rules)
    bool basketClosed = false;
    for(int s = 0; s < ArraySize(g_agg); s++)
      {
@@ -336,11 +356,11 @@ bool HandleAccount(double profit, datetime oldest)
    bool   inWindow = InWindow(age);
    bool   trailOk  = TrailAllowed(age);
 
-   //--- hard target (ASAP when window gate off) — bank the threshold:
+   //--- hard target (CASH when window gate off) — bank the threshold:
    //    close the MINIMAL winner set that covers the target, biggest
    //    winners first. Every other ticket (dust winners and ALL
    //    losers) stays open.
-   double target = AsapFloorMoney();
+   double target = ProfitCashFloor();
    if(InpAccTargetPctBal > 0.0)
      {
       double byPct = AccountInfoDouble(ACCOUNT_BALANCE) * InpAccTargetPctBal / 100.0;
@@ -367,8 +387,8 @@ bool HandleAccount(double profit, datetime oldest)
         }
      }
 
-   //--- scalp ASAP: no trail / window force-close at account layer
-   if(InpScalpAsapAccountOnly)
+   //--- CASH mode: no trail / window force-close at account layer
+   if(EffectiveCashMode())
       return false;
 
    //--- trailing
@@ -443,8 +463,8 @@ bool HandleSymbol(int aggIdx)
         }
      }
 
-   //--- scalp ASAP: hard targets only — skip trail / window
-   if(InpScalpAsapAccountOnly)
+   //--- CASH mode: hard targets only — skip trail / window
+   if(EffectiveCashMode())
       return false;
 
    //--- trailing
@@ -528,7 +548,7 @@ void HandlePosition(int liveIdx)
      {
       if(!InpTargetsWindowOnly || inWin)
         {
-         if(!InpScalpAsapAccountOnly && InpPosPartialPct > 0.0 && InpPosPartialPct < 100.0)
+         if(!EffectiveCashMode() && InpPosPartialPct > 0.0 && InpPosPartialPct < 100.0)
            {
             double vol = PartialVolume(g_live[liveIdx].sym, g_live[liveIdx].volume, InpPosPartialPct);
             if(vol > 0.0)
@@ -555,8 +575,8 @@ void HandlePosition(int liveIdx)
         }
      }
 
-   //--- scalp ASAP: hard targets only — skip trail / window
-   if(InpScalpAsapAccountOnly)
+   //--- CASH mode: hard targets only — skip trail / window
+   if(EffectiveCashMode())
       return;
 
    //--- trailing
@@ -724,33 +744,49 @@ double Money(double amountInTargetCcy)
    return amountInTargetCcy * g_ccyFactor;
   }
 
-// Scalp ASAP single floor (InpAccTargetMoney) drives account + pair + position hard closes.
-double AsapFloorMoney()
+// Profit CASH single floor (InpAccTargetMoney) drives account + pair + position hard closes.
+double ProfitCashFloor()
   {
    return Money(InpAccTargetMoney);
   }
 
+// Legacy alias — same cash floor.
+double AsapFloorMoney()
+  {
+   return ProfitCashFloor();
+  }
+
+double LossCashFloor()
+  {
+   return Money(InpAccCashLossMoney);
+  }
+
+bool EffectiveCashMode()
+  {
+   return gCashMode;
+  }
+
 bool SymHardEnabled()
   {
-   return (InpScalpAsapAccountOnly || InpSymTargetEnable);
+   return (EffectiveCashMode() || InpSymTargetEnable);
   }
 
 double SymHardTarget()
   {
-   if(InpScalpAsapAccountOnly)
-      return AsapFloorMoney();
+   if(EffectiveCashMode())
+      return ProfitCashFloor();
    return Money(InpSymTargetMoney);
   }
 
 bool PosHardEnabled()
   {
-   return (InpScalpAsapAccountOnly || InpPosTargetEnable);
+   return (EffectiveCashMode() || InpPosTargetEnable);
   }
 
 double PosHardTarget()
   {
-   if(InpScalpAsapAccountOnly)
-      return AsapFloorMoney();
+   if(EffectiveCashMode())
+      return ProfitCashFloor();
    return Money(InpPosTargetMoney);
   }
 
@@ -940,7 +976,7 @@ bool CloseTicket(ulong ticket, string tag, const bool allowLoss = false)
      }
 
    //--- HARD GUARD: by default Profit Scouter never closes a losing trade.
-   //    The only intentional exception is adverse-bar Auto (allowLoss=true).
+   //    Intentional exceptions (allowLoss=true): adverse-bar Auto, ACC-CASH-LOSS, manual CUT/FLAT.
    double liveProfit = LiveProfitOfSelected();
    if(liveProfit < 0.0 && !allowLoss)
      {
@@ -1313,8 +1349,8 @@ bool HandleAdverseBarLossCut()
 //| (see Monitor). All profit closes go through HarvestWinners:     |
 //| it banks exactly the threshold amount using the smallest set    |
 //| of green tickets (biggest first) and never touches losers or    |
-//| other pairs. Adverse-bar Auto (HandleAdverseBarLossCut) is the  |
-//| sole path that may close same-symbol losers.                     |
+//| other pairs. Intentional loss closes: adverse-bar Auto,         |
+//| opt-in ACC-CASH-LOSS, and manual CUT/FLAT.                      |
 //+------------------------------------------------------------------+
 // Sort live indices by cached profit (desc = biggest winner first,
 // asc = deepest loser first).
@@ -1385,6 +1421,69 @@ double HarvestWinners(const double need, const string sym, const string tag)
    if(closed > 0)
       CompactLiveKeepOpen();
    return(banked);
+  }
+
+// Cut all scoped losers (deepest first). Matches manual CUT semantics
+// when account floating P/L hits the Loss CASH floor. allowLoss=true.
+int CutLosersCash(const string tag)
+  {
+   int idxs[];
+   int n = ArraySize(g_live);
+   ArrayResize(idxs, n);
+   int m = 0;
+   for(int i = 0; i < n; i++)
+     {
+      if(g_live[i].profit >= 0.0)
+         continue;
+      idxs[m++] = i;
+     }
+   ArrayResize(idxs, m);
+   if(m <= 0)
+      return(0);
+
+   SortIdxsByProfit(idxs, m, false);   // deepest losers first
+
+   int closed = 0;
+   for(int k = 0; k < m; k++)
+     {
+      int i = idxs[k];
+      if(CloseTicket(g_live[i].ticket, tag, true))
+        {
+         DropPosRec(g_live[i].ticket);
+         closed++;
+        }
+     }
+   if(closed > 0)
+      CompactLiveKeepOpen();
+   return(closed);
+  }
+
+// Opt-in account Loss CASH: when float <= -LossCashFloor, cut all losers.
+bool HandleAccountCashLoss(const double profit)
+  {
+   g_cashLossClosedCycle = 0;
+   if(!gCashLossArmed)
+      return(false);
+   double floor = LossCashFloor();
+   if(floor <= 0.0)
+      return(false);
+   if(profit > -floor)
+      return(false);
+   if(g_lossCount <= 0)
+      return(false);
+
+   Notify(StringFormat("ACCOUNT Loss CASH hit: %.2f <= -%.2f %s - cutting losers",
+                       profit, floor, g_accCcy));
+   int before = g_closedCycle;
+   int closed = CutLosersCash("ACC-CASH-LOSS");
+   g_cashLossClosedCycle = g_closedCycle - before;
+   if(closed > 0)
+     {
+      g_lastAction = StringFormat("ACC-CASH-LOSS closed %d (float was %.2f)", closed, profit);
+      return(true);
+     }
+   g_lastAction = StringFormat("ACC-CASH-LOSS armed, 0 closed (float %.2f)", profit);
+   return(false);
   }
 
 // Winner-harvest floor: a green ticket qualifies for a profit close only
@@ -1722,12 +1821,13 @@ void LogStatus(double accProfit, int count)
                                (InpTrailAfterWindow ? "yes" : "no"),
                                (gScoutEnabled ? "START" : "STOP"),
                                (TradingReady() ? "enabled" : "BLOCKED"));
-   string head3 = StringFormat("positions=%d  floating=%.2f %s  accPeak=%.2f %s  accTarget=%.2f  last=%s",
+   string head3 = StringFormat("positions=%d  floating=%.2f %s  accPeak=%.2f %s  profitCash=%.2f  last=%s",
                                count, accProfit, g_accCcy, g_accPeak,
-                               (g_accArmed ? "[ARMED]" : ""), Money(InpAccTargetMoney), g_lastAction);
-   string head4 = StringFormat("lock=%s arm>=%.2f keep=%.0f%% locked=%d | win floor=%.2f %s",
+                               (g_accArmed ? "[ARMED]" : ""), ProfitCashFloor(), g_lastAction);
+   string head4 = StringFormat("lock=%s arm>=%.2f keep=%.0f%% locked=%d | win floor=%.2f %s | mode=%s",
                                (InpProfitLockEnable ? "ON" : "OFF"), Money(InpProfitLockArm),
-                               InpProfitLockKeepPct, LockedPosCount(), Money(InpMinWinProfit), g_accCcy);
+                               InpProfitLockKeepPct, LockedPosCount(), Money(InpMinWinProfit), g_accCcy,
+                               (EffectiveCashMode() ? "CASH" : "LAYER"));
    string head5 = StringFormat("winners=%d (+%.2f)  losers=%d (%.2f)  |  closed=%d realized=%.2f",
                                g_winCount, g_winSum, g_lossCount, g_lossSum,
                                g_closedSession, g_realizedSession);
@@ -1736,6 +1836,9 @@ void LogStatus(double accProfit, int count)
                                (InpAdverseProtectOnceGreen ? "protect" : "cut"),
                                (g_adverseLastSym == "" ? "-" : g_adverseLastSym),
                                g_adverseLastStreak, g_adverseClosedCycle);
+   string head7 = StringFormat("lossCash=%s floor=-%.2f %s closed=%d",
+                               (gCashLossArmed ? "ON" : "OFF"), LossCashFloor(), g_accCcy,
+                               g_cashLossClosedCycle);
 
    if(InpLogStatus)
      {
@@ -1745,9 +1848,10 @@ void LogStatus(double accProfit, int count)
       Print(head4);
       Print(head5);
       Print(head6);
+      Print(head7);
      }
 
-   string body = head1 + "\n" + head2 + "\n" + head3 + "\n" + head4 + "\n" + head5 + "\n" + head6 + "\n";
+   string body = head1 + "\n" + head2 + "\n" + head3 + "\n" + head4 + "\n" + head5 + "\n" + head6 + "\n" + head7 + "\n";
 
    for(int i = 0; i < ArraySize(g_agg); i++)
      {
@@ -1895,8 +1999,8 @@ void PsApplyUiChrome()
    g_psLineH = (int)MathRound((double)g_psLineH * 1.20);
    g_psInset = GsxSx(vision == GSX_VISION_FAR && !g_psDense ? 10 : 8);
    g_psBtnH = GsxSx(g_psDense ? 22 : 26);
-   // Two button rows (arm + manual exits) when buttons shown
-   g_psBtnBand = 2 * g_psBtnH + GsxSp(g_psDense ? 10 : 14);
+   // Three button rows (arm + manual exits + cash modes) when buttons shown
+   g_psBtnBand = 3 * g_psBtnH + GsxSp(g_psDense ? 14 : 20);
    g_psClipLine = GsxPanelCharsFit(MathMax(4, g_psW - 2 * g_psPad), g_psFont);
 
    if(vision == GSX_VISION_NEAR || g_psDense)
@@ -2016,8 +2120,10 @@ color PsPanelLineColor(const string text)
    // Live P/L detail center — accent for float/floor/peak focus lines
    if(StringFind(text, "Floating") >= 0 || StringFind(text, "Float ") >= 0 ||
       StringFind(text, "ASAP floor") >= 0 || StringFind(text, "Floor ") >= 0 ||
-      StringFind(text, "Peak ") >= 0)
+      StringFind(text, "Profit CASH") >= 0 || StringFind(text, "Peak ") >= 0)
       return(g_psColAccent);
+   if(StringFind(text, "Loss CASH") >= 0)
+      return(g_psColBear);
    if(StringFind(text, "P/L -") >= 0 || StringFind(text, "P/L −") >= 0)
       return(g_psColBear);
    if(StringFind(text, "P/L +") >= 0)
@@ -2127,9 +2233,10 @@ void DrawPanel(double accProfit, int count)
    double symPl = 0.0;
    for(int si = 0; si < ArraySize(g_agg); si++)
       symPl += g_agg[si].profit;
-   string fp = StringFormat("%d|%d|%d|%.4f|%.4f|%.4f|%.4f|%.4f|%d|%d|%.4f|%s|%d|%d|%d|%d",
+   string fp = StringFormat("%d|%d|%d|%d|%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%d|%d|%.4f|%s|%d|%d|%d|%d",
                             gScoutEnabled ? 1 : 0, gAdverseEnabled ? 1 : 0,
-                            count, accProfit, g_winSum, g_lossSum, symPl, AsapFloorMoney(),
+                            gCashMode ? 1 : 0, gCashLossArmed ? 1 : 0,
+                            count, accProfit, g_winSum, g_lossSum, symPl, ProfitCashFloor(),
                             g_winCount, g_lossCount, g_accPeak,
                             g_lastAction, g_closedSession,
                             ArraySize(g_agg), g_psDense ? 1 : 0, g_psW);
@@ -2151,43 +2258,52 @@ void DrawPanel(double accProfit, int count)
    ArrayResize(syms, 0);
    ArrayResize(foot, 0);
 
-   // --- clean detail center: status → LIVE P/L → compact risk ---
+   // --- clean detail center: status → LIVE P/L → cash floors ---
    if(g_psDense)
      {
       PsPanelPushLine(head, StringFormat("ID %d · %s · %s",
                                          InpInstanceID, g_accCcy,
-                                         (InpScalpAsapAccountOnly ? "ASAP" : "Layer")));
-      PsPanelPushLine(head, StringFormat("Scout %s · AUTO %s · %s",
+                                         (EffectiveCashMode() ? "CASH" : "LAYER")));
+      PsPanelPushLine(head, StringFormat("Scout %s · AUTO %s · LOSS %s · %s",
                                          (gScoutEnabled ? "ON" : "OFF"),
                                          (gAdverseEnabled ? "ON" : "OFF"),
+                                         (gCashLossArmed ? "ON" : "OFF"),
                                          ScopeText()));
       PsPanelPushLine(head, "—— LIVE ——");
       PsPanelPushLine(head, StringFormat("Float %+.2f %s", accProfit, g_accCcy));
       PsPanelPushLine(head, StringFormat("W %d (%+.2f) · L %d (%.2f)",
                                          g_winCount, g_winSum, g_lossCount, g_lossSum));
-      PsPanelPushLine(head, StringFormat("Peak %.2f · Floor %.2f%s",
-                                         g_accPeak, AsapFloorMoney(),
+      PsPanelPushLine(head, StringFormat("Profit CASH +%.2f · Peak %.2f%s",
+                                         ProfitCashFloor(), g_accPeak,
                                          (g_accArmed ? " [ARM]" : "")));
+      PsPanelPushLine(head, StringFormat("Loss CASH −%.2f %s",
+                                         LossCashFloor(),
+                                         (gCashLossArmed ? "ON" : "OFF")));
      }
    else
      {
       PsPanelPushLine(head, StringFormat("ID %d · %s → tgt %s · %s · %dms",
                                          InpInstanceID, g_accCcy, ccy,
                                          ScopeText(), (int)MathMax(100, InpCheckIntervalMs)));
-      PsPanelPushLine(head, StringFormat("Scout %s · %s · Magic %s · AUTO %s",
+      PsPanelPushLine(head, StringFormat("Scout %s · %s · Magic %s · AUTO %s · LOSS %s",
                                          (gScoutEnabled ? "RUNNING" : "paused"),
-                                         (InpScalpAsapAccountOnly ? "Scalp ASAP" : "Layered"),
+                                         (EffectiveCashMode() ? "CASH mode" : "Layered"),
                                          (InpUseMagicFilter ? (string)InpMagicNumber : "any"),
-                                         (gAdverseEnabled ? "ON" : "OFF")));
+                                         (gAdverseEnabled ? "ON" : "OFF"),
+                                         (gCashLossArmed ? "ON" : "OFF")));
       PsPanelPushLine(head, "———————— LIVE P/L ————————");
       PsPanelPushLine(head, StringFormat("Floating  %+.2f %s   ·  positions %d",
                                          accProfit, g_accCcy, count));
       PsPanelPushLine(head, StringFormat("Winners %d (%+.2f)   ·   Losers %d (%.2f)",
                                          g_winCount, g_winSum, g_lossCount, g_lossSum));
-      PsPanelPushLine(head, StringFormat("Peak %.2f %s%s   ·   Floor %.2f%s",
-                                         g_accPeak, g_accCcy, (g_accArmed ? " [ARMED]" : ""),
-                                         AsapFloorMoney(),
-                                         (InpScalpAsapAccountOnly ? " [ASAP]" : "")));
+      PsPanelPushLine(head, StringFormat("Peak %.2f %s%s",
+                                         g_accPeak, g_accCcy, (g_accArmed ? " [ARMED]" : "")));
+      PsPanelPushLine(head, StringFormat("Profit CASH +%.2f %s%s",
+                                         ProfitCashFloor(), g_accCcy,
+                                         (EffectiveCashMode() ? " [CASH]" : " [LAYER]")));
+      PsPanelPushLine(head, StringFormat("Loss CASH −%.2f %s · %s",
+                                         LossCashFloor(), g_accCcy,
+                                         (gCashLossArmed ? "ARMED" : "OFF")));
       PsPanelPushLine(head, StringFormat("Lock %s · Adv bars>%d age>%dm · win floor %.2f",
                                          (InpProfitLockEnable ? "ON" : "OFF"),
                                          InpAdverseMinBars, InpAdverseMinAgeMin,
@@ -2385,7 +2501,7 @@ void PsPublishBusSnapshot(double accProfit, int count)
    j += GsxJsonKV_D("floating", accProfit);
    j += GsxJsonKV_D("acc_peak", g_accPeak);
    j += GsxJsonKV_B("acc_armed", g_accArmed);
-   j += GsxJsonKV_D("acc_target", Money(InpAccTargetMoney));
+   j += GsxJsonKV_D("acc_target", ProfitCashFloor());
    j += GsxJsonKV_D("pos_target", PosHardTarget());
    j += GsxJsonKV_D("sym_target", SymHardTarget());
    j += GsxJsonKV_B("lock_enable", InpProfitLockEnable);
@@ -2393,7 +2509,11 @@ void PsPublishBusSnapshot(double accProfit, int count)
    j += GsxJsonKV_D("lock_keep_pct", InpProfitLockKeepPct);
    j += GsxJsonKV_D("win_floor", Money(InpMinWinProfit));
    j += GsxJsonKV_I("locked_count", LockedPosCount());
-   j += GsxJsonKV_B("scalp_asap", InpScalpAsapAccountOnly);
+   j += GsxJsonKV_B("scalp_asap", EffectiveCashMode()); // legacy alias of cash_mode
+   j += GsxJsonKV_B("cash_mode", EffectiveCashMode());
+   j += GsxJsonKV_D("profit_cash", ProfitCashFloor());
+   j += GsxJsonKV_D("loss_cash", LossCashFloor());
+   j += GsxJsonKV_B("loss_cash_armed", gCashLossArmed);
    j += GsxJsonKV_I("window_start", InpWindowStartMin);
    j += GsxJsonKV_I("window_end", InpWindowEndMin);
    j += GsxJsonKV_I("positions", count);
@@ -2401,7 +2521,8 @@ void PsPublishBusSnapshot(double accProfit, int count)
    j += GsxJsonKV_D("win_profit", g_winSum);
    j += GsxJsonKV_I("loss_count", g_lossCount);
    j += GsxJsonKV_D("loss_profit", g_lossSum);
-   j += GsxJsonKV_B("loss_guard", false);      // legacy field; account loss-guard removed
+   j += GsxJsonKV_B("loss_guard", false);      // legacy field; old loss-guard API not restored
+   j += GsxJsonKV_I("cash_loss_closed_cycle", g_cashLossClosedCycle);
    j += GsxJsonKV_B("adverse_enable", gAdverseEnabled);
    j += GsxJsonKV_I("adverse_min_bars", InpAdverseMinBars);
    j += GsxJsonKV_I("adverse_min_age", InpAdverseMinAgeMin);
@@ -2467,6 +2588,8 @@ bool PsInitEngine()
    CleanupStaleGlobals();
    PsLoadScoutEnabled();
    PsLoadAdverseEnabled();
+   PsLoadCashMode();
+   PsLoadCashLossArmed();
 #ifdef PS_HOST_EA
    PsLoadPanelPos();
 #endif
@@ -2555,6 +2678,86 @@ void PsSetAdverseEnabled(const bool on, const bool announce)
 #endif
   }
 
+//+------------------------------------------------------------------+
+//| CASH mode (single profit floor) vs LAYER (trail/window stack)    |
+//+------------------------------------------------------------------+
+string PsCashModeVarName()
+  {
+   return(StringFormat("PS%d_CASH", InpInstanceID));
+  }
+
+void PsLoadCashMode()
+  {
+   string n = PsCashModeVarName();
+   if(GlobalVariableCheck(n))
+     {
+      gCashMode = (GlobalVariableGet(n) > 0.5);
+      return;
+     }
+   gCashMode = InpScalpAsapAccountOnly;
+   GlobalVariableSet(n, gCashMode ? 1.0 : 0.0);
+  }
+
+void PsSetCashMode(const bool on, const bool announce)
+  {
+   gCashMode = on;
+   GlobalVariableSet(PsCashModeVarName(), on ? 1.0 : 0.0);
+   g_lastAction = on ? "CASH mode ON" : "LAYER mode ON";
+#ifdef PS_HOST_EA
+   g_psLastFp = "";
+#endif
+   if(announce)
+     {
+      Notify(on ? "CASH: single profit floor at account+pair+pos (trail/window off)"
+                : "LAYER: per-layer targets, trail, and window rules armed");
+     }
+#ifdef PS_HOST_EA
+   PsUpdateButtons();
+   ChartRedraw();
+#endif
+  }
+
+//+------------------------------------------------------------------+
+//| Loss CASH arm (opt-in account cash loss cut)                     |
+//+------------------------------------------------------------------+
+string PsLossArmVarName()
+  {
+   return(StringFormat("PS%d_LOSS", InpInstanceID));
+  }
+
+void PsLoadCashLossArmed()
+  {
+   string n = PsLossArmVarName();
+   if(GlobalVariableCheck(n))
+     {
+      gCashLossArmed = (GlobalVariableGet(n) > 0.5);
+      return;
+     }
+   gCashLossArmed = InpAccCashLossEnable;
+   GlobalVariableSet(n, gCashLossArmed ? 1.0 : 0.0);
+  }
+
+void PsSetCashLossArmed(const bool on, const bool announce)
+  {
+   gCashLossArmed = on;
+   GlobalVariableSet(PsLossArmVarName(), on ? 1.0 : 0.0);
+   g_lastAction = on ? "Loss CASH ON" : "Loss CASH OFF";
+#ifdef PS_HOST_EA
+   g_psLastFp = "";
+#endif
+   if(announce)
+     {
+      Notify(on
+             ? StringFormat("LOSS ON: cut losers when floating <= -%.2f %s",
+                            LossCashFloor(), g_accCcy)
+             : "LOSS OFF: cash loss cut paused (adverse AUTO / manual CUT still apply)");
+     }
+#ifdef PS_HOST_EA
+   PsUpdateButtons();
+   ChartRedraw();
+#endif
+  }
+
 #ifdef PS_HOST_EA
 void PsSetButton(const string tag, const int x, const int y, const int w, const int h,
                  const string text, const color bg, const color fg)
@@ -2589,6 +2792,8 @@ void PsDeleteButtons()
    ObjectDelete(0, g_btnPfx + "BANK");
    ObjectDelete(0, g_btnPfx + "CUT");
    ObjectDelete(0, g_btnPfx + "FLAT");
+   ObjectDelete(0, g_btnPfx + "CASH");
+   ObjectDelete(0, g_btnPfx + "LOSS");
   }
 
 void PsUpdateButtons()
@@ -2645,6 +2850,26 @@ void PsUpdateButtons()
                   "FLAT",
                   C'56,40,18', g_psColAccent);
      }
+   GsxLayAdvance(blay, bh + gap);
+
+   // Row 3: Profit CASH mode + Loss CASH arm
+   GsxLayRowStart(blay, bh);
+   GsxLayEqual(blay, 2, bslots);
+   if(ArraySize(bslots) >= 2)
+     {
+      string cashCap = EffectiveCashMode()
+                       ? (g_psDense ? "CASH" : "CASH ON")
+                       : (g_psDense ? "LAYER" : "LAYER");
+      string lossCap = gCashLossArmed
+                       ? (g_psDense ? "LOSS" : "LOSS ON")
+                       : (g_psDense ? "LOFF" : "LOSS OFF");
+      PsSetButton("CASH", bslots[0].x, bslots[0].y, bslots[0].w, bslots[0].h, cashCap,
+                  EffectiveCashMode() ? C'18,72,48' : chipIdle,
+                  EffectiveCashMode() ? g_psColBull : g_psColText);
+      PsSetButton("LOSS", bslots[1].x, bslots[1].y, bslots[1].w, bslots[1].h, lossCap,
+                  gCashLossArmed ? C'96,28,32' : chipIdle,
+                  gCashLossArmed ? g_psColBear : g_psColText);
+     }
   }
 
 bool PsHandleChartClick(const string sparam)
@@ -2664,6 +2889,18 @@ bool PsHandleChartClick(const string sparam)
    if(sparam == g_btnPfx + "AUTO")
      {
       PsSetAdverseEnabled(!gAdverseEnabled, true);
+      ObjectSetInteger(0, sparam, OBJPROP_STATE, false);
+      return true;
+     }
+   if(sparam == g_btnPfx + "CASH")
+     {
+      PsSetCashMode(!EffectiveCashMode(), true);
+      ObjectSetInteger(0, sparam, OBJPROP_STATE, false);
+      return true;
+     }
+   if(sparam == g_btnPfx + "LOSS")
+     {
+      PsSetCashLossArmed(!gCashLossArmed, true);
       ObjectSetInteger(0, sparam, OBJPROP_STATE, false);
       return true;
      }

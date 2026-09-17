@@ -117,6 +117,72 @@ function Confirm-LoserSafety {
     Add-Line "PASS  CloseTicket loser hard-guard present"
   }
 
+  #--- Cash-amount profit / loss floors (Velocity desk) ---
+  if ($coreText -match 'ACC-CASH-LOSS' -and $coreText -match 'CutLosersCash' -and $coreText -match 'HandleAccountCashLoss') {
+    Add-Line "PASS  ACC-CASH-LOSS cut path present"
+  }
+  else {
+    Add-Line "FAIL  ACC-CASH-LOSS cut path missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'EffectiveCashMode' -and $coreText -match 'ProfitCashFloor' -and $coreText -match 'LossCashFloor') {
+    Add-Line "PASS  cash-mode helpers present"
+  }
+  else {
+    Add-Line "FAIL  cash-mode helpers missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'PS%d_CASH' -and $coreText -match 'PS%d_LOSS') {
+    Add-Line "PASS  PS{id}_CASH / PS{id}_LOSS GV names present"
+  }
+  else {
+    Add-Line "FAIL  CASH/LOSS GV persistence missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'cash_mode' -and $coreText -match 'loss_cash_armed' -and $coreText -match 'profit_cash') {
+    Add-Line "PASS  bus cash fields present"
+  }
+  else {
+    Add-Line "FAIL  bus cash fields missing"
+    $script:fail++
+  }
+
+  if ($eaText -match 'InpAccCashLossMoney' -and $svcText -match 'InpAccCashLossMoney' -and
+      $eaText -match 'InpAccCashLossEnable' -and $svcText -match 'InpAccCashLossEnable') {
+    Add-Line "PASS  host shells expose Loss CASH inputs"
+  }
+  else {
+    Add-Line "FAIL  host shells missing Loss CASH inputs"
+    $script:fail++
+  }
+
+  if ($eaText -match 'InpAccTargetMoney\s*=\s*100\.0' -and $svcText -match 'InpAccTargetMoney\s*=\s*100\.0') {
+    Add-Line "PASS  Profit CASH default is 100 on both hosts"
+  }
+  else {
+    Add-Line "FAIL  Profit CASH default is not 100 on both hosts"
+    $script:fail++
+  }
+
+  if ($eaText -match 'InpAccCashLossMoney\s*=\s*100\.0' -and $svcText -match 'InpAccCashLossMoney\s*=\s*100\.0') {
+    Add-Line "PASS  Loss CASH amount default is 100 on both hosts"
+  }
+  else {
+    Add-Line "FAIL  Loss CASH amount default is not 100 on both hosts"
+    $script:fail++
+  }
+
+  if ($coreText -match 'PSBTN_.*"CASH"' -or ($coreText -match 'PsSetButton\("CASH"' -and $coreText -match 'PsSetButton\("LOSS"')) {
+    Add-Line "PASS  chart CASH/LOSS buttons present"
+  }
+  else {
+    Add-Line "FAIL  chart CASH/LOSS buttons missing"
+    $script:fail++
+  }
+
   if ($coreText -notmatch 'InpAdverseMinAgeMin' -or $coreText -notmatch 'InpAdverseProtectOnceGreen') {
     Add-Line "FAIL  adverse min-age / once-green gates missing in Core"
     $script:fail++
@@ -254,11 +320,37 @@ function Confirm-LoserSafety {
   $tgText = if (Test-Path $tg) { Get-Content $tg -Raw } else { "" }
   $propText = if (Test-Path $prop) { Get-Content $prop -Raw } else { "" }
 
-  if ($tgText -match 'WebRequest' -and $tgText -match 'GsxTgVerifyConnection' -and $tgText -match 'GSX_TG_QUEUE_CAP') {
+  if ($tgText -match 'WebRequest' -and $tgText -match 'GsxTgVerifyConnection' -and $tgText -match 'GSX_TG_QUEUE_CAP' -and $tgText -match 'GsxTgHttpPostEx' -and $tgText -match '\[TG\] verify') {
     Add-Line "PASS  TelegramNotifier WebRequest + verify + queue"
   }
   else {
     Add-Line "FAIL  TelegramNotifier incomplete"
+    $script:fail++
+  }
+
+  if ($tgText -match 'GsxTgChatIdOk' -and $tgText -match 'chatId must be numeric' -and
+      $tgText -match 'GsxTgHttpPostEx\(token,\s*chatId,\s*text,\s*false' -and
+      $tgText -match 'GSX_TG_REVERIFY_COOLDOWN_S') {
+    Add-Line "PASS  Telegram v1.29 plain post + chatId reject + reverify cooldown"
+  }
+  else {
+    Add-Line "FAIL  Telegram v1.29 plain/chatId/reverify contract missing"
+    $script:fail++
+  }
+
+  if ($tgText -match 'GsxTgHealthyAdd' -and $tgText -match 'skip ' -and $tgText -match 'g_tgHealthyN') {
+    Add-Line "PASS  Telegram v1.30 soft VERIFY healthy-chat list"
+  }
+  else {
+    Add-Line "FAIL  Telegram v1.30 soft VERIFY / healthy chats missing"
+    $script:fail++
+  }
+
+  if ($tgText -match 'a == b' -and $tgText -match 'silent window disabled') {
+    Add-Line "PASS  Telegram silent hours a==b means off"
+  }
+  else {
+    Add-Line "FAIL  Telegram silent hours a==b fix missing"
     $script:fail++
   }
 
