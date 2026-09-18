@@ -811,6 +811,43 @@ void GsxTgSendNow(const GsxTgConfig &cfg, const string tag, const string body)
    GsxTgProcessQueue(cfg);
   }
 
+// Enqueue tagged message without draining the queue (Settings / non-urgent).
+// Host timer drains via ProcessQueueEx(cfg, 1).
+void GsxTgEnqueueTagged(const GsxTgConfig &cfg, const string tag, const string body)
+  {
+   if(!cfg.enable)
+      return;
+
+   GsxTgResetDailyStatsIfNeeded();
+   string host = (g_tgHostTag == "" ? "" : (" " + g_tgHostTag));
+   string msg = "[" + tag + "]" + host + " " + body;
+
+   if(g_tgVerified && g_tgHealthyN > 0)
+     {
+      for(int h = 0; h < g_tgHealthyN; h++)
+         GsxTgEnqueueChat(g_tgHealthy[h], msg);
+     }
+   else
+     {
+      if(cfg.chatId1 != "" && GsxTgChatIsHealthy(cfg.chatId1))
+         GsxTgEnqueueChat(cfg.chatId1, msg);
+      if(cfg.chatId2 != "" && GsxTgChatIsHealthy(cfg.chatId2))
+         GsxTgEnqueueChat(cfg.chatId2, msg);
+      if(cfg.chatId3 != "" && GsxTgChatIsHealthy(cfg.chatId3))
+         GsxTgEnqueueChat(cfg.chatId3, msg);
+     }
+
+   if(g_tgOverflowWarnAt != 0 && (TimeCurrent() - g_tgOverflowWarnAt) <= 1)
+     {
+      string w = "[WARN]" + host + " queue overflow — oldest dropped (cap " +
+                 IntegerToString(GSX_TG_QUEUE_CAP) + ")";
+      string warnChat = (g_tgHealthyN > 0 ? g_tgHealthy[0] : cfg.chatId1);
+      if(warnChat != "")
+         GsxTgEnqueueChat(warnChat, w);
+      g_tgOverflowWarnAt = TimeCurrent() - 120;
+     }
+  }
+
 void GsxTgNotifyOpen(const GsxTgConfig &cfg, const string body)
   { GsxTgSendNow(cfg, "OPEN", body); }
 
@@ -854,8 +891,17 @@ string GsxTgFormatModify(const string sym, const double sl, const double tp)
 string GsxTgFormatClose(const string sym, const string side, const double lots,
                         const double entry, const double pl)
   {
-   return(StringFormat("%s %s lots=%.2f entry=%.5f P/L=%.2f",
-                       sym, side, lots, entry, pl));
+   return(GsxTgFormatCloseEx(sym, side, lots, entry, pl, ""));
+  }
+
+string GsxTgFormatCloseEx(const string sym, const string side, const double lots,
+                          const double entry, const double pl, const string reason)
+  {
+   if(reason == "")
+      return(StringFormat("%s %s lots=%.2f entry=%.5f P/L=%.2f",
+                          sym, side, lots, entry, pl));
+   return(StringFormat("%s %s lots=%.2f entry=%.5f P/L=%.2f | reason=%s",
+                       sym, side, lots, entry, pl, reason));
   }
 
 string GsxTgBuildDailyBody(const double dayPl, const int trades, const int wins,

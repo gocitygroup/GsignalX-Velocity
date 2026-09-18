@@ -9,6 +9,7 @@
 
 #include <GSignalX/CandleMetrics.mqh>
 #include <GSignalX/ScoutLink.mqh>
+#include <GSignalX/SettingsNotify.mqh>
 
 // Globals gAtrTrailEnabled / g_atrTrail* live in Core.mqh (declared before Monitor).
 
@@ -248,6 +249,8 @@ void PsSetAtrTrailEnabled(const bool on, const bool announce)
              ? StringFormat("TRAIL ON: ATR/%% auto-trail armed (mult=%.2f N=%d)",
                             InpAtrTrailMult, InpAtrTrailCandles)
              : "TRAIL OFF: ATR/%% auto-trail paused (CASH/LAYER/AUTO unchanged)");
+      long magic = (InpUseMagicFilter && InpMagicNumber > 0) ? InpMagicNumber : InpMagicNumber;
+      GsxSettingsPendingSetScout(InpInstanceID, magic, on ? "TRAIL ON" : "TRAIL OFF");
      }
 #ifdef PS_HOST_EA
    PsUpdateButtons();

@@ -465,6 +465,9 @@ bool GsxOpenMarket(CTrade &trade,
 
    action = ((dir == 1) ? "BUY " : "SELL ") + DoubleToString(lot, 2) +
             " @ " + DoubleToString(price, digits);
+   if(sl > 0.0 && stratDist > 0.0)
+      PrintFormat("GsignalX Entry: catastrophe SL attached %s %.5f (mult=%.1f dist=%.5f) — broker may close without Scouter tag",
+                  symbol, sl, p.strategicStopMult, stratDist);
    return(true);
   }
 
@@ -547,6 +550,9 @@ bool GsxPlacePending(CTrade &trade,
 
    action = ((dir == 1) ? "BUY " : "SELL ") + (isStop ? "STOP " : "LIMIT ") +
             DoubleToString(lot, 2) + " @ " + DoubleToString(price, digits);
+   if(sl > 0.0 && stratDist > 0.0)
+      PrintFormat("GsignalX Entry: catastrophe SL attached %s %.5f (mult=%.1f dist=%.5f) — broker may close without Scouter tag",
+                  symbol, sl, p.strategicStopMult, stratDist);
    return(true);
   }
 

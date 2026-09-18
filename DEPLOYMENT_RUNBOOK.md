@@ -176,11 +176,33 @@ NOTES:
 7. Optional: attach `GsignalX_GocityGroup` on M5 for UI/strip; keep `InpChartEntriesWhenService=false`.  
 8. Refresh Navigator if programs missing.
 
+**ProfitScouter production filter (Topology A)**
+
+- Set `InpUseMagicFilter=true` and `InpMagicNumber` to the shared desk magic.  
+- Default is filter OFF + `PS_SCOPE_ALL` (backward compatible) — Experts will WARN on init; foreign magics can be harvested.  
+- Closer claim freshness is 5s (`GSX_SCOUT_CLOSER_FRESH_SEC`); stale Service → chart Scouter resumes auto-harvest (avoid dual hosts thrashing).
+
+**Close-trigger Telegram (V2.15)**
+
+- Desk deal-watch CLOSE messages include `| reason=TAG` (e.g. `ACC-TARGET`, `ATR-TRAIL`, `ADVERSE-BAR`, `BROKER-SL`, `OVERFILL`, `BANK`).  
+- Scouter emits the tag; Desk/Chart consumes it (Service does **not** send OPEN/CLOSE).  
+- Audit trail: `%APPDATA%\MetaQuotes\Terminal\Common\Files\GSignalX\bus\v1\terminals\{tid}\closes\events.jsonl`
+
+**Settings Telegram (V2.16)**
+
+- On Desk load (TG enabled): `[SETTINGS] … LOAD magic=… RUN=… scout[…]` with effective input/UI state.  
+- Prop-critical clicks (PLAY/STOP/HALT/FOLLOW/AUTOLOT/EQ/PROP_CLEAR/roster ADD|REM|…) enqueue `[SETTINGS] CLICK … | impact`.  
+- Scouter START/CASH/TRAIL/… write pending; Desk drains on timer (Scouter never sends HTTP).  
+- PAGE/carousel/practice never notify. SETTINGS share the 1-msg/cycle queue with deals — no click-path WebRequest.  
+- Audit: `…\settings\events.jsonl`
+
 **Confirm (manual)**
 
 - Experts log: GSignalX Service OWN / roster; Scouter `started ... bus=ON`; Grader `started`  
 - Dashboard: PROP/TG strip visible; roster rows update  
 - Chart (if attached): GsignalX smiley + optional roster strip  
+- On close: Telegram `[CLOSE] … | reason=…` matches Experts `ProfitScouter [TAG]` (or `BROKER-SL` for catastrophe stops)  
+- On attach/click: Telegram `[SETTINGS] LOAD` / `CLICK STOP|HALT|…` with impact text 
 
 **Feedback block**
 

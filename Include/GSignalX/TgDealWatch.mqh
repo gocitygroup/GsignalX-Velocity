@@ -2,11 +2,13 @@
 //|                                              TgDealWatch.mqh      |
 //|  Magic-scoped position watch → Telegram OPEN/CLOSE/MODIFY         |
 //|  Used by Dashboard (primary) and Chart (failover).                |
+//|  CLOSE reasons: CloseTrigger consume first, else DEAL_REASON.     |
 //+------------------------------------------------------------------+
 #ifndef GSX_TG_DEAL_WATCH_MQH
 #define GSX_TG_DEAL_WATCH_MQH
 
 #include <GSignalX/TelegramNotifier.mqh>
+#include <GSignalX/CloseTrigger.mqh>
 
 ulong    g_tgwTickets[];
 string   g_tgwSym[];
@@ -178,6 +180,12 @@ void GsxTgwPoll(const long magic, const GsxTgConfig &cfg, const bool notify)
         }
      }
 
+   // Collect closed tickets first so we HistorySelect once per poll wave
+   ulong closedTickets[];
+   int   closedIdx[];
+   ArrayResize(closedTickets, 0);
+   ArrayResize(closedIdx, 0);
+
    for(int w = ArraySize(g_tgwTickets) - 1; w >= 0; w--)
      {
       ulong t = g_tgwTickets[w];
@@ -190,12 +198,68 @@ void GsxTgwPoll(const long magic, const GsxTgConfig &cfg, const bool notify)
            }
       if(found)
          continue;
+      int cn = ArraySize(closedTickets);
+      ArrayResize(closedTickets, cn + 1);
+      ArrayResize(closedIdx, cn + 1);
+      closedTickets[cn] = t;
+      closedIdx[cn] = w;
+     }
 
-      double pl = GsxTgwCloseProfit(t, magic);
+   bool historyReady = false;
+   if(ArraySize(closedTickets) > 0)
+      historyReady = HistorySelect(TimeCurrent() - 86400 * 7, TimeCurrent() + 60);
+
+   // Sort closedIdx descending for safe RemoveAt
+   for(int a = 0; a < ArraySize(closedIdx); a++)
+      for(int b = a + 1; b < ArraySize(closedIdx); b++)
+         if(closedIdx[b] > closedIdx[a])
+           {
+            int tmpI = closedIdx[a];
+            closedIdx[a] = closedIdx[b];
+            closedIdx[b] = tmpI;
+            ulong tmpT = closedTickets[a];
+            closedTickets[a] = closedTickets[b];
+            closedTickets[b] = tmpT;
+           }
+
+   for(int c = 0; c < ArraySize(closedTickets); c++)
+     {
+      int w = closedIdx[c];
+      ulong t = closedTickets[c];
+
+      double pl = 0.0;
+      // Prefer CloseTrigger (Scouter tag); else DEAL_REASON → BROKER-SL / …
+      string reason = GsxCtResolveReason(t, magic, historyReady, pl);
+      if(MathAbs(pl) < 1e-12)
+         pl = GsxTgwCloseProfit(t, magic); // may re-select history; ok
+
+      // If consume already set pl from emit, keep it; GsxTgwCloseProfit as fallback
+      if(MathAbs(pl) < 1e-12 && historyReady)
+        {
+         // recompute from already-selected history without second HistorySelect
+         int total = HistoryDealsTotal();
+         for(int i = total - 1; i >= 0; i--)
+           {
+            ulong d = HistoryDealGetTicket(i);
+            if(d == 0)
+               continue;
+            if((ulong)HistoryDealGetInteger(d, DEAL_POSITION_ID) != t)
+               continue;
+            if(HistoryDealGetInteger(d, DEAL_MAGIC) != magic)
+               continue;
+            long entry = HistoryDealGetInteger(d, DEAL_ENTRY);
+            if(entry != DEAL_ENTRY_OUT && entry != DEAL_ENTRY_OUT_BY)
+               continue;
+            pl += HistoryDealGetDouble(d, DEAL_PROFIT)
+                  + HistoryDealGetDouble(d, DEAL_SWAP)
+                  + HistoryDealGetDouble(d, DEAL_COMMISSION);
+           }
+        }
+
       if(notify)
-         GsxTgNotifyClose(cfg, GsxTgFormatClose(g_tgwSym[w],
-                                                (g_tgwDir[w] > 0 ? "BUY" : "SELL"),
-                                                g_tgwLots[w], g_tgwEntry[w], pl));
+         GsxTgNotifyClose(cfg, GsxTgFormatCloseEx(g_tgwSym[w],
+                                                  (g_tgwDir[w] > 0 ? "BUY" : "SELL"),
+                                                  g_tgwLots[w], g_tgwEntry[w], pl, reason));
       g_tgwSessionPl += pl;
       g_tgwDayTrades++;
       if(pl > 0.0)

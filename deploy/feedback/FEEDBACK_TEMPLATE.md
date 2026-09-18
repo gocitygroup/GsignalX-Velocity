@@ -78,6 +78,15 @@ One magic · FIXED 0.01 · EQ OFF unless floating-DD brake · Chart EA not filli
 | REKICK needs PLAY | | |
 | DIR present for all pairs; updates as each symbol finishes calc | | |
 | ASAP winners-only; losers via adverse Auto / catastrophe SL | | |
+| TG CLOSE carries `reason=` (ACC-TARGET / ATR-TRAIL / BROKER-SL / …) | | |
+| Scouter Experts tag matches Telegram reason | | |
+| Production: InpUseMagicFilter=true + desk magic | | |
+| Manual BANK → reason=BANK; broker SL → reason=BROKER-SL | | |
+| Service still WARN-only (no duplicate OPEN/CLOSE) | | |
+| TG SETTINGS LOAD on Desk attach (effective input+UI) | | |
+| TG SETTINGS on PLAY/STOP/HALT/FOLLOW/AUTOLOT/EQ | | |
+| Scouter CASH/TRAIL → Desk SETTINGS (no Scouter HTTP) | | |
+| PAGE/carousel do not spam SETTINGS | | |
 
 ## Topology B — Headless Service (DeskExecute OFF / detached; Service running)
 

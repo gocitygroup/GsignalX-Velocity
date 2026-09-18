@@ -46,6 +46,8 @@
 #include <GSignalX/RosterStore.mqh>
 #include <GSignalX/TelegramNotifier.mqh>
 #include <GSignalX/TgDealWatch.mqh>
+#include <GSignalX/CloseTrigger.mqh>
+#include <GSignalX/SettingsNotify.mqh>
 
 //+------------------------------------------------------------------+
 //| Enumerations                                                     |
@@ -1081,6 +1083,9 @@ bool PlacePending(int dir, bool isStop, double price, double atr)
                  DoubleToString(lot, 2) + " @ " + DoubleToString(price, digits);
    Notify(((dir == 1) ? "BUY " : "SELL ") + (isStop ? "STOP " : "LIMIT ") +
           DoubleToString(lot, 2) + " @ " + DoubleToString(price, digits));
+   if(ScouterOwnsExits() && sl > 0.0 && stratDist > 0.0)
+      PrintFormat("GsignalX: catastrophe SL attached %.5f (ATR x %.1f = %.5f price dist) — broker may close without Scouter tag",
+                  sl, InpStrategicStopMult, stratDist);
    return(true);
   }
 
@@ -1241,9 +1246,10 @@ bool OpenTrade(int dir)
       stopDist = minDist;
 
    double sl = 0.0, tp = 0.0;
+   double stratDist = 0.0;
    if(ScouterOwnsExits())
      {
-      double stratDist = StrategicStopDistance(atr);
+      stratDist = StrategicStopDistance(atr);
       if(stratDist > 0.0)
          sl = (dir == 1) ? price - stratDist : price + stratDist;
      }
@@ -1311,6 +1317,9 @@ bool OpenTrade(int dir)
                  " @ " + DoubleToString(price, digits);
    Notify(((dir == 1) ? "LONG " : "SHORT ") + DoubleToString(lot, 2) +
           " lots @ " + DoubleToString(price, digits));
+   if(ScouterOwnsExits() && sl > 0.0 && stratDist > 0.0)
+      PrintFormat("GsignalX: catastrophe SL attached %.5f (ATR x %.1f = %.5f price dist) — broker may close without Scouter tag",
+                  sl, InpStrategicStopMult, stratDist);
    return(true);
   }
 
@@ -1428,8 +1437,21 @@ void ResolveOverfill()
             continue;
          if(ticket == keep)
             continue;
+         if(!PositionSelectByTicket(ticket))
+            continue;
+         string sym = PositionGetString(POSITION_SYMBOL);
+         long magic = PositionGetInteger(POSITION_MAGIC);
+         int side = (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY) ? 1 : -1;
+         double lots = PositionGetDouble(POSITION_VOLUME);
+         double entry = PositionGetDouble(POSITION_PRICE_OPEN);
+         double pl = PositionGetDouble(POSITION_PROFIT)
+                     + PositionGetDouble(POSITION_SWAP);
          if(trade.PositionClose(ticket))
+           {
             Print("GsignalX: duplicate fill closed #", ticket);
+            GsxCtEmit(ticket, magic, GSX_CT_TAG_OVERFILL, "chart", pl,
+                      sym, side, lots, entry, -1);
+           }
         }
       return;
      }
@@ -1441,8 +1463,22 @@ void ResolveOverfill()
       if(vol > gIntendedLot * 1.5)
         {
          double excess = MathFloor((vol - gIntendedLot) / step) * step;
-         if(excess >= step && trade.PositionClosePartial(keep, excess))
-            Print("GsignalX: trimmed overfill by ", DoubleToString(excess, 2), " lots");
+         if(excess >= step)
+           {
+            string sym = PositionGetString(POSITION_SYMBOL);
+            long magic = PositionGetInteger(POSITION_MAGIC);
+            int side = (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY) ? 1 : -1;
+            double entry = PositionGetDouble(POSITION_PRICE_OPEN);
+            double pl = PositionGetDouble(POSITION_PROFIT)
+                        + PositionGetDouble(POSITION_SWAP);
+            if(trade.PositionClosePartial(keep, excess))
+              {
+               Print("GsignalX: trimmed overfill by ", DoubleToString(excess, 2), " lots");
+               // Partial trim: audit only (position remains)
+               GsxCtEmit(keep, magic, GSX_CT_TAG_OVERFILL, "chart", pl,
+                         sym, side, excess, entry, -1, false);
+              }
+           }
         }
      }
   }
@@ -2886,10 +2922,14 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
         {
          SetScoutRun(true);   // linked: resume the scouter harvest as well
          SetRunState(true, true);
+         GsxSettingsAnnounce("PLAY");
         }
       else
          if(click == gPfx + "BTN_STOP")
+           {
             SetRunState(false, true);   // entries only - scouter keeps managing exits
+            GsxSettingsAnnounce("STOP");
+           }
          else
             if(click == gPfx + "BTN_FLAT")
               {
@@ -2901,10 +2941,14 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                gPanelBlockReason = "";
                GsxUiMarkDirty();
                UpdatePanel(g_lastPanelState);
+               GsxSettingsAnnounce("HALT");
               }
             else
                if(click == gPfx + "BTN_FLIP")
+                 {
                   SetFlipWaitMode(!gFlipWaitMode, true);
+                  GsxSettingsAnnounce(gFlipWaitMode ? "FOLLOW WAIT" : "FOLLOW");
+                 }
                else
                   if(click == gPfx + "BTN_FDIR_AUTO" ||
                      click == gPfx + "BTN_FDIR_BUY" ||
@@ -2923,16 +2967,26 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                             ": affects new entries only — open positions unchanged");
                      GsxUiMarkDirty();
                      UpdatePanel(g_lastPanelState);
+                     GsxSettingsAnnounce("FDIR " + GsxRosterFollowDirLabel(mode));
                     }
                   else
                   if(click == gPfx + "BTN_SPREAD")
+                    {
                      SetIgnoreSpread(!gIgnoreSpread, true);
+                     GsxSettingsAnnounce(gIgnoreSpread ? "IGN" : "SPREAD");
+                    }
                   else
                      if(click == gPfx + "BTN_AUTOLOT")
+                       {
                         SetAutoLot(!gAutoLot, true);
+                        GsxSettingsAnnounce("AUTOLOT");
+                       }
                      else
                         if(click == gPfx + "BTN_EQGUARD")
+                          {
                            CycleEquityGuardPct(true);
+                           GsxSettingsAnnounce("EQ");
+                          }
                         else
                            if(click == gPfx + "TITLE")
                              {
@@ -3015,7 +3069,10 @@ void ChartTgTick()
       return;
    g_chartTgCfg = ChartBuildTgConfig();
    GsxTgMaybeReverify(g_chartTgCfg);
-   GsxTgProcessQueue(g_chartTgCfg);
+   GsxSettingsRebindCfg(g_chartTgCfg);
+   if(GsxTgChartMayOwnDeals(InpMagic))
+      GsxSettingsDrainPending(g_chartTgCfg);
+   GsxTgProcessQueueEx(g_chartTgCfg, 1);
    GsxTgPublishStatus(InpMagic);
 
    // Deal failover when Trade Center desk HB is stale
@@ -3206,6 +3263,13 @@ int OnInit()
                               AccountInfoString(ACCOUNT_SERVER), _Symbol);
    GsxTgInit(g_chartTgCfg, acct);
    g_chartTgSeeded = false;
+
+   string exitLab = (InpExitMode == GSX_EXIT_SCOUTER ? "SCOUTER" : "SIGNAL");
+   GsxSettingsBindHost(g_chartTgCfg, InpMagic, InpScoutInstanceID, "chart",
+                       false, exitLab);
+   if(InpTgEnable && GsxTgChartMayOwnDeals(InpMagic))
+      GsxSettingsNotifyLoad(g_chartTgCfg, InpMagic, InpScoutInstanceID, "chart",
+                            false, exitLab);
 
    return(INIT_SUCCEEDED);
   }

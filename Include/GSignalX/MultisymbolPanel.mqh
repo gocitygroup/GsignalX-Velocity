@@ -16,6 +16,7 @@
 #include <GSignalX/SymbolClass.mqh>
 #include <GSignalX/SessionClock.mqh>
 #include <GSignalX/TelegramNotifier.mqh>
+#include <GSignalX/SettingsNotify.mqh>
 #include <GSignalX/PracticeSim.mqh>
 #include <GSignalX/LotSizing.mqh>
 
@@ -74,6 +75,14 @@ bool   g_msScoutLinkEnable = true;
 int    g_msScoutInstanceID = 1;
 int    g_msLastTotalH    = 0;      // measured panel height for clamp/drag
 GsxSessionClockConfig g_msSessionCfg;
+
+// Announce prop-critical setting changes to Telegram (Desk-bound SettingsNotify).
+void GsxMsSettingsClick(const string action)
+  {
+   if(action == "")
+      return;
+   GsxSettingsAnnounce(action);
+  }
 
 // Scaled layout cache (rebuilt each draw via GsxMsLayoutRefresh).
 // Peer X offsets come only from GsxLay pack/cols — never stored as absolutes.
@@ -1358,6 +1367,7 @@ bool GsxMsPanelOnChartEvent(const int id,
          GsxRosterDrillKickSet(g_msMagic); // restart drill even if already PLAY
          GsxScoutRunSetLinked(g_msScoutLinkEnable, g_msScoutInstanceID, true);
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " PLAY";
+         GsxMsSettingsClick("PLAY");
          return(true);
         }
       if(tag == "BTN_STOP")
@@ -1370,6 +1380,7 @@ bool GsxMsPanelOnChartEvent(const int id,
          GsxFleetServiceRunSet(g_msMagic, false);
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                           " STOP (entries off · pendings cleared · scout runs)";
+         GsxMsSettingsClick("STOP");
          return(true);
         }
       if(tag == "BTN_HALT")
@@ -1382,11 +1393,13 @@ bool GsxMsPanelOnChartEvent(const int id,
          GsxScoutRunSetLinked(g_msScoutLinkEnable, g_msScoutInstanceID, false);
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                           " HALT (no closes) · pendings cleared";
+         GsxMsSettingsClick("HALT");
          return(true);
         }
       if(tag == "BTN_FOLLOW")
         {
          GsxMsPanelSetFlip(!g_msFlipWait);
+         GsxMsSettingsClick(g_msFlipWait ? "FOLLOW WAIT" : "FOLLOW");
          return(true);
         }
       if(tag == "BTN_SPREAD")
@@ -1394,6 +1407,7 @@ bool GsxMsPanelOnChartEvent(const int id,
          bool ign = GsxRosterSpreadIgnToggle(g_msMagic);
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                           (ign ? " IGN spread (desk)" : " SPREAD guard on (desk)");
+         GsxMsSettingsClick(ign ? "IGN" : "SPREAD");
          return(true);
         }
       if(tag == "BTN_AUTOLOT")
@@ -1401,6 +1415,7 @@ bool GsxMsPanelOnChartEvent(const int id,
          bool on = GsxRosterAutoLotToggle(g_msMagic);
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                           (on ? " AUTOLOT (desk risk%)" : " FIXED lot (desk)");
+         GsxMsSettingsClick("AUTOLOT");
          return(true);
         }
       if(tag == "BTN_EQGUARD")
@@ -1408,6 +1423,7 @@ bool GsxMsPanelOnChartEvent(const int id,
          double pct = GsxRosterEqGuardCycle(g_msMagic);
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " " +
                           GsxRosterEqGuardLabel(pct) + " (desk entries)";
+         GsxMsSettingsClick("EQ");
          return(true);
         }
       if(tag == "BTN_EQ_0" || tag == "BTN_EQ_5" || tag == "BTN_EQ_10" || tag == "BTN_EQ_20")
@@ -1419,6 +1435,7 @@ bool GsxMsPanelOnChartEvent(const int id,
          GsxRosterEqGuardSet(g_msMagic, pct);
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " " +
                           GsxRosterEqGuardLabel(pct) + " (desk entries)";
+         GsxMsSettingsClick("EQ");
          return(true);
         }
       if(tag == "BTN_DRILL_REKICK")
@@ -1444,6 +1461,7 @@ bool GsxMsPanelOnChartEvent(const int id,
          string roster[];
          GsxRosterStoreLoad(g_msMagic, roster);
          GsxMsPanelSetFollowDirAll(mode, roster);
+         GsxMsSettingsClick("FDIR " + GsxRosterFollowDirLabel(mode));
          return(true);
         }
       if(tag == "BTN_PAIR_START_ALL" || tag == "BTN_PAIR_STOP_ALL")
@@ -1463,6 +1481,7 @@ bool GsxMsPanelOnChartEvent(const int id,
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " " +
                           GsxRosterStateLabel(st) + " all (" +
                           IntegerToString(ArraySize(view)) + ")";
+         GsxMsSettingsClick("PAIR " + GsxRosterStateLabel(st) + " ALL");
          return(true);
         }
       if(tag == "BTN_EVT")
@@ -1470,6 +1489,7 @@ bool GsxMsPanelOnChartEvent(const int id,
          GsxEventModeToggle(g_msMagic);
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                           " EVT " + GsxEventModeLabel(GsxEventModeGet(g_msMagic));
+         GsxMsSettingsClick("EVT");
          return(true);
         }
       if(tag == "BTN_CAT_ALL") return(GsxMsPanelSetCat(GSX_CAT_ALL));
@@ -1521,6 +1541,7 @@ bool GsxMsPanelOnChartEvent(const int id,
          GsxRosterFleetTargetSet(g_msMagic, t);
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                           " fleet=" + IntegerToString(t);
+         GsxMsSettingsClick("FLEET");
          return(true);
         }
       if(tag == "BTN_FLEET_P")
@@ -1532,6 +1553,7 @@ bool GsxMsPanelOnChartEvent(const int id,
          GsxRosterFleetTargetSet(g_msMagic, t);
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                           " fleet=" + IntegerToString(t);
+         GsxMsSettingsClick("FLEET");
          return(true);
         }
       if(tag == "BTN_PAGE_P")
@@ -1579,6 +1601,7 @@ bool GsxMsPanelOnChartEvent(const int id,
               {
                g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " " + reason;
                GsxMsCarouselStep(1, names);
+               GsxMsSettingsClick("ADD " + car);
               }
             else
               {
@@ -1591,6 +1614,7 @@ bool GsxMsPanelOnChartEvent(const int id,
            {
             g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " " + reason;
             GsxMsCarouselStep(1, names);
+            GsxMsSettingsClick("ADD " + car);
            }
          else
            {
@@ -1647,6 +1671,7 @@ bool GsxMsPanelOnChartEvent(const int id,
          GsxRosterStoreSave(g_msMagic, names, true);
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                           " SWAP " + rem + " → " + addSym;
+         GsxMsSettingsClick("SWAP");
          return(true);
         }
       if(tag == "BTN_REM")
@@ -1664,6 +1689,7 @@ bool GsxMsPanelOnChartEvent(const int id,
             GsxRosterStoreSave(g_msMagic, names, true);
             g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                              " REMOVE " + carRem + " (pendings cancelled)";
+            GsxMsSettingsClick("REM " + carRem);
            }
          else
             g_msLastAction = "REMOVE skipped";
@@ -1692,6 +1718,7 @@ bool GsxMsPanelOnChartEvent(const int id,
             GsxRosterStoreSave(g_msMagic, names, true);
             g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                              " REMOVE " + rem + " (pendings cancelled)";
+            GsxMsSettingsClick("REM " + rem);
            }
          else
             g_msLastAction = "REMOVE skipped " + rem;
@@ -1710,6 +1737,7 @@ bool GsxMsPanelOnChartEvent(const int id,
                              " " + view[ri] + " Follow " +
                              GsxRosterFollowDirLabel(mode) +
                              " (new entries only)";
+            GsxMsSettingsClick("FDIR " + view[ri]);
            }
          return(true);
         }
@@ -1743,6 +1771,7 @@ bool GsxMsPanelOnChartEvent(const int id,
             g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                              " " + GsxRosterStateLabel(st) + " " + view[ri] +
                              (st == GSX_PAIR_START ? " · PLAY" : " · pendings cleared");
+            GsxMsSettingsClick("STATE " + GsxRosterStateLabel(st));
            }
          return(true);
         }

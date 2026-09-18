@@ -611,6 +611,12 @@ function Confirm-Files {
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\ChartPanel.mqh") "Include GSignalX\ChartPanel.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\Fleet.mqh") "Include GSignalX\Fleet.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\ScoutLink.mqh") "Include GSignalX\ScoutLink.mqh" | Out-Null
+  Test-PathMark (Join-Path $mql5 "Include\GSignalX\CloseTrigger.mqh") "Include GSignalX\CloseTrigger.mqh" | Out-Null
+  Test-PathMark (Join-Path $RepoRoot "Include\GSignalX\CloseTrigger.mqh") "Repo CloseTrigger.mqh" | Out-Null
+  Test-PathMark (Join-Path $mql5 "Include\GSignalX\SettingsNotify.mqh") "Include GSignalX\SettingsNotify.mqh" | Out-Null
+  Test-PathMark (Join-Path $RepoRoot "Include\GSignalX\SettingsNotify.mqh") "Repo SettingsNotify.mqh" | Out-Null
+  Test-PathMark (Join-Path $mql5 "Include\GSignalX\TgDealWatch.mqh") "Include GSignalX\TgDealWatch.mqh" | Out-Null
+  Test-PathMark (Join-Path $mql5 "Include\GSignalX\TelegramNotifier.mqh") "Include GSignalX\TelegramNotifier.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\Engines.mqh") "Include GSignalX\Engines.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\Core.mqh") "Include GSignalX\Core.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\EntryExec.mqh") "Include GSignalX\EntryExec.mqh" | Out-Null
@@ -1841,6 +1847,120 @@ function Confirm-Functional {
   }
   else {
     Add-Line "FAIL  Dashboard/Chart mouse-wheel enable missing"
+    $script:fail++
+  }
+
+  # --- V2.15 CloseTrigger + Telegram close reason ---
+  $ctPath   = Join-Path $RepoRoot "Include\GSignalX\CloseTrigger.mqh"
+  $tgwPath  = Join-Path $RepoRoot "Include\GSignalX\TgDealWatch.mqh"
+  $tgPath   = Join-Path $RepoRoot "Include\GSignalX\TelegramNotifier.mqh"
+  $ctText   = if (Test-Path $ctPath) { Get-Content $ctPath -Raw } else { "" }
+  $tgwText  = if (Test-Path $tgwPath) { Get-Content $tgwPath -Raw } else { "" }
+  $tgText   = if (Test-Path $tgPath) { Get-Content $tgPath -Raw } else { "" }
+
+  if ($ctText -match 'GsxCtEmit' -and $ctText -match 'GsxCtConsume' -and
+      $ctText -match 'GsxCtResolveReason' -and $ctText -match 'BROKER-SL' -and
+      $ctText -match 'events\.jsonl' -and $ctText -match 'GSX_CT_') {
+    Add-Line "PASS  V2.15 CloseTrigger emit/consume + audit jsonl + BROKER-SL"
+  }
+  else {
+    Add-Line "FAIL  V2.15 CloseTrigger module incomplete"
+    $script:fail++
+  }
+
+  if ($psText -match 'GsxCtEmit' -and $psText -match 'CloseTrigger\.mqh' -and
+      $psText -match 'InpUseMagicFilter=false with PS_SCOPE_ALL') {
+    Add-Line "PASS  V2.15 Scouter CloseTicket emit + magic-filter WARN"
+  }
+  else {
+    Add-Line "FAIL  V2.15 Scouter CloseTrigger wire / WARN missing"
+    $script:fail++
+  }
+
+  if ($tgText -match 'GsxTgFormatCloseEx' -and $tgText -match 'reason=%s') {
+    Add-Line "PASS  V2.15 GsxTgFormatCloseEx reason= field"
+  }
+  else {
+    Add-Line "FAIL  V2.15 FormatCloseEx missing"
+    $script:fail++
+  }
+
+  if ($tgwText -match 'GsxCtResolveReason' -and $tgwText -match 'GsxTgFormatCloseEx' -and
+      $tgwText -match 'HistorySelect' -and $tgwText -match 'CloseTrigger\.mqh') {
+    Add-Line "PASS  V2.15 TgDealWatch consume-before-history + CloseEx"
+  }
+  else {
+    Add-Line "FAIL  V2.15 TgDealWatch reason path missing"
+    $script:fail++
+  }
+
+  if ($chartText -match 'GSX_CT_TAG_OVERFILL' -and $chartText -match 'GsxCtEmit' -and
+      $chartText -match 'catastrophe SL attached') {
+    Add-Line "PASS  V2.15 OVERFILL emit + catastrophe SL open log"
+  }
+  else {
+    Add-Line "FAIL  V2.15 OVERFILL / SL-open log missing"
+    $script:fail++
+  }
+
+  if ($entryText -match 'catastrophe SL attached' -and $entryText -match 'broker may close without Scouter tag') {
+    Add-Line "PASS  V2.15 EntryExec catastrophe SL open log"
+  }
+  else {
+    Add-Line "FAIL  V2.15 EntryExec SL open log missing"
+    $script:fail++
+  }
+
+  # --- V2.16 SettingsNotify Telegram ---
+  $setPath  = Join-Path $RepoRoot "Include\GSignalX\SettingsNotify.mqh"
+  $atrPath  = Join-Path $RepoRoot "Include\ProfitScouter\AtrTrail.mqh"
+  $setText  = if (Test-Path $setPath) { Get-Content $setPath -Raw } else { "" }
+  $atrSetText = if (Test-Path $atrPath) { Get-Content $atrPath -Raw } else { "" }
+  $tgNText  = if (Test-Path $tgPath) { Get-Content $tgPath -Raw } else { "" }
+
+  if ($setText -match 'GsxSettingsNotify' -and $setText -match 'GsxSettingsNotifyLoad' -and
+      $setText -match 'GsxSettingsAnnounce' -and $setText -match 'GsxSettingsPendingSetScout' -and
+      $setText -match 'GsxTgEnqueueTagged' -and $setText -match 'SETTINGS') {
+    Add-Line "PASS  V2.16 SettingsNotify LOAD/Announce/pending + EnqueueTagged"
+  }
+  else {
+    Add-Line "FAIL  V2.16 SettingsNotify module incomplete"
+    $script:fail++
+  }
+
+  if ($tgNText -match 'GsxTgEnqueueTagged' -and $tgNText -match 'without draining') {
+    Add-Line "PASS  V2.16 GsxTgEnqueueTagged (no drain on enqueue)"
+  }
+  else {
+    Add-Line "FAIL  V2.16 EnqueueTagged missing"
+    $script:fail++
+  }
+
+  if ($msText -match 'GsxMsSettingsClick' -and $msText -match 'GsxMsSettingsClick\("PLAY"\)' -and
+      $msText -match 'GsxMsSettingsClick\("STOP"\)' -and $msText -match 'GsxMsSettingsClick\("HALT"\)' -and
+      $msText -notmatch 'GsxMsSettingsClick\("PAGE') {
+    Add-Line "PASS  V2.16 MultisymbolPanel prop-critical SETTINGS (no PAGE)"
+  }
+  else {
+    Add-Line "FAIL  V2.16 MultisymbolPanel SETTINGS wiring missing"
+    $script:fail++
+  }
+
+  if ($dashText -match 'GsxSettingsNotifyLoad' -and $dashText -match 'GsxSettingsDrainPending' -and
+      $dashText -match 'GsxSettingsBindHost') {
+    Add-Line "PASS  V2.16 Desk LOAD + drain pending"
+  }
+  else {
+    Add-Line "FAIL  V2.16 Desk SettingsNotify wire missing"
+    $script:fail++
+  }
+
+  if ($psText -match 'PsEmitSettingsPending' -and $psText -match 'GsxSettingsPendingSetScout' -and
+      $atrSetText -match 'GsxSettingsPendingSetScout') {
+    Add-Line "PASS  V2.16 Scouter arm pending (no HTTP)"
+  }
+  else {
+    Add-Line "FAIL  V2.16 Scouter settings pending missing"
     $script:fail++
   }
 }

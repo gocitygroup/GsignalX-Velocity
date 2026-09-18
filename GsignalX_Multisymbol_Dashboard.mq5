@@ -205,6 +205,7 @@ input int    InpEvtPollSec            = 30;
 #include <GSignalX/MultisymbolPanel.mqh>
 #include <GSignalX/TelegramNotifier.mqh>
 #include <GSignalX/TgDealWatch.mqh>
+#include <GSignalX/SettingsNotify.mqh>
 #include <GSignalX/PropRisk.mqh>
 #include <GSignalX/EventGate.mqh>
 #include <GSignalX/SessionClock.mqh>
@@ -517,6 +518,12 @@ int OnInit()
    GsxTgDeskHeartbeat(InpMagic);
    GsxTgwSeedFromOpen(InpMagic);
 
+   GsxSettingsBindHost(g_tgCfg, InpMagic, InpScoutInstanceID, "desk",
+                       InpDeskExecute, "SCOUTER");
+   if(InpTgEnable)
+      GsxSettingsNotifyLoad(g_tgCfg, InpMagic, InpScoutInstanceID, "desk",
+                            InpDeskExecute, "SCOUTER");
+
    DashTryStartCore("OnInit");
 
    ChartSetInteger(0, CHART_EVENT_MOUSE_MOVE, true);
@@ -601,6 +608,8 @@ void OnTimer()
 
    DashPollEvents(false);
    DashDealWatch();
+   GsxSettingsRebindCfg(g_tgCfg);
+   GsxSettingsDrainPending(g_tgCfg);
    GsxTgProcessQueueEx(g_tgCfg, 1);
    GsxTgPublishStatus(InpMagic);
    DashMaybeSummaries();
@@ -625,6 +634,7 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
       else
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                           " PLAY (prop unlocked)";
+      GsxSettingsAnnounce("PLAY PROP");
      }
    if(id == CHARTEVENT_OBJECT_CLICK && sparam == "GSXMS_BTN_PROP_CLEAR")
      {
@@ -632,6 +642,7 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
       GsxPropClearLock(g_propCfg, g_propSt, true);
       g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                        " PROP CLEAR + PLAY armed";
+      GsxSettingsAnnounce("PROP CLEAR");
       if(g_deskCoreActive)
         {
          DashPublishDeskTimeframe();

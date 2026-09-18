@@ -13,6 +13,8 @@
 #include <GSignalX/BarDirection.mqh>
 #include <GSignalX/CandleMetrics.mqh>
 #include <GSignalX/ScoutLink.mqh>
+#include <GSignalX/CloseTrigger.mqh>
+#include <GSignalX/SettingsNotify.mqh>
 #ifdef PS_HOST_EA
 #include <GSignalX/ChartPanel.mqh>
 #endif
@@ -609,7 +611,7 @@ void HandlePosition(int liveIdx)
               {
                Notify(StringFormat("#%I64u target %.2f %s - partial close %.2f lots",
                                    ticket, profit, g_accCcy, vol));
-               if(ClosePartial(ticket, vol))
+               if(ClosePartial(ticket, vol, "POS-PARTIAL"))
                  {
                   g_pos[r].peak  = 0.0;
                   g_pos[r].armed = false;
@@ -1082,7 +1084,13 @@ bool CloseTicket(ulong ticket, string tag, const bool allowLoss = false)
       return false;
      }
 
-   g_trade.SetExpertMagicNumber((ulong)PositionGetInteger(POSITION_MAGIC));
+   // Snapshot before close — ticket is gone after PositionClose succeeds.
+   long   magic = PositionGetInteger(POSITION_MAGIC);
+   int    side  = (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY) ? 1 : -1;
+   double lots  = PositionGetDouble(POSITION_VOLUME);
+   double entry = PositionGetDouble(POSITION_PRICE_OPEN);
+
+   g_trade.SetExpertMagicNumber((ulong)magic);
    g_trade.SetTypeFillingBySymbol(sym);
    g_trade.SetDeviationInPoints(InpSlippagePoints);
 
@@ -1096,6 +1104,7 @@ bool CloseTicket(ulong ticket, string tag, const bool allowLoss = false)
          g_closedCycle++;
          g_closedSession++;
          g_realizedSession += liveProfit;
+         GsxCtEmit(ticket, magic, tag, "scouter", liveProfit, sym, side, lots, entry, -1);
          return true;
         }
       uint rc = g_trade.ResultRetcode();
@@ -1106,7 +1115,11 @@ bool CloseTicket(ulong ticket, string tag, const bool allowLoss = false)
          break;
       Sleep(200);
       if(!PositionSelectByTicket(ticket))
+        {
+         // Closed by peer — still emit so Telegram can attribute the tag.
+         GsxCtEmit(ticket, magic, tag, "scouter", liveProfit, sym, side, lots, entry, -1);
          return true; // gone already
+        }
      }
    return false;
   }
@@ -1169,7 +1182,7 @@ bool ManualCloseConfirmAndRun(const int side, const string tag, const string pro
    return(true);
   }
 
-bool ClosePartial(ulong ticket, double volume)
+bool ClosePartial(ulong ticket, double volume, const string tag = GSX_CT_TAG_PARTIAL)
   {
    if(!g_closerAllows && !g_closerManualBypass)
       return false;
@@ -1186,7 +1199,12 @@ bool ClosePartial(ulong ticket, double volume)
       return false;
      }
 
-   g_trade.SetExpertMagicNumber((ulong)PositionGetInteger(POSITION_MAGIC));
+   long   magic = PositionGetInteger(POSITION_MAGIC);
+   int    side  = (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY) ? 1 : -1;
+   double entry = PositionGetDouble(POSITION_PRICE_OPEN);
+   string emitTag = (tag == "" ? GSX_CT_TAG_PARTIAL : tag);
+
+   g_trade.SetExpertMagicNumber((ulong)magic);
    g_trade.SetTypeFillingBySymbol(sym);
 
    int tries = (int)MathMax(1, InpMaxRetries);
@@ -1194,7 +1212,9 @@ bool ClosePartial(ulong ticket, double volume)
      {
       if(g_trade.PositionClosePartial(ticket, volume, InpSlippagePoints))
         {
-         PrintFormat("ProfitScouter: partial close #%I64u %.2f lots", ticket, volume);
+         PrintFormat("ProfitScouter [%s]: partial close #%I64u %.2f lots", emitTag, ticket, volume);
+         // Audit only — do not leave hot pending (ticket still open; would mis-tag later CLOSE)
+         GsxCtEmit(ticket, magic, emitTag, "scouter", liveProfit, sym, side, volume, entry, -1, false);
          return true;
         }
       PrintFormat("ProfitScouter: partial close #%I64u failed rc=%u (%s)",
@@ -2779,6 +2799,14 @@ bool PsInitEngine()
 #ifdef PS_HOST_EA
    PsLoadPanelPos();
 #endif
+   // Production Topology A: magic filter ON + correct InpMagicNumber.
+   // Default remains off for backward compat — warn loudly when scope is ALL.
+   if(!InpUseMagicFilter && InpScope == PS_SCOPE_ALL)
+     {
+      Print("ProfitScouter WARN: InpUseMagicFilter=false with PS_SCOPE_ALL — ",
+            "Scouter may harvest/cut foreign magics. ",
+            "Set InpUseMagicFilter=true and InpMagicNumber to desk magic for production.");
+     }
    return true;
   }
 
@@ -2806,6 +2834,14 @@ void PsLoadScoutEnabled()
    GsxScoutRunSet(InpInstanceID, gScoutEnabled);
   }
 
+void PsEmitSettingsPending(const string action)
+  {
+   long magic = (InpUseMagicFilter && InpMagicNumber > 0) ? InpMagicNumber : InpMagicNumber;
+   if(magic <= 0)
+      magic = 0; // scout-id pending still fires
+   GsxSettingsPendingSetScout(InpInstanceID, magic, action);
+  }
+
 void PsSetScoutEnabled(const bool on, const bool announce)
   {
    gScoutEnabled = on;
@@ -2818,6 +2854,7 @@ void PsSetScoutEnabled(const bool on, const bool announce)
      {
       Notify(on ? "START: profit scouting armed (closes enabled)"
                 : "STOP: profit scouting paused (watch only)");
+      PsEmitSettingsPending(on ? "SCOUT START" : "SCOUT STOP");
      }
 #ifdef PS_HOST_EA
    PsUpdateButtons();
@@ -2857,6 +2894,7 @@ void PsSetAdverseEnabled(const bool on, const bool announce)
      {
       Notify(on ? "AUTO ON: adverse-bar loss exit armed"
                 : "AUTO OFF: adverse-bar loss exit paused");
+      PsEmitSettingsPending(on ? "ADVERSE ON" : "ADVERSE OFF");
      }
 #ifdef PS_HOST_EA
    PsUpdateButtons();
@@ -2896,6 +2934,7 @@ void PsSetCashMode(const bool on, const bool announce)
      {
       Notify(on ? "CASH: single profit floor at account+pair+pos (trail/window off)"
                 : "LAYER: per-layer targets, trail, and window rules armed");
+      PsEmitSettingsPending(on ? "CASH ON" : "CASH OFF");
      }
 #ifdef PS_HOST_EA
    PsUpdateButtons();
@@ -2937,6 +2976,7 @@ void PsSetCashLossArmed(const bool on, const bool announce)
              ? StringFormat("LOSS ON: cut losers when floating <= -%.2f %s",
                             LossCashFloor(), g_accCcy)
              : "LOSS OFF: cash loss cut paused (adverse AUTO / manual CUT still apply)");
+      PsEmitSettingsPending(on ? "LOSS ON" : "LOSS OFF");
      }
 #ifdef PS_HOST_EA
    PsUpdateButtons();
