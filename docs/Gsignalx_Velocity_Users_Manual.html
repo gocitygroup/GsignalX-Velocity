@@ -999,12 +999,46 @@ tr:nth-child(even) td { background: var(--row-stripe); }
         <tbody>
           <tr><td><strong>START / STOP</strong></td><td>Arm or pause harvest closes</td><td>STOP = watch P/L only; tickets stay open</td></tr>
           <tr><td><strong>AUTO</strong></td><td>Adverse-bar loser exit on/off</td><td>Keep ON for M5 desk with signal + age gates</td></tr>
-          <tr><td><strong>BANK / CUT / FLAT</strong></td><td>Manual confirm closes</td><td>BANK winners · CUT losers · FLAT all</td></tr>
+          <tr><td><strong>TRAIL</strong></td><td>Independent ATR/% candle auto-trail on winners</td><td>ON for multi-pair books that need give-back protection between Profit CASH floors</td></tr>
+          <tr><td><strong>BANK / CUT / FLAT</strong></td><td>Manual confirm closes</td><td>BANK winners · CUT losers · FLAT all — always operator OK</td></tr>
           <tr><td><strong>CASH / LAYER</strong></td><td>Toggle single cash floor vs layered rules</td><td>Scalps → CASH; trail/window books → LAYER</td></tr>
           <tr><td><strong>LOSS ON / OFF</strong></td><td>Arm opt-in account Loss CASH cut</td><td>OFF by default; arm only when you want −N auto cut</td></tr>
         </tbody>
       </table>
-      <p>Persists: <code>PS&#123;id&#125;_RUN</code>, <code>_ADVEN</code>, <code>_CASH</code>, <code>_LOSS</code>. Service with the same Instance ID honors chart toggles when <code>InpRespectChartRunState=true</code>.</p>
+      <p>Persists: <code>PS&#123;id&#125;_RUN</code>, <code>_ADVEN</code>, <code>_CASH</code>, <code>_LOSS</code>, <code>_TRAIL</code>. Service with the same Instance ID honors chart toggles when <code>InpRespectChartRunState=true</code>.</p>
+
+      <h3 id="atr-trail">ATR / Percent TRAIL — best use <span class="chip chip-prop">Scouter 2.02</span></h3>
+      <p class="lede" style="margin-top:0">Independent winner protection. Does <strong>not</strong> replace Profit CASH floors, adverse AUTO, or Loss CASH. Manual <strong>BANK / CUT / FLAT</strong> always work.</p>
+      <div class="card-grid">
+        <div class="card">
+          <h3>What it does</h3>
+          <p>When <strong>TRAIL ON</strong>, Scouter closes <strong>green tickets</strong> after peak give-back using Hybrid distance: max of ATR×mult (plus last-N candle range floor) and % of peak money. Tag: <code>ATR-TRAIL</code>.</p>
+        </div>
+        <div class="card">
+          <h3>How to arm</h3>
+          <p>Chart button <strong>TRAIL</strong> writes <code>PS&#123;id&#125;_TRAIL</code>. Keep <strong>START</strong> on (master kill for all auto closes). Service honors the same GV when <code>InpRespectChartRunState=true</code>.</p>
+        </div>
+        <div class="card">
+          <h3>Best case (prop / multi-pair)</h3>
+          <p>M5 desk · Profit CASH set for hard bank · <strong>TRAIL ON</strong> · optimizer ON · AUTO ON for losers · Loss CASH OFF unless you want −N flatten. Use TRAIL when winners pull back before the cash floor.</p>
+        </div>
+      </div>
+      <h4>Key inputs</h4>
+      <table>
+        <thead><tr><th>Input</th><th>Stock / tip</th></tr></thead>
+        <tbody>
+          <tr><td><code>InpAtrTrailMode</code></td><td>Hybrid (ATR + % of peak)</td></tr>
+          <tr><td><code>InpAtrTrailMult</code> / min–max</td><td>1.5 base; optimizer nudges 0.8–2.5 per pair</td></tr>
+          <tr><td><code>InpAtrTrailPct</code></td><td>30% of peak give-back</td></tr>
+          <tr><td><code>InpAtrTrailCandles</code></td><td>3 — avg range of last closed bars as distance floor</td></tr>
+          <tr><td><code>InpAtrTrailArmMoney</code></td><td>0 = arm at MinWin / Profit CASH floor</td></tr>
+          <tr><td><code>InpAtrTrailOptimize</code></td><td>ON — per-canon EMA adjusts effective mult</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong class="label">Adverse candle length (optional)</strong>
+        <code>InpAdverseMinBodyPts</code> / <code>InpAdverseMinRangePts</code> default <strong>0</strong> — AUTO streak behaviour unchanged. Set &gt;0 only when opposing bars must have meaningful size before loser cuts.
+      </div>
 
       <div class="callout bear">
         <strong class="label">Removed — do not chase old docs</strong>
@@ -2001,6 +2035,10 @@ cd GsignalX-Velocity</pre>
           <tr><td><strong>START</strong></td><td>Arm harvest</td></tr>
           <tr><td><strong>STOP</strong></td><td>Watch-only; no closes</td></tr>
           <tr><td><strong>AUTO</strong></td><td>Adverse-bar loser exit on/off</td></tr>
+          <tr><td><strong>TRAIL</strong></td><td>Independent ATR/% candle auto-trail on winners (Scouter 2.02)</td></tr>
+          <tr><td><strong>BANK / CUT / FLAT</strong></td><td>Manual confirm closes</td></tr>
+          <tr><td><strong>CASH / LAYER</strong></td><td>Single cash floor vs layered rules</td></tr>
+          <tr><td><strong>LOSS ON / OFF</strong></td><td>Opt-in account Loss CASH arm</td></tr>
         </tbody>
       </table>
 
@@ -2028,19 +2066,23 @@ cd GsignalX-Velocity</pre>
         </tbody>
       </table>
 
-      <h2>Key ProfitScouter defaults (Velocity 2.00)</h2>
+      <h2>Key ProfitScouter defaults (Velocity Scouter 2.02)</h2>
       <table>
         <thead><tr><th>Input</th><th>Default</th></tr></thead>
         <tbody>
-          <tr><td><code>InpAccTargetMoney</code></td><td>5.0 (scale for micro!)</td></tr>
-          <tr><td><code>InpProfitLockArm</code></td><td>5.0</td></tr>
-          <tr><td><code>InpMinWinProfit</code></td><td>5.0</td></tr>
+          <tr><td><code>InpAccTargetMoney</code></td><td>100 (stock Profit CASH; scale for micro)</td></tr>
+          <tr><td><code>InpProfitLockArm</code></td><td>100 (align to Profit CASH)</td></tr>
+          <tr><td><code>InpMinWinProfit</code></td><td>100 (align to Profit CASH)</td></tr>
           <tr><td><code>InpProfitLockKeepPct</code></td><td>50</td></tr>
           <tr><td><code>InpAdverseExitEnable</code></td><td>true</td></tr>
           <tr><td><code>InpAdverseMinBars</code></td><td>2 (fires at streak &gt;2 → ≥3 bars)</td></tr>
           <tr><td><code>InpAdverseMinAgeMin</code></td><td>15</td></tr>
           <tr><td><code>InpAdverseProtectOnceGreen</code></td><td>true</td></tr>
           <tr><td><code>InpAdverseTimeframe</code></td><td>Stock Service often <strong>M15</strong> — set to <strong>M5</strong> for the preliminary M5 desk; EA = CURRENT (host on M5)</td></tr>
+          <tr><td><code>InpAdverseMinBodyPts</code> / Range</td><td>0 / 0 (optional length gates; 0 = unchanged AUTO)</td></tr>
+          <tr><td><code>InpAtrTrailMode</code></td><td>Hybrid (ATR + % of peak)</td></tr>
+          <tr><td><code>InpAtrTrailMult</code> / Pct / Candles</td><td>1.5 / 30 / 3</td></tr>
+          <tr><td><code>InpAtrTrailOptimize</code></td><td>true (per-canon EMA mult nudge)</td></tr>
           <tr><td><code>InpCheckIntervalMs</code></td><td>100</td></tr>
           <tr><td><code>InpIncludeCommission</code> / Swap</td><td>true / true</td></tr>
         </tbody>
@@ -2051,9 +2093,9 @@ cd GsignalX-Velocity</pre>
 
     <!-- COMMUNITY -->
     <section class="panel" id="community" data-title="Desk Community" data-short="Community">
-      <div class="kicker">Telegram · channel primary · macro day trading</div>
+      <div class="kicker">Telegram + WhatsApp · macro · feedback · meet-up</div>
       <h1>GSignalX desk community</h1>
-      <p class="lede">Same invites as the GSignalX Executive / Xenon support desk. For this update the <strong>trading channel is primary</strong>: macro overview for day trading — consult the composite current driver breakdown and the cited data sources for the quantitative basis. The <strong>group</strong> stays available for live feedback and peer setups.</p>
+      <p class="lede">Same invites as the GSignalX Executive / Xenon support desk. Three roles: <strong>Telegram channel</strong> = macro basis for day trading; <strong>Telegram group</strong> = feedback / peer setups; <strong>WhatsApp group</strong> = live meet-up / desk chat.</p>
 
       <div class="callout gold">
         <strong class="label">Channel · main (this update)</strong>
@@ -2063,7 +2105,7 @@ cd GsignalX-Velocity</pre>
 
       <div class="callout">
         <strong class="label">Not the same as MT5 alert Telegram</strong>
-        Desk alerts (<a href="#telegram" data-tab="telegram">Telegram Alerts</a>) are a private bot → your numeric chat IDs with soft VERIFY. Community links below are public invite spaces. Never paste bot tokens, ChatId numbers, broker logins, or account numbers into the channel or group.
+        Desk alerts (<a href="#telegram" data-tab="telegram">Telegram Alerts</a>) are a private bot → your numeric chat IDs with soft VERIFY. Community links below are public invite spaces. Never paste bot tokens, ChatId numbers, broker logins, or account numbers into the channel, Telegram group, or WhatsApp meet-up.
       </div>
 
       <h2>Join</h2>
@@ -2074,9 +2116,14 @@ cd GsignalX-Velocity</pre>
           <p><a href="https://t.me/+yURbcVkPi1kxNDg0" target="_blank" rel="noopener noreferrer">Open trading channel →</a></p>
         </div>
         <div class="card">
-          <h3>💬 Trading group · secondary</h3>
+          <h3>💬 Trading group · feedback</h3>
           <p>Ask traders, share redacted deploy CONFIRM notes, compare sample setups, and send product feedback. Use after you have the day’s macro basis from the channel.</p>
           <p><a href="https://t.me/+ZDosSHfUCLU1ZGY0" target="_blank" rel="noopener noreferrer">Open trading group →</a></p>
+        </div>
+        <div class="card">
+          <h3>📱 WhatsApp group · meet-up</h3>
+          <p>Live desk meet-up and quick chat — session windows, M5 book notes, and real-time peer check-ins. Complements Telegram; does not replace the macro channel.</p>
+          <p><a href="https://chat.whatsapp.com/EemGekqMwDgKrLj0tkqYlB" target="_blank" rel="noopener noreferrer">Join WhatsApp meet-up →</a></p>
         </div>
       </div>
       <div data-gsx-community="macro"></div>
@@ -2085,8 +2132,8 @@ cd GsignalX-Velocity</pre>
       <ul>
         <li>Start with the <strong>channel</strong> for the day’s macro / driver quantitative basis before sizing the Velocity book.</li>
         <li>Process over hype — share what you ran (pairs, floor, session window), not account credentials.</li>
-        <li>No bot tokens, WebRequest secrets, or numeric TG ChatIds in community chats.</li>
-        <li>Bugs with steps to reproduce → prefer <a href="https://github.com/gocitygroup/GsignalX-Velocity/issues" target="_blank" rel="noopener">GitHub Issues</a>; narrative desk feedback → trading group.</li>
+        <li>No bot tokens, WebRequest secrets, or numeric TG ChatIds in community chats (Telegram or WhatsApp).</li>
+        <li>Bugs with steps to reproduce → prefer <a href="https://github.com/gocitygroup/GsignalX-Velocity/issues" target="_blank" rel="noopener">GitHub Issues</a>; narrative desk feedback → Telegram group; live meet-up → WhatsApp.</li>
         <li>Blur or omit account numbers in screenshots.</li>
       </ul>
 
@@ -2132,6 +2179,8 @@ cd GsignalX-Velocity</pre>
         (primary — macro overview for day trading: composite current driver breakdown + cited data sources) ·
         <a href="https://t.me/+ZDosSHfUCLU1ZGY0" target="_blank" rel="noopener noreferrer">Trading group</a>
         (desk feedback) ·
+        <a href="https://chat.whatsapp.com/EemGekqMwDgKrLj0tkqYlB" target="_blank" rel="noopener noreferrer">WhatsApp meet-up</a>
+        (live desk chat) ·
         <a href="https://github.com/gocitygroup/GsignalX-Velocity/issues" target="_blank" rel="noopener">GitHub Issues</a>
         (reproducible bugs) ·
         <a href="https://github.com/gocitygroup/GsignalX-Velocity/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>
@@ -2158,12 +2207,14 @@ cd GsignalX-Velocity</pre>
           <tr><td><strong>Drill</strong></td><td>Timed window after PLAY for active-direction entries</td></tr>
           <tr><td><strong>March-after-flat</strong></td><td>Re-arm after Scouter flats the chart</td></tr>
           <tr><td><strong>ASAP / Profit CASH floor</strong></td><td>Bank winners when floating P/L hits account cash minimum (stock default <strong>100</strong>; CASH mode)</td></tr>
+          <tr><td><strong>ATR TRAIL</strong></td><td>Scouter 2.02 winner give-back close — Hybrid ATR×mult + % of peak + last-N candle range floor (tag <code>ATR-TRAIL</code>)</td></tr>
+          <tr><td><strong>TRAIL arm</strong></td><td>Independent chart <strong>TRAIL</strong> toggle (<code>PS&#123;id&#125;_TRAIL</code>); START remains master kill for auto closes</td></tr>
           <tr><td><strong>Loss CASH</strong></td><td>Opt-in cut when floating ≤ −N (stock amount 100; arm OFF until LOSS ON)</td></tr>
           <tr><td><strong>Fleet</strong></td><td>Max concurrent pairs (open or pending)</td></tr>
           <tr><td><strong>Strategic SL</strong></td><td>Catastrophe broker stop (default 4×ATR)</td></tr>
           <tr><td><strong>Trade Center</strong></td><td>Multisymbol Dashboard — roster, PROP, Telegram desk</td></tr>
           <tr><td><strong>VERIFY</strong></td><td>Trade Center — soft Telegram health: getMe + plain probe per chat; Verified if ≥1 chat delivers</td></tr>
-          <tr><td><strong>Desk community</strong></td><td>Public GSignalX Telegram — <strong>channel primary</strong> (macro day-trading overview / driver breakdown); group secondary (feedback)</td></tr>
+          <tr><td><strong>Desk community</strong></td><td>Public GSignalX invites — Telegram <strong>channel</strong> (macro), Telegram <strong>group</strong> (feedback), <strong>WhatsApp</strong> (live meet-up)</td></tr>
           <tr><td><strong>Deal failover</strong></td><td>Chart sends OPEN/CLOSE only when Trade Center desk heartbeat is stale</td></tr>
           <tr><td><strong>TG host tags</strong></td><td><code>svc</code> Service · <code>desk</code> Trade Center · <code>chart</code> Chart EA</td></tr>
           <tr><td><strong>Soft STOP</strong></td><td>PropRisk / operator pause entries; never closes</td></tr>
@@ -2173,7 +2224,7 @@ cd GsignalX-Velocity</pre>
       </table>
 
       <h2>Version alignment</h2>
-      <p>This manual matches <strong>Gsignalx Velocity 2.14</strong> (Trade Center / Service <code>#property version "2.14"</code>; bus schema <strong>1</strong>) plus current Scouter <strong>Profit CASH / Loss CASH</strong> and Telegram <strong>soft VERIFY</strong> desk behaviour. Run the desk from <a href="#desk213">System UI Best Use</a>. Operator note: <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.</p>
+      <p>This manual matches <strong>Gsignalx Velocity 2.14</strong> (Trade Center / Service <code>#property version "2.14"</code>; bus schema <strong>1</strong>) plus ProfitScouter <strong>2.02</strong> (<strong>Profit CASH / Loss CASH</strong>, independent <strong>ATR TRAIL</strong>) and Telegram <strong>soft VERIFY</strong> desk behaviour. Run the desk from <a href="#desk213">System UI Best Use</a>. Operator note: <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.</p>
 
       <div class="callout gold">
         <strong class="label">Executive signals</strong>

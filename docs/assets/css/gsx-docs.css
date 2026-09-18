@@ -218,6 +218,17 @@
 .gsx-community-btn.group.secondary {
   opacity: 0.92;
 }
+.gsx-community-btn.whatsapp {
+  color: #1f8f5f;
+  border-color: rgba(37, 211, 102, 0.55);
+  background: color-mix(in srgb, #25d366 12%, transparent);
+}
+.gsx-community-btn.whatsapp:hover {
+  color: #157a4f;
+  border-color: rgba(37, 211, 102, 0.8);
+  background: color-mix(in srgb, #25d366 20%, transparent);
+  text-decoration: none;
+}
 .gsx-community-dual.channel-primary .gsx-community-lead {
   border-left: 3px solid var(--gold);
   padding-left: 10px;

@@ -18,12 +18,13 @@ Default lot **FIXED 0.01**. Bus schema **v1**. Current cut **Velocity 2.14**.
 
 Cloud conviction signals (optional): [gsignalx.cloud](https://www.gsignalx.cloud/)
 
-**Desk community (Telegram)** — same invites as GSignalX Executive:
+**Desk community** — same invites as GSignalX Executive:
 
-- **[Trading channel](https://t.me/+yURbcVkPi1kxNDg0) (primary this update)** — Macro overview for day trading: consult the composite current driver breakdown and the cited data sources for the quantitative basis  
-- [Trading group](https://t.me/+ZDosSHfUCLU1ZGY0) (secondary) — feedback & peer desk  
+- **[Trading channel](https://t.me/+yURbcVkPi1kxNDg0) (primary)** — Macro overview for day trading: consult the composite current driver breakdown and the cited data sources for the quantitative basis  
+- [Trading group](https://t.me/+ZDosSHfUCLU1ZGY0) — feedback & peer desk  
+- [WhatsApp meet-up](https://chat.whatsapp.com/EemGekqMwDgKrLj0tkqYlB) — live desk chat  
 
-Manual chapter: [Desk Community](docs/Gsignalx_Velocity_Users_Manual.html#community)
+Manual chapter: [Desk Community](docs/Gsignalx_Velocity_Users_Manual.html#community) · Scouter **TRAIL** best use: [Profit CASH](docs/Gsignalx_Velocity_Users_Manual.html#profit-cash)
 
 **License:** [PolyForm Noncommercial 1.0.0](LICENSE) — personal / education / research; commercial use not permitted ([NOTICE](NOTICE)). [CONTRIBUTING.md](CONTRIBUTING.md)
 

@@ -1,4 +1,4 @@
-/* Gsignalx Velocity — desk community (Telegram channel + group)
+/* Gsignalx Velocity — desk community (Telegram channel + group + WhatsApp)
  * URLs mirrored from GocitySignalXenon COMPANY_CONFIG.contacts
  * (lib/forex-dashboard/config/company.ts).
  *
@@ -6,11 +6,13 @@
  *   consult the composite current driver breakdown and cited data sources
  *   for the quantitative basis. Also broadcasts / testimonials.
  * Group (secondary) — feedback / trader chat / stuck deploy.
+ * WhatsApp — live meet-up / desk chat (not a Telegram replacement).
  * Distinct from MT5 alert Telegram (BotFather / VERIFY / private chat IDs).
  */
 (function () {
   var CHANNEL_URL = "https://t.me/+yURbcVkPi1kxNDg0";
   var GROUP_URL = "https://t.me/+ZDosSHfUCLU1ZGY0";
+  var WHATSAPP_URL = "https://chat.whatsapp.com/EemGekqMwDgKrLj0tkqYlB";
   var BANNER_PANELS = { deploy: 1, telegram: 1, performance: 1, community: 1, welcome: 1 };
 
   var MACRO_LEAD =
@@ -22,42 +24,54 @@
       channelLabel: "Trading channel · primary",
       channelHint: "Macro drivers & day-trading basis",
       groupLabel: "Trading group",
-      groupHint: "Feedback & peer desk"
+      groupHint: "Feedback & peer desk",
+      whatsappLabel: "WhatsApp · meet-up",
+      whatsappHint: "Live desk chat"
     },
     feedback: {
       lead: MACRO_LEAD + " Then share desk feedback in the group.",
       channelLabel: "Channel · macro (main)",
       channelHint: "Driver breakdown + cited sources",
       groupLabel: "Group · feedback",
-      groupHint: "Ask traders / stuck deploy"
+      groupHint: "Ask traders / stuck deploy",
+      whatsappLabel: "WhatsApp · meet-up",
+      whatsappHint: "Live session chat"
     },
     stuck: {
       lead: "Stuck on deploy? Ask the group — or follow the channel for the day's macro overview first.",
       channelLabel: "Channel · macro (main)",
       channelHint: "Day-trading driver breakdown",
       groupLabel: "Trading group",
-      groupHint: "Share redacted CONFIRM notes"
+      groupHint: "Share redacted CONFIRM notes",
+      whatsappLabel: "WhatsApp · meet-up",
+      whatsappHint: "Quick desk check-in"
     },
     testimonial: {
       lead: MACRO_LEAD,
       channelLabel: "Channel · primary",
       channelHint: "Macro + process tips",
       groupLabel: "Group · discuss",
-      groupHint: "Peer setups & Q&A"
+      groupHint: "Peer setups & Q&A",
+      whatsappLabel: "WhatsApp · meet-up",
+      whatsappHint: "Live meet-up"
     },
     macro: {
       lead: MACRO_LEAD,
       channelLabel: "Open trading channel",
       channelHint: "Composite drivers · cited sources",
       groupLabel: "Trading group",
-      groupHint: "Optional peer chat"
+      groupHint: "Optional peer chat",
+      whatsappLabel: "WhatsApp · meet-up",
+      whatsappHint: "Live desk chat"
     },
     banner: {
       lead: "Macro · day trading (channel)",
       channelLabel: "Channel · main",
       channelHint: "",
       groupLabel: "Group",
-      groupHint: ""
+      groupHint: "",
+      whatsappLabel: "WhatsApp",
+      whatsappHint: ""
     }
   };
 
@@ -84,6 +98,9 @@
     var grHint = cfg.groupHint
       ? '<span class="gsx-community-hint">' + esc(cfg.groupHint) + "</span>"
       : "";
+    var waHint = cfg.whatsappHint
+      ? '<span class="gsx-community-hint">' + esc(cfg.whatsappHint) + "</span>"
+      : "";
     return (
       '<div class="gsx-community-dual channel-primary" data-intent="' +
       esc(intent || "default") +
@@ -105,6 +122,14 @@
       ">" +
       esc(cfg.groupLabel) +
       grHint +
+      "</a>" +
+      '<a class="gsx-community-btn whatsapp" href="' +
+      esc(WHATSAPP_URL) +
+      '" ' +
+      linkAttrs() +
+      ">" +
+      esc(cfg.whatsappLabel || "WhatsApp · meet-up") +
+      waHint +
       "</a>" +
       "</div></div>"
     );
@@ -131,6 +156,13 @@
       linkAttrs() +
       ">" +
       esc(cfg.groupLabel) +
+      "</a>" +
+      '<a class="gsx-community-btn whatsapp" href="' +
+      esc(WHATSAPP_URL) +
+      '" ' +
+      linkAttrs() +
+      ">" +
+      esc(cfg.whatsappLabel || "WhatsApp") +
       "</a>" +
       '<a class="gsx-community-btn more" href="#community" data-tab="community">More →</a>' +
       "</div></div>"
@@ -195,8 +227,10 @@
   window.GsxCommunity = {
     channelUrl: CHANNEL_URL,
     groupUrl: GROUP_URL,
+    whatsappUrl: WHATSAPP_URL,
     channelLabel: "Trading channel",
     groupLabel: "Trading group",
+    whatsappLabel: "WhatsApp meet-up",
     macroLead: MACRO_LEAD,
     primary: "channel",
     renderDualCtaHtml: renderDualCtaHtml,

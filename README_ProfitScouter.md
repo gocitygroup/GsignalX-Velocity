@@ -10,13 +10,13 @@ A money-based profit monitoring and harvesting engine for MetaTrader 5. It does 
 
 **Adverse experience gates:** loser Auto requires signal + opposing closed-bar streak, plus **min hold age** (`InpAdverseMinAgeMin`, default **15** minutes) and **once-green protect** (`InpAdverseProtectOnceGreen`, default **ON**). Service adverse TF default is **M5**. Account/pair layers no longer early-return when a target is notionally hit but zero winners meet `InpMinWinProfit`.
 
-**Chart buttons:** **START / STOP / AUTO** · **BANK / CUT / FLAT** · **CASH / LAYER** · **LOSS ON / OFF**. Panel shows `Profit CASH +N` and `Loss CASH −N`. Drag the title bar to move; position persists in `PS{InstanceID}_PNLX` / `PNLY`.
+**Chart buttons:** **START / STOP / AUTO / TRAIL** · **BANK / CUT / FLAT** · **CASH / LAYER** · **LOSS ON / OFF**. Panel shows `Profit CASH +N` and `Loss CASH −N`. Drag the title bar to move; position persists in `PS{InstanceID}_PNLX` / `PNLY`.
 
 **Winner harvest:** profit path closes the **smallest set of green tickets** that covers the threshold — biggest winners first. Losers are never touched by Profit CASH. Intentional loss closes: adverse **AUTO**, opt-in **Loss CASH**, manual **CUT / FLAT**.
 
 **Default close guard:** `CloseTicket` / `ClosePartial` refuse negatives unless `allowLoss` (adverse, Loss CASH, or manual CUT/FLAT). Old account loss-guard input names are **not** restored.
 
-**v1.12+ chart START / STOP / AUTO:** run state persists in `PS{InstanceID}_RUN`; adverse Auto in `PS{InstanceID}_ADVEN`. Service honors chart RUN / ADVEN / CASH / LOSS when `InpRespectChartRunState=true` and Instance ID matches.
+**v1.12+ chart START / STOP / AUTO / TRAIL:** run state persists in `PS{InstanceID}_RUN`; adverse Auto in `PS{InstanceID}_ADVEN`; TRAIL in `PS{InstanceID}_TRAIL`. Service honors chart RUN / ADVEN / CASH / LOSS / TRAIL when `InpRespectChartRunState=true` and Instance ID matches.
 
 **v2.01 agnostic / concurrent:** eligibility uses `GsxSymbolCanon` (broker suffixes OK). Service claims `PS{id}_CLOSER` (+ `PS{id}_CLOSER_TS` heartbeat) and owns **auto-harvest** while fresh; the EA yields automatic closes but **BANK / CUT / FLAT chart buttons always work** (operator override). Stale Service claim (>5s) lets the EA resume auto-harvest. Pair baskets use `InpBasketClosesPerCycle` + rotate. Desk practice soft-apply writes `PS{id}_FLOOR` / `_MINWIN` / `_LOCKARM` live overrides. Shared inputs live in `Include/ProfitScouter/Inputs.mqh`.
 
@@ -80,7 +80,7 @@ Requires MetaTrader 5 build 3000+ (uses `input group`, `CTrade`, millisecond tim
 4. Drag the EA onto the chart. On the **Common** tab tick *Allow Algo Trading*. Set your inputs on the **Inputs** tab. Press OK.
 5. A smiley face appears top-right and the dashboard prints in the chart corner. **START** / **STOP** buttons appear (if `InpShowButtons=true`).
 
-**Run one auto-closer only** for a given `InpInstanceID`. Prefer `ProfitScouter_Service` for unattended harvest (it claims `PS{id}_CLOSER` with a heartbeat). The chart EA with the same Instance ID yields **automatic** closes while Service is fresh, but **START/STOP/AUTO/CASH/LOSS and BANK/CUT/FLAT still work** on the chart. If Service stops (or its heartbeat goes stale >5s), the EA resumes auto-harvest. Use different `InpInstanceID` + magic filters for disjoint books.
+**Run one auto-closer only** for a given `InpInstanceID`. Prefer `ProfitScouter_Service` for unattended harvest (it claims `PS{id}_CLOSER` with a heartbeat). The chart EA with the same Instance ID yields **automatic** closes while Service is fresh, but **START/STOP/AUTO/TRAIL/CASH/LOSS and BANK/CUT/FLAT still work** on the chart. If Service stops (or its heartbeat goes stale >5s), the EA resumes auto-harvest. Use different `InpInstanceID` + magic filters for disjoint books.
 
 ### Standalone buttons (EA host)
 
@@ -91,6 +91,7 @@ Profit Scouter does **not** need GSignalX. Attach the EA alone to harvest any el
 | **START** (dense: **GO**) | Arm scouting — Profit CASH / LAYER closes run (`PS{id}_RUN`) |
 | **STOP** | Pause closes — panel still updates floating P/L; no closes until START again |
 | **AUTO** | Toggle adverse-bar loss exit ON/OFF (`PS{id}_ADVEN`). Does not pause profit targeting |
+| **TRAIL** | Independent ATR/% candle auto-trail on winners (`PS{id}_TRAIL`). Does not replace Profit CASH |
 | **BANK +** | Confirm → close **winners** only |
 | **CUT −** | Confirm → close **losers** only |
 | **FLAT** | Confirm → close **all** in scope |
@@ -99,7 +100,19 @@ Profit Scouter does **not** need GSignalX. Attach the EA alone to harvest any el
 
 **Only Scouter UI closes tickets.** Desk/Chart PLAY/STOP/HALT never flatten. Full system map: [Manual § Profit CASH](docs/Gsignalx_Velocity_Users_Manual.html#profit-cash).
 
-State survives recompile/restart: `PS{InpInstanceID}_RUN`, `_ADVEN`, `_CASH`, `_LOSS`. Default arm on first attach: scout START, adverse ON, CASH mode seeded from `InpScalpAsapAccountOnly=true`, Loss CASH OFF.
+State survives recompile/restart: `PS{InpInstanceID}_RUN`, `_ADVEN`, `_CASH`, `_LOSS`, `_TRAIL`. Default arm on first attach: scout START, adverse ON, TRAIL OFF, CASH mode seeded from `InpScalpAsapAccountOnly=true`, Loss CASH OFF.
+
+### Best use — TRAIL (Scouter 2.02)
+
+Operator checklist for give-back protection between hard Profit CASH floors:
+
+1. **START ON** (master kill for all auto closes — TRAIL included).
+2. Chart **TRAIL ON** (`PS{id}_TRAIL`); Service honors when `InpRespectChartRunState=true`.
+3. Keep **Profit CASH** set for the hard bank; TRAIL does not replace it.
+4. Keep **AUTO ON** for adverse losers; Loss CASH OFF unless you want −N flatten.
+5. Manual **BANK / CUT / FLAT** always work (independent of TRAIL / CASH / AUTO).
+
+Teachable recipe: [Manual · ATR TRAIL](docs/Gsignalx_Velocity_Users_Manual.html#atr-trail).
 
 If you also run `ProfitScouter_Service` with the **same** `InpInstanceID` and `InpRespectChartRunState=true`, chart toggles update Service closes as well. Trade Center / Chart **PLAY** / **HALT** write the same `_RUN` when scout-link is enabled (desk **STOP** leaves Scouter harvesting).
 
