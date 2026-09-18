@@ -245,7 +245,8 @@ function Confirm-LoserSafety {
   }
 
   if ($scoutText -match 'GsxScoutCloserClaimService' -and $scoutText -match 'GsxScoutCloserAllowsCloses' -and
-      $coreText -match 'g_closerAllows' -and $svcText -match 'GsxScoutCloserClaimService') {
+      $scoutText -match 'GsxScoutCloserServiceFresh' -and $coreText -match 'g_closerAllows' -and
+      $coreText -match 'g_closerManualBypass' -and $svcText -match 'GsxScoutCloserClaimService') {
     Add-Line "PASS  V2.01 Service sole closer (PS CLOSER)"
   }
   else {

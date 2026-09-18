@@ -122,8 +122,9 @@ string         g_adverseLastSym    = "";
 int            g_adverseLastStreak = 0;
 int            g_adverseClosedCycle = 0;
 int            g_cashLossClosedCycle = 0;
-bool           g_closerAllows = true;   // refreshed each Monitor (Service sole closer)
+bool           g_closerAllows = true;   // refreshed each Monitor (Service sole auto-closer)
 bool           g_closerYieldLogged = false;
+bool           g_closerManualBypass = false; // BANK/CUT/FLAT operator override
 int            g_basketRotate = 0;      // fair multi-symbol pair harvest start
 string         g_busLastFp = "";
 datetime       g_busLastPub = 0;
@@ -203,9 +204,10 @@ void Monitor()
      {
       if(!g_closerYieldLogged)
         {
-         PrintFormat("ProfitScouter #%d: Service owns closes — EA watch/UI only", InpInstanceID);
+         PrintFormat("ProfitScouter #%d: Service owns auto-harvest — EA UI arms + BANK/CUT/FLAT still work",
+                     InpInstanceID);
          g_closerYieldLogged = true;
-         g_lastAction = "yield to Service closer";
+         g_lastAction = "auto yield to Service (manual OK)";
         }
      }
    else
@@ -1035,10 +1037,11 @@ double LiveProfitOfSelected()
 
 bool CloseTicket(ulong ticket, string tag, const bool allowLoss = false)
   {
-   if(!g_closerAllows)
+   // Auto-harvest yields to fresh Service closer; manual BANK/CUT/FLAT bypasses.
+   if(!g_closerAllows && !g_closerManualBypass)
      {
       if(InpVerboseLog)
-         PrintFormat("ProfitScouter: CloseTicket blocked (Service owns closer) tag=%s #%I64u",
+         PrintFormat("ProfitScouter: CloseTicket blocked (Service owns auto-closer) tag=%s #%I64u",
                      tag, ticket);
       return false;
      }
@@ -1137,24 +1140,22 @@ int ManualCloseBySide(const int side, const string tag)
 
 bool ManualCloseConfirmAndRun(const int side, const string tag, const string prompt)
   {
-   if(!g_closerAllows)
-     {
-      MessageBox("Service owns closes for this Instance ID.\nEA is watch/UI only.",
-                 "Profit Scouter", MB_OK | MB_ICONINFORMATION);
-      return(false);
-     }
+   // Chart BANK/CUT/FLAT are always operator-owned (even when Service auto-harvests).
    if(MessageBox(prompt, "Profit Scouter — confirm", MB_OKCANCEL | MB_ICONWARNING) != IDOK)
      {
       g_lastAction = tag + " cancelled";
       return(false);
      }
+   g_closerManualBypass = true;
    ManualCloseBySide(side, tag);
+   g_closerManualBypass = false;
+   g_busForcePub = true;
    return(true);
   }
 
 bool ClosePartial(ulong ticket, double volume)
   {
-   if(!g_closerAllows)
+   if(!g_closerAllows && !g_closerManualBypass)
       return false;
    if(!PositionSelectByTicket(ticket))
       return false;

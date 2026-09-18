@@ -105,16 +105,23 @@ bool GsxScoutLossGet(const int instanceId, const bool defaultOn = false)
   }
 
 //+------------------------------------------------------------------+
-//| CLOSER — exclusive close ownership (Service preferred)           |
+//| CLOSER — exclusive auto-harvest ownership (Service preferred)    |
+//| Manual BANK/CUT/FLAT on the EA chart always remain operator OK.  |
 //+------------------------------------------------------------------+
 string GsxScoutCloserVarName(const int instanceId)
   {
    return(StringFormat("PS%d_CLOSER", instanceId));
   }
 
+string GsxScoutCloserTsVarName(const int instanceId)
+  {
+   return(StringFormat("PS%d_CLOSER_TS", instanceId));
+  }
+
 void GsxScoutCloserSet(const int instanceId, const int host)
   {
    GlobalVariableSet(GsxScoutCloserVarName(instanceId), (double)host);
+   GlobalVariableSet(GsxScoutCloserTsVarName(instanceId), (double)TimeCurrent());
   }
 
 int GsxScoutCloserGet(const int instanceId)
@@ -128,14 +135,25 @@ int GsxScoutCloserGet(const int instanceId)
    return(GSX_SCOUT_CLOSER_NONE);
   }
 
+datetime GsxScoutCloserTsGet(const int instanceId)
+  {
+   string name = GsxScoutCloserTsVarName(instanceId);
+   if(!GlobalVariableCheck(name))
+      return(0);
+   return((datetime)GlobalVariableGet(name));
+  }
+
 void GsxScoutCloserClear(const int instanceId)
   {
    string name = GsxScoutCloserVarName(instanceId);
+   string ts  = GsxScoutCloserTsVarName(instanceId);
    if(GlobalVariableCheck(name))
       GlobalVariableDel(name);
+   if(GlobalVariableCheck(ts))
+      GlobalVariableDel(ts);
   }
 
-// Service claims sole closer. EA yields while Service owns.
+// Service claims sole auto-closer and refreshes heartbeat each cycle.
 void GsxScoutCloserClaimService(const int instanceId)
   {
    GsxScoutCloserSet(instanceId, GSX_SCOUT_CLOSER_SERVICE);
@@ -152,14 +170,32 @@ bool GsxScoutCloserIsService(const int instanceId)
    return(GsxScoutCloserGet(instanceId) == GSX_SCOUT_CLOSER_SERVICE);
   }
 
-// True when this host may send CloseTicket / harvest closes.
+// Fresh Service claim window (seconds). Stale/crash → EA resumes auto harvest.
+#define GSX_SCOUT_CLOSER_FRESH_SEC  5
+
+bool GsxScoutCloserServiceFresh(const int instanceId)
+  {
+   if(GsxScoutCloserGet(instanceId) != GSX_SCOUT_CLOSER_SERVICE)
+      return(false);
+   datetime ts = GsxScoutCloserTsGet(instanceId);
+   if(ts <= 0)
+      return(false);
+   return((TimeCurrent() - ts) <= GSX_SCOUT_CLOSER_FRESH_SEC);
+  }
+
+// True when this host may run *automatic* harvest closes.
+// Manual EA BANK/CUT/FLAT bypass this (operator override).
 bool GsxScoutCloserAllowsCloses(const int instanceId, const bool isServiceHost)
   {
-   int owner = GsxScoutCloserGet(instanceId);
    if(isServiceHost)
-      return(true); // Service always closes (and should claim on start)
-   // EA: only when Service is not the owner
-   return(owner != GSX_SCOUT_CLOSER_SERVICE);
+      return(true);
+   // EA auto-harvest: yield only while Service claim is fresh
+   if(GsxScoutCloserServiceFresh(instanceId))
+      return(false);
+   // Stale SERVICE tag: clear so UI/logs stay honest
+   if(GsxScoutCloserGet(instanceId) == GSX_SCOUT_CLOSER_SERVICE)
+      GsxScoutCloserClear(instanceId);
+   return(true);
   }
 
 //+------------------------------------------------------------------+
