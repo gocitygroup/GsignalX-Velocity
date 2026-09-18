@@ -520,6 +520,7 @@ int OnInit()
    DashTryStartCore("OnInit");
 
    ChartSetInteger(0, CHART_EVENT_MOUSE_MOVE, true);
+   ChartSetInteger(0, CHART_EVENT_MOUSE_WHEEL, true);
    int cycle = (int)MathMax(50, InpCycleMs);
    int uiMs  = (int)MathMax(100, InpRefreshMs);
    int ms = (InpDeskExecute ? (int)MathMin(cycle, uiMs) : uiMs);

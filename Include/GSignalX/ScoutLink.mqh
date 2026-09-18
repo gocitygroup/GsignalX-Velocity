@@ -1,12 +1,19 @@
 //+------------------------------------------------------------------+
 //|                                                  ScoutLink.mqh    |
-//|  Shared Profit Scouter START/STOP GV (PS{id}_RUN).                |
+//|  Shared Profit Scouter GV API (RUN/ADVEN/CASH/LOSS/CLOSER/floors).|
 //|  Chart EA, Trade Center, and Service hosts write; Scouter reads.  |
-//|  Never closes tickets — harvest arm only.                         |
+//|  Never closes tickets — harvest arm / floors / closer claim only. |
 //+------------------------------------------------------------------+
 #ifndef GSX_SCOUT_LINK_MQH
 #define GSX_SCOUT_LINK_MQH
 
+// Closer host tags (mirror Fleet OWN pattern)
+#define GSX_SCOUT_CLOSER_NONE    0
+#define GSX_SCOUT_CLOSER_EA      1
+#define GSX_SCOUT_CLOSER_SERVICE 2
+
+//+------------------------------------------------------------------+
+//| RUN — harvest arm                                                |
 //+------------------------------------------------------------------+
 string GsxScoutRunVarName(const int instanceId)
   {
@@ -32,6 +39,192 @@ void GsxScoutRunSetLinked(const bool linkEnable, const int instanceId, const boo
    if(!linkEnable)
       return;
    GsxScoutRunSet(instanceId, on);
+  }
+
+//+------------------------------------------------------------------+
+//| ADVEN — adverse-bar Auto arm                                     |
+//+------------------------------------------------------------------+
+string GsxScoutAdvenVarName(const int instanceId)
+  {
+   return(StringFormat("PS%d_ADVEN", instanceId));
+  }
+
+void GsxScoutAdvenSet(const int instanceId, const bool on)
+  {
+   GlobalVariableSet(GsxScoutAdvenVarName(instanceId), on ? 1.0 : 0.0);
+  }
+
+bool GsxScoutAdvenGet(const int instanceId, const bool defaultOn = true)
+  {
+   string name = GsxScoutAdvenVarName(instanceId);
+   if(!GlobalVariableCheck(name))
+      return(defaultOn);
+   return(GlobalVariableGet(name) > 0.5);
+  }
+
+//+------------------------------------------------------------------+
+//| CASH — single-floor vs LAYER mode                                |
+//+------------------------------------------------------------------+
+string GsxScoutCashVarName(const int instanceId)
+  {
+   return(StringFormat("PS%d_CASH", instanceId));
+  }
+
+void GsxScoutCashSet(const int instanceId, const bool on)
+  {
+   GlobalVariableSet(GsxScoutCashVarName(instanceId), on ? 1.0 : 0.0);
+  }
+
+bool GsxScoutCashGet(const int instanceId, const bool defaultOn = true)
+  {
+   string name = GsxScoutCashVarName(instanceId);
+   if(!GlobalVariableCheck(name))
+      return(defaultOn);
+   return(GlobalVariableGet(name) > 0.5);
+  }
+
+//+------------------------------------------------------------------+
+//| LOSS — Loss CASH arm                                             |
+//+------------------------------------------------------------------+
+string GsxScoutLossVarName(const int instanceId)
+  {
+   return(StringFormat("PS%d_LOSS", instanceId));
+  }
+
+void GsxScoutLossSet(const int instanceId, const bool on)
+  {
+   GlobalVariableSet(GsxScoutLossVarName(instanceId), on ? 1.0 : 0.0);
+  }
+
+bool GsxScoutLossGet(const int instanceId, const bool defaultOn = false)
+  {
+   string name = GsxScoutLossVarName(instanceId);
+   if(!GlobalVariableCheck(name))
+      return(defaultOn);
+   return(GlobalVariableGet(name) > 0.5);
+  }
+
+//+------------------------------------------------------------------+
+//| CLOSER — exclusive close ownership (Service preferred)           |
+//+------------------------------------------------------------------+
+string GsxScoutCloserVarName(const int instanceId)
+  {
+   return(StringFormat("PS%d_CLOSER", instanceId));
+  }
+
+void GsxScoutCloserSet(const int instanceId, const int host)
+  {
+   GlobalVariableSet(GsxScoutCloserVarName(instanceId), (double)host);
+  }
+
+int GsxScoutCloserGet(const int instanceId)
+  {
+   string name = GsxScoutCloserVarName(instanceId);
+   if(!GlobalVariableCheck(name))
+      return(GSX_SCOUT_CLOSER_NONE);
+   int h = (int)GlobalVariableGet(name);
+   if(h == GSX_SCOUT_CLOSER_EA || h == GSX_SCOUT_CLOSER_SERVICE)
+      return(h);
+   return(GSX_SCOUT_CLOSER_NONE);
+  }
+
+void GsxScoutCloserClear(const int instanceId)
+  {
+   string name = GsxScoutCloserVarName(instanceId);
+   if(GlobalVariableCheck(name))
+      GlobalVariableDel(name);
+  }
+
+// Service claims sole closer. EA yields while Service owns.
+void GsxScoutCloserClaimService(const int instanceId)
+  {
+   GsxScoutCloserSet(instanceId, GSX_SCOUT_CLOSER_SERVICE);
+  }
+
+void GsxScoutCloserReleaseService(const int instanceId)
+  {
+   if(GsxScoutCloserGet(instanceId) == GSX_SCOUT_CLOSER_SERVICE)
+      GsxScoutCloserClear(instanceId);
+  }
+
+bool GsxScoutCloserIsService(const int instanceId)
+  {
+   return(GsxScoutCloserGet(instanceId) == GSX_SCOUT_CLOSER_SERVICE);
+  }
+
+// True when this host may send CloseTicket / harvest closes.
+bool GsxScoutCloserAllowsCloses(const int instanceId, const bool isServiceHost)
+  {
+   int owner = GsxScoutCloserGet(instanceId);
+   if(isServiceHost)
+      return(true); // Service always closes (and should claim on start)
+   // EA: only when Service is not the owner
+   return(owner != GSX_SCOUT_CLOSER_SERVICE);
+  }
+
+//+------------------------------------------------------------------+
+//| Live practice floors (desk soft-apply overrides inputs)          |
+//+------------------------------------------------------------------+
+string GsxScoutFloorVarName(const int instanceId)
+  {
+   return(StringFormat("PS%d_FLOOR", instanceId));
+  }
+
+string GsxScoutMinWinVarName(const int instanceId)
+  {
+   return(StringFormat("PS%d_MINWIN", instanceId));
+  }
+
+string GsxScoutLockArmVarName(const int instanceId)
+  {
+   return(StringFormat("PS%d_LOCKARM", instanceId));
+  }
+
+void GsxScoutFloorsSet(const int instanceId,
+                       const double floor,
+                       const double minWin,
+                       const double lockArm)
+  {
+   GlobalVariableSet(GsxScoutFloorVarName(instanceId), floor);
+   GlobalVariableSet(GsxScoutMinWinVarName(instanceId), minWin);
+   GlobalVariableSet(GsxScoutLockArmVarName(instanceId), lockArm);
+  }
+
+void GsxScoutFloorsClear(const int instanceId)
+  {
+   string a = GsxScoutFloorVarName(instanceId);
+   string b = GsxScoutMinWinVarName(instanceId);
+   string c = GsxScoutLockArmVarName(instanceId);
+   if(GlobalVariableCheck(a)) GlobalVariableDel(a);
+   if(GlobalVariableCheck(b)) GlobalVariableDel(b);
+   if(GlobalVariableCheck(c)) GlobalVariableDel(c);
+  }
+
+bool GsxScoutFloorGet(const int instanceId, double &floorOut)
+  {
+   string name = GsxScoutFloorVarName(instanceId);
+   if(!GlobalVariableCheck(name))
+      return(false);
+   floorOut = GlobalVariableGet(name);
+   return(true);
+  }
+
+bool GsxScoutMinWinGet(const int instanceId, double &minWinOut)
+  {
+   string name = GsxScoutMinWinVarName(instanceId);
+   if(!GlobalVariableCheck(name))
+      return(false);
+   minWinOut = GlobalVariableGet(name);
+   return(true);
+  }
+
+bool GsxScoutLockArmGet(const int instanceId, double &lockArmOut)
+  {
+   string name = GsxScoutLockArmVarName(instanceId);
+   if(!GlobalVariableCheck(name))
+      return(false);
+   lockArmOut = GlobalVariableGet(name);
+   return(true);
   }
 
 #endif // GSX_SCOUT_LINK_MQH

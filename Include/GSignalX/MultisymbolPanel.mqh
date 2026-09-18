@@ -1,6 +1,6 @@
 //+------------------------------------------------------------------+
 //|                                         MultisymbolPanel.mqh      |
-//|  Full + Compact Trade Center (GSXMS_) — v1.26 categories/events   |
+//|  Full + Compact Trade Center (GSXMS_) — v1.27 wheel page scroll   |
 //|  NEVER closes positions.                                          |
 //+------------------------------------------------------------------+
 #ifndef GSX_MULTISYMBOL_PANEL_MQH
@@ -63,6 +63,7 @@ bool   g_msShowButtons   = true;
 bool   g_msShowPractice  = false; // v2.05: mute practice/demo coach by default
 int    g_msDefaultFleet  = 4;
 int    g_msRowsDrawn     = 0;
+int    g_msCompactRowsDrawn = 0;
 int    g_msClassMax      = GSX_CLASS_SOFT_MAX_DEFAULT;
 int    g_msPanelWidth    = GSXMS_WIDTH;
 int    g_msRowH          = GSXMS_RH;
@@ -553,6 +554,7 @@ void GsxMsPanelDelete()
   {
    ObjectsDeleteAll(0, GSXMS_PFX);
    g_msRowsDrawn = 0;
+   g_msCompactRowsDrawn = 0;
   }
 
 //+------------------------------------------------------------------+
@@ -715,6 +717,78 @@ void GsxMsTrimRowObjects(const int used)
       ObjectDelete(0, GSXMS_PFX + "BTN_REM_" + IntegerToString(i));
      }
    g_msRowsDrawn = used;
+  }
+
+void GsxMsTrimCompactRows(const int used)
+  {
+   for(int i = used; i < g_msCompactRowsDrawn; i++)
+     {
+      ObjectDelete(0, GSXMS_PFX + StringFormat("CR%d", i));
+      ObjectDelete(0, GSXMS_PFX + "BTN_STATE_" + IntegerToString(i));
+      ObjectDelete(0, GSXMS_PFX + "BTN_REM_" + IntegerToString(i));
+     }
+   g_msCompactRowsDrawn = used;
+  }
+
+// Category-filtered page count (same ceil math as GsxMsBuildSnapshot).
+int GsxMsPageCountFromCat()
+  {
+   string names[];
+   GsxRosterStoreLoad(g_msMagic, names);
+   string view[];
+   GsxRosterFilterByCat(names, GsxRosterCatGet(g_msMagic), view);
+   int n = ArraySize(view);
+   int ps = MathMax(1, g_msPageSize);
+   return(n <= 0 ? 1 : (n + ps - 1) / ps);
+  }
+
+// Shared page step for BTN_PAGE_* and mouse-wheel scroll. Clamps to [0, pageCount-1].
+bool GsxMsPageStep(const int delta)
+  {
+   int pc = GsxMsPageCountFromCat();
+   int next = g_msPage + delta;
+   if(next < 0)
+      next = 0;
+   if(next >= pc)
+      next = pc - 1;
+   if(next == g_msPage)
+     {
+      g_msLastAction = "page " + IntegerToString(g_msPage + 1);
+      return(false);
+     }
+   g_msPage = next;
+   GsxRosterPageSet(g_msMagic, g_msPage);
+   g_msLastAction = "page " + IntegerToString(g_msPage + 1);
+   return(true);
+  }
+
+bool GsxMsObjContains(const string name, const int mx, const int my)
+  {
+   if(ObjectFind(0, name) < 0)
+      return(false);
+   int x = (int)ObjectGetInteger(0, name, OBJPROP_XDISTANCE);
+   int y = (int)ObjectGetInteger(0, name, OBJPROP_YDISTANCE);
+   int w = (int)ObjectGetInteger(0, name, OBJPROP_XSIZE);
+   int h = (int)ObjectGetInteger(0, name, OBJPROP_YSIZE);
+   if(w <= 0 || h <= 0)
+      return(false);
+   if(mx < x || mx > x + w)
+      return(false);
+   if(my < y || my > y + h)
+      return(false);
+   return(true);
+  }
+
+// Hit-test Trade Center BG / compact CBG / table band for wheel consume.
+bool GsxMsHitTestPanel(const int mx, const int my)
+  {
+   if(GsxMsObjContains(GSXMS_PFX + "CBG", mx, my))
+      return(true);
+   if(GsxMsObjContains(GSXMS_PFX + "BG", mx, my))
+      return(true);
+   if(GsxMsObjContains(GSXMS_PFX + "SEC_TBL", mx, my))
+      return(true);
+   return(false);
   }
 
 void GsxMsDrawCatTab(const string tag, const GsxLaySlot &slot,
@@ -1189,6 +1263,7 @@ void GsxMsPanelDrawCompact(const GsxMsSnapshot &snap, const int anchorX, const i
                             g_msColBear, g_msColBg, pad);
       GsxLayAdvanceTight(lay, rh + MathMax(0, g_msLay.tableGap));
      }
+   GsxMsTrimCompactRows(show);
 
    int totalH = GsxLayMeasuredH(lay) + GsxSx(8);
    string cbg = GSXMS_PFX + "CBG";
@@ -1219,9 +1294,21 @@ bool GsxMsPanelApplyPractice(const int band, const int cost, const int style)
    GsxRosterCatSet(g_msMagic, p.softCat);
    g_msPage = 0;
    GsxRosterPageSet(g_msMagic, 0);
-   g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " " + p.label +
-                    " fleet=" + IntegerToString(p.fleetTarget) +
-                    " (load .set for floors)";
+
+   // Push live Scouter floors (desk soft-apply → Core overrides without Service restart)
+   if(g_msScoutLinkEnable && g_msScoutInstanceID > 0)
+     {
+      GsxScoutFloorsSet(g_msScoutInstanceID, p.asapFloor, p.minWin, p.lockArm);
+      g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " " + p.label +
+                       " fleet=" + IntegerToString(p.fleetTarget) +
+                       " floor=" + DoubleToString(p.asapFloor, 2);
+     }
+   else
+     {
+      g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " " + p.label +
+                       " fleet=" + IntegerToString(p.fleetTarget) +
+                       " (scout unlink — load .set for floors)";
+     }
    return(true);
   }
 
@@ -1230,6 +1317,22 @@ bool GsxMsPanelOnChartEvent(const int id,
                             const double &dparam,
                             const string &sparam)
   {
+   // Wheel over Trade Center / compact strip → page step (consume to keep chart zoom).
+   if(id == CHARTEVENT_MOUSE_WHEEL)
+     {
+      int mx = (int)(short)lparam;
+      int my = (int)(short)(lparam >> 16);
+      int delta = (int)dparam;
+      if(!GsxMsHitTestPanel(mx, my))
+         return(false);
+      // Scroll up (delta>0) → previous page; scroll down → next (clamped).
+      if(delta > 0)
+         GsxMsPageStep(-1);
+      else if(delta < 0)
+         GsxMsPageStep(1);
+      return(true);
+     }
+
    if(id == CHARTEVENT_OBJECT_CLICK)
      {
       if(StringFind(sparam, GSXMS_PFX) != 0)
@@ -1433,16 +1536,12 @@ bool GsxMsPanelOnChartEvent(const int id,
         }
       if(tag == "BTN_PAGE_P")
         {
-         g_msPage = MathMax(0, g_msPage - 1);
-         GsxRosterPageSet(g_msMagic, g_msPage);
-         g_msLastAction = "page " + IntegerToString(g_msPage + 1);
+         GsxMsPageStep(-1);
          return(true);
         }
       if(tag == "BTN_PAGE_N")
         {
-         g_msPage = g_msPage + 1;
-         GsxRosterPageSet(g_msMagic, g_msPage);
-         g_msLastAction = "page " + IntegerToString(g_msPage + 1);
+         GsxMsPageStep(1);
          return(true);
         }
 

@@ -2858,8 +2858,13 @@ void SetRunState(bool on, bool announce)
 void OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam)
   {
    // Multisymbol strip / dashboard objects on this chart (GSXMS_)
+   // Wheel has empty sparam — route via strip enable or existing GSXMS_ objects.
+   bool msWheel = (id == CHARTEVENT_MOUSE_WHEEL &&
+                   (GsxChartRosterStripEnabled() || ObjectFind(0, "GSXMS_CBG") >= 0 ||
+                    ObjectFind(0, "GSXMS_BG") >= 0));
    if(StringFind(sparam, "GSXMS_") == 0 ||
-      (id == CHARTEVENT_MOUSE_MOVE && g_msDragging))
+      (id == CHARTEVENT_MOUSE_MOVE && g_msDragging) ||
+      msWheel)
      {
       if(GsxMsPanelOnChartEvent(id, lparam, dparam, sparam))
         {
@@ -3122,6 +3127,7 @@ int OnInit()
    ChartSetInteger(0, CHART_SHOW_GRID, false);
    ChartSetInteger(0, CHART_FOREGROUND, false);
    ChartSetInteger(0, CHART_EVENT_MOUSE_MOVE, true);
+   ChartSetInteger(0, CHART_EVENT_MOUSE_WHEEL, true);
    GsxLoadPanelPos();
 
    // v1.24 compact roster strip (same magic as Service / Dashboard)

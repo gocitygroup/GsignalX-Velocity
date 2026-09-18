@@ -74,6 +74,7 @@ struct AdvCache
    string            canon;
    int               dir;         // last bus signal direction (+1/-1/0)
    datetime          barTime;     // forming-bar open time for InpAdverseTimeframe
+   datetime          dirStamp;    // last bus dir refresh (throttle file I/O)
    int               sellStreak;  // consecutive closed selling bars
    int               buyStreak;   // consecutive closed buying bars
   };
@@ -121,6 +122,12 @@ string         g_adverseLastSym    = "";
 int            g_adverseLastStreak = 0;
 int            g_adverseClosedCycle = 0;
 int            g_cashLossClosedCycle = 0;
+bool           g_closerAllows = true;   // refreshed each Monitor (Service sole closer)
+bool           g_closerYieldLogged = false;
+int            g_basketRotate = 0;      // fair multi-symbol pair harvest start
+string         g_busLastFp = "";
+datetime       g_busLastPub = 0;
+bool           g_busForcePub = false;
 #ifdef PS_HOST_EA
 int            g_panelX = 10;
 int            g_panelY = 18;
@@ -136,6 +143,7 @@ int            g_psClipLine = 40;
 int            g_psBtnH = 26;
 int            g_psBtnBand = 34;
 string         g_psLastFp = "";
+string         g_psChromeFp = "";
 datetime       g_psLastForceDraw = 0;
 // Runtime layout (scaled + vision-aware)
 int            g_psW = 460;
@@ -181,23 +189,30 @@ void SubscribeSymbols()
 void Monitor()
   {
    RefreshCurrencyFactor(false);
-#ifdef PS_HOST_EA
+#ifdef PS_HOST_SERVICE
+   g_closerAllows = true;
+#else
    // Live desk sync: Trade Center HALT/PLAY writes PS{id}_RUN / ADVEN;
    // chart CASH / LOSS buttons share PS{id}_CASH / PS{id}_LOSS with Service.
-   gScoutEnabled = GsxScoutRunGet(InpInstanceID, gScoutEnabled);
-   string advN = StringFormat("PS%d_ADVEN", InpInstanceID);
-   if(GlobalVariableCheck(advN))
-      gAdverseEnabled = (GlobalVariableGet(advN) > 0.5);
-   string cashN = StringFormat("PS%d_CASH", InpInstanceID);
-   if(GlobalVariableCheck(cashN))
-      gCashMode = (GlobalVariableGet(cashN) > 0.5);
-   string lossN = StringFormat("PS%d_LOSS", InpInstanceID);
-   if(GlobalVariableCheck(lossN))
-      gCashLossArmed = (GlobalVariableGet(lossN) > 0.5);
+   gScoutEnabled    = GsxScoutRunGet(InpInstanceID, gScoutEnabled);
+   gAdverseEnabled  = GsxScoutAdvenGet(InpInstanceID, gAdverseEnabled);
+   gCashMode        = GsxScoutCashGet(InpInstanceID, gCashMode);
+   gCashLossArmed   = GsxScoutLossGet(InpInstanceID, gCashLossArmed);
+   g_closerAllows   = GsxScoutCloserAllowsCloses(InpInstanceID, false);
+   if(!g_closerAllows)
+     {
+      if(!g_closerYieldLogged)
+        {
+         PrintFormat("ProfitScouter #%d: Service owns closes — EA watch/UI only", InpInstanceID);
+         g_closerYieldLogged = true;
+         g_lastAction = "yield to Service closer";
+        }
+     }
+   else
+      g_closerYieldLogged = false;
 #endif
 
    //--- 1. collect eligible positions -------------------------------
-   ArrayResize(g_live, 0);
    ArrayResize(g_agg, 0);
    g_winCount = 0;  g_winSum  = 0.0;
    g_lossCount = 0; g_lossSum = 0.0;
@@ -208,6 +223,8 @@ void Monitor()
    datetime accOldest = 0;
 
    int total = PositionsTotal();
+   ArrayResize(g_live, total); // pre-size; trim after scan
+   int liveN = 0;
    for(int i = 0; i < total; i++)
      {
       ulong ticket = PositionGetTicket(i);
@@ -237,9 +254,7 @@ void Monitor()
       lp.symIndex = AggIndex(sym);
       lp.posType  = PositionGetInteger(POSITION_TYPE);
 
-      int n = ArraySize(g_live);
-      ArrayResize(g_live, n + 1);
-      g_live[n] = lp;
+      g_live[liveN++] = lp;
 
       //--- symbol aggregation + profit / loss bucketing
       g_agg[lp.symIndex].profit += profit;
@@ -269,11 +284,12 @@ void Monitor()
       //--- always-on peak tracking (drives the profit lock in every mode)
       TrackPosPeak(TouchPosRec(ticket), profit);
      }
+   ArrayResize(g_live, liveN);
 
    g_lastAccProfit = accProfit;
    PurgeUnseen();
 
-   if(ArraySize(g_live) == 0)
+   if(liveN == 0)
      {
       ResetAccountPeak();
       PsAfterCycle(0.0, 0);
@@ -284,13 +300,20 @@ void Monitor()
    if(!gScoutEnabled)
      {
       g_lastAction = "scout STOPPED";
-      PsAfterCycle(accProfit, ArraySize(g_live));
+      PsAfterCycle(accProfit, liveN);
       return;
      }
 
    if(!TradingReady())
      {
-      PsAfterCycle(accProfit, ArraySize(g_live));
+      PsAfterCycle(accProfit, liveN);
+      return;
+     }
+
+   // Service owns closes — EA tracks peaks + panel only
+   if(!g_closerAllows)
+     {
+      PsAfterCycle(accProfit, liveN);
       return;
      }
 
@@ -301,6 +324,7 @@ void Monitor()
       for(int i = 0; i < ArraySize(g_live); i++)
          accProfit += g_live[i].profit;
       g_lastAccProfit = accProfit;
+      g_busForcePub = true;
      }
 
    //--- 1c. opt-in account Loss CASH cut (all scoped losers; allowLoss)
@@ -309,6 +333,7 @@ void Monitor()
       double remLoss = 0.0;
       for(int i = 0; i < ArraySize(g_live); i++)
          remLoss += g_live[i].profit;
+      g_busForcePub = true;
       PsAfterCycle(remLoss, ArraySize(g_live));
       return;
      }
@@ -320,19 +345,30 @@ void Monitor()
       double rem = 0.0;
       for(int i = 0; i < ArraySize(g_live); i++)
          rem += g_live[i].profit;
+      g_busForcePub = true;
       PsAfterCycle(rem, ArraySize(g_live));
       return;
      }
 
-   //--- 3. per-pair level (CASH: hard floor only; layered: full rules)
-   bool basketClosed = false;
-   for(int s = 0; s < ArraySize(g_agg); s++)
+   //--- 3. per-pair level (fair rotate + budget; CASH: hard floor only)
+   int nAgg = ArraySize(g_agg);
+   int budget = MathMax(1, InpBasketClosesPerCycle);
+   int closedBaskets = 0;
+   if(nAgg > 0)
      {
-      if(HandleSymbol(s))
-         basketClosed = true;
+      if(g_basketRotate < 0 || g_basketRotate >= nAgg)
+         g_basketRotate = 0;
+      for(int k = 0; k < nAgg && closedBaskets < budget; k++)
+        {
+         int s = (g_basketRotate + k) % nAgg;
+         if(HandleSymbol(s))
+            closedBaskets++;
+        }
+      g_basketRotate = (g_basketRotate + 1) % nAgg;
      }
-   if(basketClosed)
+   if(closedBaskets > 0)
      {
+      g_busForcePub = true;
       PsAfterCycle(accProfit, ArraySize(g_live));
       return;
      }
@@ -530,7 +566,7 @@ void HandlePosition(int liveIdx)
    if(lockFloor > 0.0 && profit > 0.0 && profit <= lockFloor)
      {
       // Enforce winner floor: do not profit-lock close below MinWinProfit
-      if(InpMinWinProfit > 0.0 && profit < Money(InpMinWinProfit))
+      if(InpMinWinProfit > 0.0 && profit < MinWinFloorMoney())
          return;
       Notify(StringFormat("#%I64u profit lock: peak %.2f -> %.2f <= floor %.2f %s - closing green",
                           ticket, g_pos[r].peak, profit, lockFloor, g_accCcy));
@@ -628,12 +664,12 @@ void TrackPosPeak(const int r, const double profit)
       SavePosPeak(r);                       // survives terminal restart
      }
 
-   if(InpProfitLockEnable && !g_pos[r].lockArmed && g_pos[r].peak >= Money(InpProfitLockArm))
+   if(InpProfitLockEnable && !g_pos[r].lockArmed && g_pos[r].peak >= LockArmMoney())
      {
       g_pos[r].lockArmed = true;
       if(InpVerboseLog)
          PrintFormat("ProfitScouter: #%I64u profit lock ARMED (peak %.2f >= %.2f %s)",
-                      g_pos[r].ticket, g_pos[r].peak, Money(InpProfitLockArm), g_accCcy);
+                      g_pos[r].ticket, g_pos[r].peak, LockArmMoney(), g_accCcy);
      }
   }
 
@@ -647,7 +683,7 @@ double LockFloor(const int r)
    double floor = g_pos[r].peak * InpProfitLockKeepPct / 100.0;
    // Never bank a locked winner below the configured winner floor (ASAP default 5)
    if(InpMinWinProfit > 0.0)
-      floor = MathMax(floor, Money(InpMinWinProfit));
+      floor = MathMax(floor, MinWinFloorMoney());
    return(floor);
   }
 
@@ -744,10 +780,29 @@ double Money(double amountInTargetCcy)
    return amountInTargetCcy * g_ccyFactor;
   }
 
-// Profit CASH single floor (InpAccTargetMoney) drives account + pair + position hard closes.
+// Profit CASH single floor — live PS{id}_FLOOR GV overrides input when set.
 double ProfitCashFloor()
   {
+   double live = 0.0;
+   if(GsxScoutFloorGet(InpInstanceID, live) && live > 0.0)
+      return Money(live);
    return Money(InpAccTargetMoney);
+  }
+
+double MinWinFloorMoney()
+  {
+   double live = 0.0;
+   if(GsxScoutMinWinGet(InpInstanceID, live) && live > 0.0)
+      return Money(live);
+   return Money(InpMinWinProfit);
+  }
+
+double LockArmMoney()
+  {
+   double live = 0.0;
+   if(GsxScoutLockArmGet(InpInstanceID, live) && live > 0.0)
+      return Money(live);
+   return Money(InpProfitLockArm);
   }
 
 // Legacy alias — same cash floor.
@@ -896,9 +951,22 @@ void BuildAllowList()
       StringTrimRight(s);
       if(s == "")
          continue;
+      string canon = GsxSymbolCanon(s);
+      if(canon == "")
+         continue;
+      // de-dupe by canon
+      bool dup = false;
+      for(int j = 0; j < ArraySize(g_allowList); j++)
+         if(g_allowList[j] == canon)
+           {
+            dup = true;
+            break;
+           }
+      if(dup)
+         continue;
       int k = ArraySize(g_allowList);
       ArrayResize(g_allowList, k + 1);
-      g_allowList[k] = s;
+      g_allowList[k] = canon;
      }
   }
 
@@ -907,19 +975,22 @@ bool IsEligible(string sym, long magic)
    if(InpUseMagicFilter && magic != InpMagicNumber)
       return false;
 
+   string canon = GsxSymbolCanon(sym);
+
    if(InpScope == PS_SCOPE_ONE)
      {
 #ifdef PS_HOST_SERVICE
-      return (sym == InpPrimarySymbol);
+      string want = GsxSymbolCanon(InpPrimarySymbol);
+      return (canon == want || sym == InpPrimarySymbol);
 #else
-      return (sym == _Symbol);
+      return (canon == GsxSymbolCanon(_Symbol) || sym == _Symbol);
 #endif
      }
 
    if(InpScope == PS_SCOPE_LIST)
      {
       for(int i = 0; i < ArraySize(g_allowList); i++)
-         if(g_allowList[i] == sym)
+         if(g_allowList[i] == canon)
             return true;
       return false;
      }
@@ -964,6 +1035,13 @@ double LiveProfitOfSelected()
 
 bool CloseTicket(ulong ticket, string tag, const bool allowLoss = false)
   {
+   if(!g_closerAllows)
+     {
+      if(InpVerboseLog)
+         PrintFormat("ProfitScouter: CloseTicket blocked (Service owns closer) tag=%s #%I64u",
+                     tag, ticket);
+      return false;
+     }
    if(!PositionSelectByTicket(ticket))
       return false;
 
@@ -1059,6 +1137,12 @@ int ManualCloseBySide(const int side, const string tag)
 
 bool ManualCloseConfirmAndRun(const int side, const string tag, const string prompt)
   {
+   if(!g_closerAllows)
+     {
+      MessageBox("Service owns closes for this Instance ID.\nEA is watch/UI only.",
+                 "Profit Scouter", MB_OK | MB_ICONINFORMATION);
+      return(false);
+     }
    if(MessageBox(prompt, "Profit Scouter — confirm", MB_OKCANCEL | MB_ICONWARNING) != IDOK)
      {
       g_lastAction = tag + " cancelled";
@@ -1070,6 +1154,8 @@ bool ManualCloseConfirmAndRun(const int side, const string tag, const string pro
 
 bool ClosePartial(ulong ticket, double volume)
   {
+   if(!g_closerAllows)
+      return false;
    if(!PositionSelectByTicket(ticket))
       return false;
    string sym = PositionGetString(POSITION_SYMBOL);
@@ -1133,6 +1219,7 @@ int PsAdvCacheIndex(const string sym, const bool create)
    g_adv[n].canon      = GsxSymbolCanon(sym);
    g_adv[n].dir        = 0;
    g_adv[n].barTime    = 0;
+   g_adv[n].dirStamp   = 0;
    g_adv[n].sellStreak = 0;
    g_adv[n].buyStreak  = 0;
    return(n);
@@ -1156,12 +1243,18 @@ void PsRefreshAdvCache(const string sym)
 
    ENUM_TIMEFRAMES tf = PsAdverseTf();
    datetime        bt = iTime(sym, tf, 0);
+   datetime        now = TimeCurrent();
+   bool            newBar = (bt != 0 && bt != g_adv[ix].barTime);
 
-   // Bus direction: refresh every cycle (cheap file read of fixed JSON)
-   g_adv[ix].dir = PsReadLastSignalDir(sym);
+   // Bus direction: refresh on new bar or at most once per second
+   if(newBar || g_adv[ix].dirStamp == 0 || now - g_adv[ix].dirStamp >= 1)
+     {
+      g_adv[ix].dir = PsReadLastSignalDir(sym);
+      g_adv[ix].dirStamp = now;
+     }
 
    // Streaks: only recompute when the forming bar advances
-   if(bt != 0 && bt != g_adv[ix].barTime)
+   if(newBar)
      {
       g_adv[ix].barTime    = bt;
       g_adv[ix].sellStreak = GsxCountConsecutiveClosedBars(sym, tf, -1);
@@ -1494,7 +1587,7 @@ bool IsProfitableTicket(double profit)
    if(profit <= 0.0)
       return(false);
    if(InpMinWinProfit > 0.0)
-      return(profit >= Money(InpMinWinProfit));
+      return(profit >= MinWinFloorMoney());
    return(true);
   }
 
@@ -1607,7 +1700,7 @@ int PosIndex(ulong ticket, bool createIfMissing)
    g_pos[n].commLoaded = false;
    g_pos[n].seen       = true;
    // lock re-arms from the persisted peak (survives terminal restart)
-   g_pos[n].lockArmed  = (InpProfitLockEnable && g_pos[n].peak >= Money(InpProfitLockArm));
+   g_pos[n].lockArmed  = (InpProfitLockEnable && g_pos[n].peak >= LockArmMoney());
    return n;
   }
 
@@ -1825,8 +1918,8 @@ void LogStatus(double accProfit, int count)
                                count, accProfit, g_accCcy, g_accPeak,
                                (g_accArmed ? "[ARMED]" : ""), ProfitCashFloor(), g_lastAction);
    string head4 = StringFormat("lock=%s arm>=%.2f keep=%.0f%% locked=%d | win floor=%.2f %s | mode=%s",
-                               (InpProfitLockEnable ? "ON" : "OFF"), Money(InpProfitLockArm),
-                               InpProfitLockKeepPct, LockedPosCount(), Money(InpMinWinProfit), g_accCcy,
+                               (InpProfitLockEnable ? "ON" : "OFF"), LockArmMoney(),
+                               InpProfitLockKeepPct, LockedPosCount(), MinWinFloorMoney(), g_accCcy,
                                (EffectiveCashMode() ? "CASH" : "LAYER"));
    string head5 = StringFormat("winners=%d (+%.2f)  losers=%d (%.2f)  |  closed=%d realized=%.2f",
                                g_winCount, g_winSum, g_lossCount, g_lossSum,
@@ -2240,14 +2333,23 @@ void DrawPanel(double accProfit, int count)
                             g_winCount, g_lossCount, g_accPeak,
                             g_lastAction, g_closedSession,
                             ArraySize(g_agg), g_psDense ? 1 : 0, g_psW);
-   // Soft heartbeat only if nothing moved (keeps chrome fresh without stalling P/L)
-   bool heartbeat = (g_psLastForceDraw == 0 || TimeCurrent() - g_psLastForceDraw >= 1);
+   string chromeFp = StringFormat("%d|%d|%d|%d|%d|%d",
+                                  gScoutEnabled ? 1 : 0, gAdverseEnabled ? 1 : 0,
+                                  gCashMode ? 1 : 0, gCashLossArmed ? 1 : 0,
+                                  g_psDense ? 1 : 0, g_psW);
+   // Soft heartbeat every 8s if nothing moved (align with desk)
+   bool heartbeat = (g_psLastForceDraw == 0 || TimeCurrent() - g_psLastForceDraw >= 8);
    if(fp == g_psLastFp && !heartbeat)
      {
-      PsUpdateButtons();
+      if(chromeFp != g_psChromeFp)
+        {
+         g_psChromeFp = chromeFp;
+         PsUpdateButtons();
+        }
       return;
      }
    g_psLastFp = fp;
+   g_psChromeFp = chromeFp;
    g_psLastForceDraw = TimeCurrent();
 
    string ccy = TargetCcy();
@@ -2307,7 +2409,7 @@ void DrawPanel(double accProfit, int count)
       PsPanelPushLine(head, StringFormat("Lock %s · Adv bars>%d age>%dm · win floor %.2f",
                                          (InpProfitLockEnable ? "ON" : "OFF"),
                                          InpAdverseMinBars, InpAdverseMinAgeMin,
-                                         Money(InpMinWinProfit)));
+                                         MinWinFloorMoney()));
      }
 
    // --- symbol rows (budgeted; truncated before footer) ---
@@ -2491,6 +2593,30 @@ void PsPublishBusSnapshot(double accProfit, int count)
    if(!InpBusEnable)
       return;
 
+   // Dirty fingerprint + 250ms min gap; force on close; 1s heartbeat
+   string fp = StringFormat("%d|%d|%d|%.4f|%.4f|%d|%d|%s|%d",
+                            gScoutEnabled ? 1 : 0, gCashMode ? 1 : 0, gCashLossArmed ? 1 : 0,
+                            accProfit, g_accPeak, count, g_winCount, g_lastAction, ArraySize(g_agg));
+   datetime now = TimeCurrent();
+   static uint s_busTick = 0;
+   uint tick = GetTickCount();
+   bool gapOk = (s_busTick == 0 || tick - s_busTick >= 250);
+   bool heartbeat = (g_busLastPub == 0 || now - g_busLastPub >= 1);
+   bool dirty = (fp != g_busLastFp);
+
+   if(!g_busForcePub)
+     {
+      if(!dirty && !heartbeat)
+         return;
+      if(dirty && !gapOk)
+         return;
+     }
+
+   g_busLastFp = fp;
+   g_busLastPub = now;
+   s_busTick = tick;
+   g_busForcePub = false;
+
    string tid = GsxMakeTid();
    string j = "{";
    j += GsxJsonKV_I("version", GSX_BUS_VERSION);
@@ -2505,9 +2631,9 @@ void PsPublishBusSnapshot(double accProfit, int count)
    j += GsxJsonKV_D("pos_target", PosHardTarget());
    j += GsxJsonKV_D("sym_target", SymHardTarget());
    j += GsxJsonKV_B("lock_enable", InpProfitLockEnable);
-   j += GsxJsonKV_D("lock_arm", Money(InpProfitLockArm));
+   j += GsxJsonKV_D("lock_arm", LockArmMoney());
    j += GsxJsonKV_D("lock_keep_pct", InpProfitLockKeepPct);
-   j += GsxJsonKV_D("win_floor", Money(InpMinWinProfit));
+   j += GsxJsonKV_D("win_floor", MinWinFloorMoney());
    j += GsxJsonKV_I("locked_count", LockedPosCount());
    j += GsxJsonKV_B("scalp_asap", EffectiveCashMode()); // legacy alias of cash_mode
    j += GsxJsonKV_B("cash_mode", EffectiveCashMode());
@@ -2575,6 +2701,8 @@ void PsAfterCycle(double accProfit, int count)
 bool PsInitEngine()
   {
    g_prefix = StringFormat("PS%d_", InpInstanceID);
+   g_btnPfx = StringFormat("PSBTN_%d_", InpInstanceID);
+   g_pnlPfx = StringFormat("PSPNL_%d_", InpInstanceID);
    g_accCcy = AccountInfoString(ACCOUNT_CURRENCY);
    g_trade.SetDeviationInPoints(InpSlippagePoints);
    g_trade.SetAsyncMode(false);
@@ -2582,6 +2710,9 @@ bool PsInitEngine()
    BuildAllowList();
 #ifdef PS_HOST_SERVICE
    SubscribeSymbols();
+   g_closerAllows = true;
+#else
+   g_closerAllows = GsxScoutCloserAllowsCloses(InpInstanceID, false);
 #endif
    RefreshCurrencyFactor(true);
    LoadAccountPeak();
@@ -2644,7 +2775,7 @@ void PsSetScoutEnabled(const bool on, const bool announce)
 //+------------------------------------------------------------------+
 string PsAdverseStateVarName()
   {
-   return(StringFormat("PS%d_ADVEN", InpInstanceID));
+   return(GsxScoutAdvenVarName(InpInstanceID));
   }
 
 void PsLoadAdverseEnabled()
@@ -2652,17 +2783,17 @@ void PsLoadAdverseEnabled()
    string n = PsAdverseStateVarName();
    if(GlobalVariableCheck(n))
      {
-      gAdverseEnabled = (GlobalVariableGet(n) > 0.5);
+      gAdverseEnabled = GsxScoutAdvenGet(InpInstanceID, gAdverseEnabled);
       return;
      }
    gAdverseEnabled = InpAdverseExitEnable;
-   GlobalVariableSet(n, gAdverseEnabled ? 1.0 : 0.0);
+   GsxScoutAdvenSet(InpInstanceID, gAdverseEnabled);
   }
 
 void PsSetAdverseEnabled(const bool on, const bool announce)
   {
    gAdverseEnabled = on;
-   GlobalVariableSet(PsAdverseStateVarName(), on ? 1.0 : 0.0);
+   GsxScoutAdvenSet(InpInstanceID, on);
    g_lastAction = on ? "adverse AUTO ON" : "adverse AUTO OFF";
 #ifdef PS_HOST_EA
    g_psLastFp = "";
@@ -2683,7 +2814,7 @@ void PsSetAdverseEnabled(const bool on, const bool announce)
 //+------------------------------------------------------------------+
 string PsCashModeVarName()
   {
-   return(StringFormat("PS%d_CASH", InpInstanceID));
+   return(GsxScoutCashVarName(InpInstanceID));
   }
 
 void PsLoadCashMode()
@@ -2691,17 +2822,17 @@ void PsLoadCashMode()
    string n = PsCashModeVarName();
    if(GlobalVariableCheck(n))
      {
-      gCashMode = (GlobalVariableGet(n) > 0.5);
+      gCashMode = GsxScoutCashGet(InpInstanceID, gCashMode);
       return;
      }
    gCashMode = InpScalpAsapAccountOnly;
-   GlobalVariableSet(n, gCashMode ? 1.0 : 0.0);
+   GsxScoutCashSet(InpInstanceID, gCashMode);
   }
 
 void PsSetCashMode(const bool on, const bool announce)
   {
    gCashMode = on;
-   GlobalVariableSet(PsCashModeVarName(), on ? 1.0 : 0.0);
+   GsxScoutCashSet(InpInstanceID, on);
    g_lastAction = on ? "CASH mode ON" : "LAYER mode ON";
 #ifdef PS_HOST_EA
    g_psLastFp = "";
@@ -2722,7 +2853,7 @@ void PsSetCashMode(const bool on, const bool announce)
 //+------------------------------------------------------------------+
 string PsLossArmVarName()
   {
-   return(StringFormat("PS%d_LOSS", InpInstanceID));
+   return(GsxScoutLossVarName(InpInstanceID));
   }
 
 void PsLoadCashLossArmed()
@@ -2730,17 +2861,17 @@ void PsLoadCashLossArmed()
    string n = PsLossArmVarName();
    if(GlobalVariableCheck(n))
      {
-      gCashLossArmed = (GlobalVariableGet(n) > 0.5);
+      gCashLossArmed = GsxScoutLossGet(InpInstanceID, gCashLossArmed);
       return;
      }
    gCashLossArmed = InpAccCashLossEnable;
-   GlobalVariableSet(n, gCashLossArmed ? 1.0 : 0.0);
+   GsxScoutLossSet(InpInstanceID, gCashLossArmed);
   }
 
 void PsSetCashLossArmed(const bool on, const bool announce)
   {
    gCashLossArmed = on;
-   GlobalVariableSet(PsLossArmVarName(), on ? 1.0 : 0.0);
+   GsxScoutLossSet(InpInstanceID, on);
    g_lastAction = on ? "Loss CASH ON" : "Loss CASH OFF";
 #ifdef PS_HOST_EA
    g_psLastFp = "";

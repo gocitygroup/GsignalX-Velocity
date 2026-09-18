@@ -18,6 +18,8 @@ A money-based profit monitoring and harvesting engine for MetaTrader 5. It does 
 
 **v1.12+ chart START / STOP / AUTO:** run state persists in `PS{InstanceID}_RUN`; adverse Auto in `PS{InstanceID}_ADVEN`. Service honors chart RUN / ADVEN / CASH / LOSS when `InpRespectChartRunState=true` and Instance ID matches.
 
+**v2.01 agnostic / concurrent:** eligibility uses `GsxSymbolCanon` (broker suffixes OK). Service claims `PS{id}_CLOSER` and is the sole closer while running; the EA yields harvest/closes and stays UI+arms. Pair baskets use `InpBasketClosesPerCycle` + rotate. Desk practice soft-apply writes `PS{id}_FLOOR` / `_MINWIN` / `_LOCKARM` live overrides. Shared inputs live in `Include/ProfitScouter/Inputs.mqh`.
+
 **v1.10+** shares one Core engine (`Include/ProfitScouter/Core.mqh`) between the EA and Service, and can publish structured snapshots to the **FILE_COMMON connector bus** so every terminal can be graded together (`cash_mode`, `profit_cash`, `loss_cash`, `loss_cash_armed`).
 
 - Deploy: [DEPLOYMENT.md](DEPLOYMENT.md)  
@@ -76,7 +78,7 @@ Requires MetaTrader 5 build 3000+ (uses `input group`, `CTrade`, millisecond tim
 4. Drag the EA onto the chart. On the **Common** tab tick *Allow Algo Trading*. Set your inputs on the **Inputs** tab. Press OK.
 5. A smiley face appears top-right and the dashboard prints in the chart corner. **START** / **STOP** buttons appear (if `InpShowButtons=true`).
 
-**Run one instance only** if the scope is "All symbols". Two instances monitoring the same positions will race each other. If you want several instances (e.g. one per strategy magic number), give each a different `InpInstanceID` so their stored peaks stay separate, and use `InpUseMagicFilter` so their position sets do not overlap.
+**Run one closer only** for a given `InpInstanceID`. Prefer `ProfitScouter_Service` as the sole closer (it claims `PS{id}_CLOSER`). The chart EA with the same Instance ID becomes watch/UI + arm toggles while Service runs. Two overlapping closers will race — v2.01 blocks EA closes when Service owns. If you want several instances (e.g. one per strategy magic number), give each a different `InpInstanceID` and use `InpUseMagicFilter` so position sets do not overlap.
 
 ### Standalone buttons (EA host)
 

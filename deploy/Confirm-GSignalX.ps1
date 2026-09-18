@@ -67,6 +67,8 @@ function Test-PathMark([string] $path, [string] $label) {
 function Confirm-LoserSafety {
   Add-Line "=== GATE LoserSafety (static) ==="
   $core = Join-Path $RepoRoot "Include\ProfitScouter\Core.mqh"
+  $inputs = Join-Path $RepoRoot "Include\ProfitScouter\Inputs.mqh"
+  $scout = Join-Path $RepoRoot "Include\GSignalX\ScoutLink.mqh"
   $gsx  = Join-Path $RepoRoot "GsignalX_GocityGroup.mq5"
   $svc  = Join-Path $RepoRoot "ProfitScouter_Service.mq5"
   $ea   = Join-Path $RepoRoot "ProfitScouter_DollarTarget.mq5"
@@ -79,10 +81,13 @@ function Confirm-LoserSafety {
   }
 
   $coreText = Get-Content $core -Raw
+  $inpText  = if (Test-Path $inputs) { Get-Content $inputs -Raw } else { "" }
+  $scoutText = if (Test-Path $scout) { Get-Content $scout -Raw } else { "" }
   $gsxText  = if (Test-Path $gsx)  { Get-Content $gsx  -Raw } else { "" }
   $svcText  = if (Test-Path $svc)  { Get-Content $svc  -Raw } else { "" }
   $eaText   = if (Test-Path $ea)   { Get-Content $ea   -Raw } else { "" }
   $harvText = if (Test-Path $harv) { Get-Content $harv -Raw } else { "" }
+  $hostText = $eaText + "`n" + $svcText + "`n" + $inpText
 
   if ($coreText -match 'CutLosersToGuard|InpAccMaxLossMoney|InpAccLossGuardEnable') {
     Add-Line "FAIL  loss-guard symbols restored in Core.mqh"
@@ -134,7 +139,8 @@ function Confirm-LoserSafety {
     $script:fail++
   }
 
-  if ($coreText -match 'PS%d_CASH' -and $coreText -match 'PS%d_LOSS') {
+  if (($coreText -match 'PS%d_CASH' -or $scoutText -match 'PS%d_CASH') -and
+      ($coreText -match 'PS%d_LOSS' -or $scoutText -match 'PS%d_LOSS')) {
     Add-Line "PASS  PS{id}_CASH / PS{id}_LOSS GV names present"
   }
   else {
@@ -150,8 +156,7 @@ function Confirm-LoserSafety {
     $script:fail++
   }
 
-  if ($eaText -match 'InpAccCashLossMoney' -and $svcText -match 'InpAccCashLossMoney' -and
-      $eaText -match 'InpAccCashLossEnable' -and $svcText -match 'InpAccCashLossEnable') {
+  if ($hostText -match 'InpAccCashLossMoney' -and $hostText -match 'InpAccCashLossEnable') {
     Add-Line "PASS  host shells expose Loss CASH inputs"
   }
   else {
@@ -159,7 +164,8 @@ function Confirm-LoserSafety {
     $script:fail++
   }
 
-  if ($eaText -match 'InpAccTargetMoney\s*=\s*100\.0' -and $svcText -match 'InpAccTargetMoney\s*=\s*100\.0') {
+  if ($inpText -match 'InpAccTargetMoney\s*=\s*100\.0' -and
+      $eaText -match 'ProfitScouter/Inputs.mqh' -and $svcText -match 'ProfitScouter/Inputs.mqh') {
     Add-Line "PASS  Profit CASH default is 100 on both hosts"
   }
   else {
@@ -167,7 +173,7 @@ function Confirm-LoserSafety {
     $script:fail++
   }
 
-  if ($eaText -match 'InpAccCashLossMoney\s*=\s*100\.0' -and $svcText -match 'InpAccCashLossMoney\s*=\s*100\.0') {
+  if ($inpText -match 'InpAccCashLossMoney\s*=\s*100\.0') {
     Add-Line "PASS  Loss CASH amount default is 100 on both hosts"
   }
   else {
@@ -199,7 +205,7 @@ function Confirm-LoserSafety {
     Add-Line "PASS  AdverseEligibleLoser present"
   }
 
-  if ($svcText -match 'InpAdverseMinAgeMin' -and $eaText -match 'InpAdverseMinAgeMin') {
+  if ($hostText -match 'InpAdverseMinAgeMin') {
     Add-Line "PASS  host shells expose InpAdverseMinAgeMin"
   }
   else {
@@ -226,6 +232,66 @@ function Confirm-LoserSafety {
   }
   else {
     Add-Line "FAIL  GSignalX Scouter defer string missing"
+    $script:fail++
+  }
+
+  #--- V2.01 Scouter agnostic / closer / fair harvest ---
+  if ($coreText -match 'GsxSymbolCanon' -and $coreText -match 'IsEligible') {
+    Add-Line "PASS  V2.01 canon-based IsEligible"
+  }
+  else {
+    Add-Line "FAIL  V2.01 canon eligibility missing"
+    $script:fail++
+  }
+
+  if ($scoutText -match 'GsxScoutCloserClaimService' -and $scoutText -match 'GsxScoutCloserAllowsCloses' -and
+      $coreText -match 'g_closerAllows' -and $svcText -match 'GsxScoutCloserClaimService') {
+    Add-Line "PASS  V2.01 Service sole closer (PS CLOSER)"
+  }
+  else {
+    Add-Line "FAIL  V2.01 closer ownership missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'InpBasketClosesPerCycle' -and $coreText -match 'g_basketRotate') {
+    Add-Line "PASS  V2.01 fair multi-symbol basket budget"
+  }
+  else {
+    Add-Line "FAIL  V2.01 basket fairness missing"
+    $script:fail++
+  }
+
+  if ($scoutText -match 'GsxScoutFloorsSet' -and $coreText -match 'GsxScoutFloorGet' -and
+      $coreText -match 'MinWinFloorMoney') {
+    Add-Line "PASS  V2.01 practice floor GV overrides"
+  }
+  else {
+    Add-Line "FAIL  V2.01 floor GV bridge missing"
+    $script:fail++
+  }
+
+  if ($scoutText -match 'GsxScoutAdvenSet' -and $scoutText -match 'GsxScoutCashSet' -and
+      $scoutText -match 'GsxScoutLossSet') {
+    Add-Line "PASS  V2.01 ScoutLink ADVEN/CASH/LOSS helpers"
+  }
+  else {
+    Add-Line "FAIL  V2.01 ScoutLink arm helpers missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'PSBTN_' -and $coreText -match 'g_btnPfx = StringFormat') {
+    Add-Line "PASS  V2.01 instance-prefixed panel objects"
+  }
+  else {
+    Add-Line "FAIL  V2.01 instance panel prefix missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'g_busForcePub' -and $coreText -match 's_busTick') {
+    Add-Line "PASS  V2.01 scouter bus publish throttle"
+  }
+  else {
+    Add-Line "FAIL  V2.01 bus throttle missing"
     $script:fail++
   }
 
@@ -501,6 +567,8 @@ function Confirm-Files {
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\MultisymbolPanel.mqh") "Include GSignalX\MultisymbolPanel.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\RosterViewModel.mqh") "Include GSignalX\RosterViewModel.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\ProfitScouter\Core.mqh") "Include ProfitScouter\Core.mqh" | Out-Null
+  Test-PathMark (Join-Path $mql5 "Include\ProfitScouter\Inputs.mqh") "Include ProfitScouter\Inputs.mqh" | Out-Null
+  Test-PathMark (Join-Path $RepoRoot "Include\ProfitScouter\Inputs.mqh") "Repo ProfitScouter\Inputs.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Experts\GsignalX_GocityGroup.mq5") "Experts GsignalX" | Out-Null
   Test-PathMark (Join-Path $mql5 "Experts\GsignalX_Multisymbol_Dashboard.mq5") "Experts Multisymbol Dashboard" | Out-Null
   Test-PathMark (Join-Path $mql5 "Experts\ProfitScouter_DollarTarget.mq5") "Experts ProfitScouter EA" | Out-Null
@@ -1685,6 +1753,41 @@ function Confirm-Functional {
   }
   else {
     Add-Line "FAIL  V2.14.1 desk-mirror age guard missing"
+    $script:fail++
+  }
+
+  # --- Wheel page scroll (Trade Center + chart roster strip) ---
+  $msPanelScroll = Join-Path $RepoRoot "Include\GSignalX\MultisymbolPanel.mqh"
+  $dashScroll    = Join-Path $RepoRoot "GsignalX_Multisymbol_Dashboard.mq5"
+  $chartScroll   = Join-Path $RepoRoot "GsignalX_GocityGroup.mq5"
+  $msScrollText  = if (Test-Path $msPanelScroll) { Get-Content $msPanelScroll -Raw } else { "" }
+  $dashScrollText = if (Test-Path $dashScroll) { Get-Content $dashScroll -Raw } else { "" }
+  $chartScrollText = if (Test-Path $chartScroll) { Get-Content $chartScroll -Raw } else { "" }
+
+  if ($msScrollText -match 'GsxMsPageStep' -and $msScrollText -match 'GsxMsPageCountFromCat' -and
+      $msScrollText -match 'GsxMsHitTestPanel' -and $msScrollText -match 'CHARTEVENT_MOUSE_WHEEL') {
+    Add-Line "PASS  MultisymbolPanel GsxMsPageStep + wheel hit-test"
+  }
+  else {
+    Add-Line "FAIL  MultisymbolPanel wheel page scroll missing"
+    $script:fail++
+  }
+
+  if ($msScrollText -match 'next >= pc' -and $msScrollText -match 'GsxMsTrimCompactRows') {
+    Add-Line "PASS  MultisymbolPanel page clamp + compact CR trim"
+  }
+  else {
+    Add-Line "FAIL  MultisymbolPanel page clamp / compact trim missing"
+    $script:fail++
+  }
+
+  if ($dashScrollText -match 'CHART_EVENT_MOUSE_WHEEL' -and
+      $chartScrollText -match 'CHART_EVENT_MOUSE_WHEEL' -and
+      $chartScrollText -match 'CHARTEVENT_MOUSE_WHEEL') {
+    Add-Line "PASS  Dashboard + Chart EA CHART_EVENT_MOUSE_WHEEL enable"
+  }
+  else {
+    Add-Line "FAIL  Dashboard/Chart mouse-wheel enable missing"
     $script:fail++
   }
 }
