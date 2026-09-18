@@ -20,6 +20,8 @@ A money-based profit monitoring and harvesting engine for MetaTrader 5. It does 
 
 **v2.01 agnostic / concurrent:** eligibility uses `GsxSymbolCanon` (broker suffixes OK). Service claims `PS{id}_CLOSER` (+ `PS{id}_CLOSER_TS` heartbeat) and owns **auto-harvest** while fresh; the EA yields automatic closes but **BANK / CUT / FLAT chart buttons always work** (operator override). Stale Service claim (>5s) lets the EA resume auto-harvest. Pair baskets use `InpBasketClosesPerCycle` + rotate. Desk practice soft-apply writes `PS{id}_FLOOR` / `_MINWIN` / `_LOCKARM` live overrides. Shared inputs live in `Include/ProfitScouter/Inputs.mqh`.
 
+**v2.02 ATR/% TRAIL:** independent chart **TRAIL** arm (`PS{id}_TRAIL`) closes winners on ATR×mult / % peak / last-N candle range give-back (Hybrid default). Does not replace Profit CASH floors. Per-canon EMA optimizer nudges trail mult (`PS{id}_OPT_*`). Adverse AUTO optionally requires min body/range pts (`InpAdverseMinBodyPts` / `InpAdverseMinRangePts`, default **0** = unchanged).
+
 **v1.10+** shares one Core engine (`Include/ProfitScouter/Core.mqh`) between the EA and Service, and can publish structured snapshots to the **FILE_COMMON connector bus** so every terminal can be graded together (`cash_mode`, `profit_cash`, `loss_cash`, `loss_cash_armed`).
 
 - Deploy: [DEPLOYMENT.md](DEPLOYMENT.md)  

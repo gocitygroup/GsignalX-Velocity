@@ -3,11 +3,11 @@
 //|                    Profit monitoring / harvesting engine for MT5 |
 //+------------------------------------------------------------------+
 #property copyright "Profit Scouter"
-#property version   "2.01"
-#property description "Gsignalx Velocity 2.01 — Profit Scouter Dollar Target (EA edition)"
-#property description "Standalone START/STOP/AUTO/CASH/LOSS scout; fixed cash floors; movable panel."
+#property version   "2.02"
+#property description "Gsignalx Velocity 2.02 — Profit Scouter Dollar Target (EA edition)"
+#property description "Standalone START/STOP/AUTO/CASH/LOSS/TRAIL scout; ATR/% auto-trail; movable panel."
 #property description "Profit CASH: winners-only at set cash levels. Loss CASH: opt-in cut at cash floor."
-#property description "Chart AUTO = adverse bars; CASH toggles single-floor vs layered; LOSS arms cash cut."
+#property description "TRAIL = independent ATR/percent candle trail; AUTO = adverse bars; BANK/CUT/FLAT manual."
 
 #define PS_HOST_EA
 
@@ -18,10 +18,11 @@
 input group "=== 1b. EA host ==="
 input string  InpPrimarySymbol     = "";      // unused on EA (chart symbol); kept for Core parity
 input ENUM_TIMEFRAMES InpAdverseTimeframe = PERIOD_CURRENT;  // Chart period (CURRENT = this chart)
+input ENUM_TIMEFRAMES InpAtrTrailTf       = PERIOD_CURRENT;  // ATR trail TF (CURRENT = this chart)
 
 input group "=== 8. Display / Notifications ==="
 input bool    InpShowPanel         = true;
-input bool    InpShowButtons       = true;    // Chart START/STOP/AUTO/CASH/LOSS + BANK/CUT/FLAT
+input bool    InpShowButtons       = true;    // Chart START/STOP/AUTO/CASH/LOSS/TRAIL + BANK/CUT/FLAT
 input bool    InpScoutStartArmed   = true;    // Initial arm if no saved run state
 input int     InpPanelX            = 10;      // Panel X (left-upper); drag to move; saved
 input int     InpPanelY            = 50;      // Panel Y (below buttons by default)

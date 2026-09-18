@@ -263,5 +263,26 @@ bool GsxScoutLockArmGet(const int instanceId, double &lockArmOut)
    return(true);
   }
 
+//+------------------------------------------------------------------+
+//| TRAIL — independent ATR/% auto-trail arm                         |
+//+------------------------------------------------------------------+
+string GsxScoutTrailVarName(const int instanceId)
+  {
+   return(StringFormat("PS%d_TRAIL", instanceId));
+  }
+
+void GsxScoutTrailSet(const int instanceId, const bool on)
+  {
+   GlobalVariableSet(GsxScoutTrailVarName(instanceId), on ? 1.0 : 0.0);
+  }
+
+bool GsxScoutTrailGet(const int instanceId, const bool defaultOn = false)
+  {
+   string name = GsxScoutTrailVarName(instanceId);
+   if(!GlobalVariableCheck(name))
+      return(defaultOn);
+   return(GlobalVariableGet(name) > 0.5);
+  }
+
 #endif // GSX_SCOUT_LINK_MQH
 //+------------------------------------------------------------------+

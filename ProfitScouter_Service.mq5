@@ -5,11 +5,11 @@
 //+------------------------------------------------------------------+
 #property service
 #property copyright "Profit Scouter"
-#property version   "2.01"
-#property description "Gsignalx Velocity 2.01 — Profit Scouter Dollar Target (Service edition)"
-#property description "Fixed cash floors; profit lock; honors chart START/STOP/AUTO/CASH/LOSS via Instance ID."
+#property version   "2.02"
+#property description "Gsignalx Velocity 2.02 — Profit Scouter Dollar Target (Service edition)"
+#property description "Fixed cash floors; ATR/% TRAIL; honors chart START/STOP/AUTO/CASH/LOSS/TRAIL via Instance ID."
 #property description "Profit CASH: winners-only at set cash levels. Loss CASH: opt-in cut at cash floor."
-#property description "Sole closer when running; EA yields closes for the same Instance ID."
+#property description "Sole closer when running; EA yields auto closes; BANK/CUT/FLAT always OK on chart."
 
 #define PS_HOST_SERVICE
 
@@ -18,8 +18,9 @@
 
 input group "=== 1b. Service host ==="
 input string  InpPrimarySymbol     = "EURUSD";
-input bool    InpRespectChartRunState = true; // Honor PS{id}_RUN / ADVEN / CASH / LOSS from chart
+input bool    InpRespectChartRunState = true; // Honor PS{id}_RUN / ADVEN / CASH / LOSS / TRAIL from chart
 input ENUM_TIMEFRAMES InpAdverseTimeframe = PERIOD_M5; // Service has no chart; M5 matches Velocity desk
+input ENUM_TIMEFRAMES InpAtrTrailTf       = PERIOD_M5; // ATR trail TF for headless host
 
 input group "=== 8. Status / Notifications ==="
 input bool    InpLogStatus         = true;
@@ -58,6 +59,7 @@ void OnStart()
          PsLoadAdverseEnabled();
          PsLoadCashMode();
          PsLoadCashLossArmed();
+         PsLoadAtrTrailEnabled();
         }
       else
         {
@@ -65,6 +67,7 @@ void OnStart()
          gAdverseEnabled = InpAdverseExitEnable;
          gCashMode = InpScalpAsapAccountOnly;
          gCashLossArmed = InpAccCashLossEnable;
+         gAtrTrailEnabled = InpAtrTrailEnable;
         }
       Monitor();
       Sleep(ms);

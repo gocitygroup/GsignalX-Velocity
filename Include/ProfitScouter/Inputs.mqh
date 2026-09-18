@@ -20,6 +20,13 @@ enum ENUM_PS_TRAIL
    PS_TRAIL_ANY     = 2
   };
 
+enum ENUM_PS_ATR_TRAIL_MODE
+  {
+   PS_ATR_TRAIL_ATR     = 0,  // ATR × mult (+ candle-range floor)
+   PS_ATR_TRAIL_PERCENT = 1,  // % of peak money
+   PS_ATR_TRAIL_HYBRID  = 2   // max(ATR money, % of peak)
+  };
+
 input group "=== 1. General / Filters ==="
 input int     InpInstanceID        = 1;
 input bool    InpUseMagicFilter    = false;
@@ -96,6 +103,22 @@ input int             InpAdverseMinBars          = 2;               // Fire when
 input bool            InpAdverseRequireSignal    = true;            // Skip if bus direction missing/0
 input int             InpAdverseMinAgeMin        = 15;              // Min hold minutes before adverse may cut (0=off)
 input bool            InpAdverseProtectOnceGreen = true;            // Skip adverse if ticket once peaked green / lock armed
+input double          InpAdverseMinBodyPts       = 0.0;            // 0=off; avg opposing body must be >= pts
+input double          InpAdverseMinRangePts      = 0.0;            // 0=off; avg opposing range must be >= pts
+input int             InpAdverseLengthBars       = 3;              // Bars for adverse length average (when pts>0)
+
+input group "=== 7d. ATR / Percent auto-trail (independent TRAIL arm) ==="
+input bool                   InpAtrTrailEnable     = false;  // Seed TRAIL arm if no PS{id}_TRAIL GV
+input ENUM_PS_ATR_TRAIL_MODE InpAtrTrailMode       = PS_ATR_TRAIL_HYBRID;
+input int                    InpAtrTrailPeriod     = 14;
+input double                 InpAtrTrailMult       = 1.5;    // Base ATR multiplier
+input double                 InpAtrTrailPct        = 30.0;   // % of peak money give-back
+input int                    InpAtrTrailCandles    = 3;      // Avg range of last N closed bars as distance floor
+input double                 InpAtrTrailArmMoney   = 0.0;    // 0 = use MinWin floor to arm
+input bool                   InpAtrTrailOptimize   = true;   // Adaptive EMA mult per symbol_canon
+input double                 InpAtrTrailMultMin    = 0.8;
+input double                 InpAtrTrailMultMax    = 2.5;
+input double                 InpAtrTrailOptAlpha   = 0.20;   // EMA learning rate
 
 input group "=== 9. Connector bus (FILE_COMMON) ==="
 input bool    InpBusEnable         = true;

@@ -11,6 +11,7 @@
 #include <GSignalX/SymbolCanon.mqh>
 #include <GSignalX/TerminalIdentity.mqh>
 #include <GSignalX/BarDirection.mqh>
+#include <GSignalX/CandleMetrics.mqh>
 #include <GSignalX/ScoutLink.mqh>
 #ifdef PS_HOST_EA
 #include <GSignalX/ChartPanel.mqh>
@@ -115,6 +116,7 @@ bool           gScoutEnabled = true;   // START/STOP scout arm (chart UI + GV)
 bool           gAdverseEnabled = true; // AUTO adverse-bar loss exit arm (chart UI + GV)
 bool           gCashMode = true;       // CASH single-floor vs LAYER trail/window (chart UI + GV)
 bool           gCashLossArmed = false; // LOSS CASH arm: cut losers at -InpAccCashLossMoney
+bool           gAtrTrailEnabled = false; // independent ATR/% TRAIL arm (PS{id}_TRAIL)
 string         g_btnPfx      = "PSBTN_";
 string         g_pnlPfx      = "PSPNL_";
 //--- adverse-bar Auto visibility (real-time bus / panel)
@@ -122,6 +124,9 @@ string         g_adverseLastSym    = "";
 int            g_adverseLastStreak = 0;
 int            g_adverseClosedCycle = 0;
 int            g_cashLossClosedCycle = 0;
+int            g_atrTrailClosedCycle = 0;
+double         g_atrTrailLastMultEff = 0.0;
+string         g_atrTrailLastSym = "";
 bool           g_closerAllows = true;   // refreshed each Monitor (Service sole auto-closer)
 bool           g_closerYieldLogged = false;
 bool           g_closerManualBypass = false; // BANK/CUT/FLAT operator override
@@ -194,11 +199,12 @@ void Monitor()
    g_closerAllows = true;
 #else
    // Live desk sync: Trade Center HALT/PLAY writes PS{id}_RUN / ADVEN;
-   // chart CASH / LOSS buttons share PS{id}_CASH / PS{id}_LOSS with Service.
+   // chart CASH / LOSS / TRAIL buttons share GVs with Service.
    gScoutEnabled    = GsxScoutRunGet(InpInstanceID, gScoutEnabled);
    gAdverseEnabled  = GsxScoutAdvenGet(InpInstanceID, gAdverseEnabled);
    gCashMode        = GsxScoutCashGet(InpInstanceID, gCashMode);
    gCashLossArmed   = GsxScoutLossGet(InpInstanceID, gCashLossArmed);
+   gAtrTrailEnabled = GsxScoutTrailGet(InpInstanceID, gAtrTrailEnabled);
    g_closerAllows   = GsxScoutCloserAllowsCloses(InpInstanceID, false);
    if(!g_closerAllows)
      {
@@ -338,6 +344,16 @@ void Monitor()
       g_busForcePub = true;
       PsAfterCycle(remLoss, ArraySize(g_live));
       return;
+     }
+
+   //--- 1d. independent ATR/% TRAIL (winners); does not replace CASH floors
+   if(HandleAtrTrailProfit())
+     {
+      accProfit = 0.0;
+      for(int i = 0; i < ArraySize(g_live); i++)
+         accProfit += g_live[i].profit;
+      g_lastAccProfit = accProfit;
+      g_busForcePub = true;
      }
 
    //--- 2. account level ---------------------------------------------
@@ -1396,6 +1412,26 @@ bool HandleAdverseBarLossCut()
 
       if(!fire)
          continue;
+
+      // Additive candle-length gate (0 pts = unchanged streak-only behavior)
+      if(InpAdverseMinBodyPts > 0.0 || InpAdverseMinRangePts > 0.0)
+        {
+         ENUM_TIMEFRAMES tfAdv = PsAdverseTf();
+         int nLen = MathMax(1, InpAdverseLengthBars);
+         if(InpAdverseMinBodyPts > 0.0)
+           {
+            double avgBody = GsxAvgClosedBodyPts(sym, tfAdv, nLen);
+            if(avgBody < InpAdverseMinBodyPts)
+               continue;
+           }
+         if(InpAdverseMinRangePts > 0.0)
+           {
+            double avgRange = GsxAvgClosedRangePts(sym, tfAdv, nLen);
+            if(avgRange < InpAdverseMinRangePts)
+               continue;
+           }
+        }
+
       if(PsAdvAlreadyFiredThisBar(g_adv[ix].canon, g_adv[ix].barTime))
          continue;
 
@@ -1611,6 +1647,8 @@ void CompactLiveKeepOpen()
    for(int i = 0; i < m; i++)
       g_live[i] = keep[i];
   }
+
+#include <ProfitScouter/AtrTrail.mqh>
 
 double PartialVolume(string sym, double volume, double pct)
   {
@@ -2327,16 +2365,16 @@ void DrawPanel(double accProfit, int count)
    double symPl = 0.0;
    for(int si = 0; si < ArraySize(g_agg); si++)
       symPl += g_agg[si].profit;
-   string fp = StringFormat("%d|%d|%d|%d|%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%d|%d|%.4f|%s|%d|%d|%d|%d",
+   string fp = StringFormat("%d|%d|%d|%d|%d|%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%d|%d|%.4f|%s|%d|%d|%d|%d|%.2f",
                             gScoutEnabled ? 1 : 0, gAdverseEnabled ? 1 : 0,
-                            gCashMode ? 1 : 0, gCashLossArmed ? 1 : 0,
+                            gCashMode ? 1 : 0, gCashLossArmed ? 1 : 0, gAtrTrailEnabled ? 1 : 0,
                             count, accProfit, g_winSum, g_lossSum, symPl, ProfitCashFloor(),
                             g_winCount, g_lossCount, g_accPeak,
                             g_lastAction, g_closedSession,
-                            ArraySize(g_agg), g_psDense ? 1 : 0, g_psW);
-   string chromeFp = StringFormat("%d|%d|%d|%d|%d|%d",
+                            ArraySize(g_agg), g_psDense ? 1 : 0, g_psW, g_atrTrailLastMultEff);
+   string chromeFp = StringFormat("%d|%d|%d|%d|%d|%d|%d",
                                   gScoutEnabled ? 1 : 0, gAdverseEnabled ? 1 : 0,
-                                  gCashMode ? 1 : 0, gCashLossArmed ? 1 : 0,
+                                  gCashMode ? 1 : 0, gCashLossArmed ? 1 : 0, gAtrTrailEnabled ? 1 : 0,
                                   g_psDense ? 1 : 0, g_psW);
    // Soft heartbeat every 8s if nothing moved (align with desk)
    bool heartbeat = (g_psLastForceDraw == 0 || TimeCurrent() - g_psLastForceDraw >= 8);
@@ -2372,6 +2410,11 @@ void DrawPanel(double accProfit, int count)
                                          (gAdverseEnabled ? "ON" : "OFF"),
                                          (gCashLossArmed ? "ON" : "OFF"),
                                          ScopeText()));
+      PsPanelPushLine(head, StringFormat("TRAIL %s · ×%.2f · N=%d%s",
+                                         (gAtrTrailEnabled ? "ON" : "OFF"),
+                                         (g_atrTrailLastMultEff > 0.0 ? g_atrTrailLastMultEff : InpAtrTrailMult),
+                                         InpAtrTrailCandles,
+                                         (InpAtrTrailOptimize ? " · opt" : "")));
       PsPanelPushLine(head, "—— LIVE ——");
       PsPanelPushLine(head, StringFormat("Float %+.2f %s", accProfit, g_accCcy));
       PsPanelPushLine(head, StringFormat("W %d (%+.2f) · L %d (%.2f)",
@@ -2394,6 +2437,11 @@ void DrawPanel(double accProfit, int count)
                                          (InpUseMagicFilter ? (string)InpMagicNumber : "any"),
                                          (gAdverseEnabled ? "ON" : "OFF"),
                                          (gCashLossArmed ? "ON" : "OFF")));
+      PsPanelPushLine(head, StringFormat("TRAIL %s · mult×%.2f · candles=%d · %s",
+                                         (gAtrTrailEnabled ? "ON" : "OFF"),
+                                         (g_atrTrailLastMultEff > 0.0 ? g_atrTrailLastMultEff : InpAtrTrailMult),
+                                         InpAtrTrailCandles,
+                                         (InpAtrTrailOptimize ? "optimizer ON" : "optimizer OFF")));
       PsPanelPushLine(head, "———————— LIVE P/L ————————");
       PsPanelPushLine(head, StringFormat("Floating  %+.2f %s   ·  positions %d",
                                          accProfit, g_accCcy, count));
@@ -2595,8 +2643,9 @@ void PsPublishBusSnapshot(double accProfit, int count)
       return;
 
    // Dirty fingerprint + 250ms min gap; force on close; 1s heartbeat
-   string fp = StringFormat("%d|%d|%d|%.4f|%.4f|%d|%d|%s|%d",
+   string fp = StringFormat("%d|%d|%d|%d|%.4f|%.4f|%d|%d|%s|%d",
                             gScoutEnabled ? 1 : 0, gCashMode ? 1 : 0, gCashLossArmed ? 1 : 0,
+                            gAtrTrailEnabled ? 1 : 0,
                             accProfit, g_accPeak, count, g_winCount, g_lastAction, ArraySize(g_agg));
    datetime now = TimeCurrent();
    static uint s_busTick = 0;
@@ -2657,6 +2706,10 @@ void PsPublishBusSnapshot(double accProfit, int count)
    j += GsxJsonKV_S("adverse_last_sym", g_adverseLastSym);
    j += GsxJsonKV_I("adverse_last_streak", g_adverseLastStreak);
    j += GsxJsonKV_I("adverse_closed_cycle", g_adverseClosedCycle);
+   j += GsxJsonKV_B("atr_trail_enable", gAtrTrailEnabled);
+   j += GsxJsonKV_D("atr_trail_mult_eff", (g_atrTrailLastMultEff > 0.0 ? g_atrTrailLastMultEff : InpAtrTrailMult));
+   j += GsxJsonKV_I("atr_trail_closed_cycle", g_atrTrailClosedCycle);
+   j += GsxJsonKV_S("atr_trail_last_sym", g_atrTrailLastSym);
    j += GsxJsonKV_I("closed_session", g_closedSession);
    j += GsxJsonKV_D("realized_session", g_realizedSession);
    j += GsxJsonKV_B("trading_ready", TradingReady());
@@ -2722,6 +2775,7 @@ bool PsInitEngine()
    PsLoadAdverseEnabled();
    PsLoadCashMode();
    PsLoadCashLossArmed();
+   PsLoadAtrTrailEnabled();
 #ifdef PS_HOST_EA
    PsLoadPanelPos();
 #endif
@@ -2921,6 +2975,7 @@ void PsDeleteButtons()
    ObjectDelete(0, g_btnPfx + "START");
    ObjectDelete(0, g_btnPfx + "STOP");
    ObjectDelete(0, g_btnPfx + "AUTO");
+   ObjectDelete(0, g_btnPfx + "TRAIL");
    ObjectDelete(0, g_btnPfx + "BANK");
    ObjectDelete(0, g_btnPfx + "CUT");
    ObjectDelete(0, g_btnPfx + "FLAT");
@@ -2984,10 +3039,10 @@ void PsUpdateButtons()
      }
    GsxLayAdvance(blay, bh + gap);
 
-   // Row 3: Profit CASH mode + Loss CASH arm
+   // Row 3: Profit CASH mode + Loss CASH arm + ATR TRAIL
    GsxLayRowStart(blay, bh);
-   GsxLayEqual(blay, 2, bslots);
-   if(ArraySize(bslots) >= 2)
+   GsxLayEqual(blay, 3, bslots);
+   if(ArraySize(bslots) >= 3)
      {
       string cashCap = EffectiveCashMode()
                        ? (g_psDense ? "CASH" : "CASH ON")
@@ -2995,12 +3050,18 @@ void PsUpdateButtons()
       string lossCap = gCashLossArmed
                        ? (g_psDense ? "LOSS" : "LOSS ON")
                        : (g_psDense ? "LOFF" : "LOSS OFF");
+      string trailCap = gAtrTrailEnabled
+                        ? (g_psDense ? "TRL" : "TRAIL ON")
+                        : (g_psDense ? "TOFF" : "TRAIL OFF");
       PsSetButton("CASH", bslots[0].x, bslots[0].y, bslots[0].w, bslots[0].h, cashCap,
                   EffectiveCashMode() ? C'18,72,48' : chipIdle,
                   EffectiveCashMode() ? g_psColBull : g_psColText);
       PsSetButton("LOSS", bslots[1].x, bslots[1].y, bslots[1].w, bslots[1].h, lossCap,
                   gCashLossArmed ? C'96,28,32' : chipIdle,
                   gCashLossArmed ? g_psColBear : g_psColText);
+      PsSetButton("TRAIL", bslots[2].x, bslots[2].y, bslots[2].w, bslots[2].h, trailCap,
+                  gAtrTrailEnabled ? C'48,88,160' : chipIdle,
+                  gAtrTrailEnabled ? C'220,236,255' : g_psColText);
      }
   }
 
@@ -3033,6 +3094,12 @@ bool PsHandleChartClick(const string sparam)
    if(sparam == g_btnPfx + "LOSS")
      {
       PsSetCashLossArmed(!gCashLossArmed, true);
+      ObjectSetInteger(0, sparam, OBJPROP_STATE, false);
+      return true;
+     }
+   if(sparam == g_btnPfx + "TRAIL")
+     {
+      PsSetAtrTrailEnabled(!gAtrTrailEnabled, true);
       ObjectSetInteger(0, sparam, OBJPROP_STATE, false);
       return true;
      }

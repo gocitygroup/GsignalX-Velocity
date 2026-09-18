@@ -296,6 +296,56 @@ function Confirm-LoserSafety {
     $script:fail++
   }
 
+  #--- V2.02 ATR/% TRAIL + candle-length adverse ---
+  $candle = Join-Path $RepoRoot "Include\GSignalX\CandleMetrics.mqh"
+  $atrTr  = Join-Path $RepoRoot "Include\ProfitScouter\AtrTrail.mqh"
+  $candleText = if (Test-Path $candle) { Get-Content $candle -Raw } else { "" }
+  $atrText = if (Test-Path $atrTr) { Get-Content $atrTr -Raw } else { "" }
+
+  if ($candleText -match 'GsxAtrPoints' -and $candleText -match 'GsxAvgClosedRangePts' -and
+      $candleText -match 'GsxClosedBarBodyPts') {
+    Add-Line "PASS  V2.02 CandleMetrics ATR/range/body helpers"
+  }
+  else {
+    Add-Line "FAIL  V2.02 CandleMetrics missing"
+    $script:fail++
+  }
+
+  if ($atrText -match 'HandleAtrTrailProfit' -and $atrText -match 'ATR-TRAIL' -and
+      $atrText -match 'PsAtrTrailOptimizerUpdate' -and $coreText -match 'HandleAtrTrailProfit') {
+    Add-Line "PASS  V2.02 ATR trail harvest + optimizer"
+  }
+  else {
+    Add-Line "FAIL  V2.02 ATR trail path missing"
+    $script:fail++
+  }
+
+  if ($scoutText -match 'GsxScoutTrailSet' -and $coreText -match 'PsSetButton\("TRAIL"' -and
+      $coreText -match 'PsSetAtrTrailEnabled') {
+    Add-Line "PASS  V2.02 TRAIL button + ScoutLink arm"
+  }
+  else {
+    Add-Line "FAIL  V2.02 TRAIL UI/arm missing"
+    $script:fail++
+  }
+
+  if ($inpText -match 'InpAdverseMinBodyPts' -and $inpText -match 'InpAdverseMinRangePts' -and
+      $coreText -match 'GsxAvgClosedBodyPts') {
+    Add-Line "PASS  V2.02 adverse candle-length gate (default 0)"
+  }
+  else {
+    Add-Line "FAIL  V2.02 adverse length gate missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'atr_trail_enable' -and $coreText -match 'atr_trail_mult_eff') {
+    Add-Line "PASS  V2.02 bus atr_trail fields"
+  }
+  else {
+    Add-Line "FAIL  V2.02 bus atr_trail fields missing"
+    $script:fail++
+  }
+
   #--- Velocity 2.00 provenance: Service / Dashboard / Prop+Telegram feature gates ---
   #--- (feature content shipped as 1.23–1.25; hosts now #property version 2.00) ---
   #--- Multisymbol signal service coexistence ---
@@ -569,6 +619,8 @@ function Confirm-Files {
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\RosterViewModel.mqh") "Include GSignalX\RosterViewModel.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\ProfitScouter\Core.mqh") "Include ProfitScouter\Core.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\ProfitScouter\Inputs.mqh") "Include ProfitScouter\Inputs.mqh" | Out-Null
+  Test-PathMark (Join-Path $mql5 "Include\ProfitScouter\AtrTrail.mqh") "Include ProfitScouter\AtrTrail.mqh" | Out-Null
+  Test-PathMark (Join-Path $mql5 "Include\GSignalX\CandleMetrics.mqh") "Include GSignalX\CandleMetrics.mqh" | Out-Null
   Test-PathMark (Join-Path $RepoRoot "Include\ProfitScouter\Inputs.mqh") "Repo ProfitScouter\Inputs.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Experts\GsignalX_GocityGroup.mq5") "Experts GsignalX" | Out-Null
   Test-PathMark (Join-Path $mql5 "Experts\GsignalX_Multisymbol_Dashboard.mq5") "Experts Multisymbol Dashboard" | Out-Null
