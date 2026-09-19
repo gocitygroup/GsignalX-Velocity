@@ -99,6 +99,18 @@ input bool   InpUseStop              = true;
 input double InpStopMult             = 2.0;
 input bool   InpStrategicStopEnable  = true;
 input double InpStrategicStopMult    = 4.0;
+input bool   InpStratStopUseDailyAtr = true;
+input int    InpStratStopDailyAtrLen = 14;
+input double InpStratStopDailyFloorMult = 0.20;
+input double InpStratStopClassMultFx  = 1.0;
+input double InpStratStopClassMultCmd = 1.35;
+input double InpStratStopClassMultCr  = 1.75;
+input int    InpStratStopRangeBars    = 6;
+input double InpStratStopRangeMult    = 1.0;
+input double InpStratStopHardCapMult  = 12.0;
+input bool   InpStratStopJitterEnable = true;
+input double InpStratStopJitterPct    = 8.0;
+input int    InpStratStopMicroPts     = 5;
 input bool   InpUseTarget            = false; // ignored (Scouter TP=0)
 input double InpTargetMult           = 4.0;
 

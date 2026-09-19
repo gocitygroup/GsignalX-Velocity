@@ -15,6 +15,11 @@
 //|    InpPendFromSignalOpen, InpPendMaxAgeMin,                       |
 //|    InpUseStop, InpStopMult, InpStrategicStopEnable,               |
 //|    InpStrategicStopMult, InpUseTarget, InpTargetMult,             |
+//|    InpStratStopUseDailyAtr, InpStratStopDailyAtrLen,               |
+//|    InpStratStopDailyFloorMult, InpStratStopClassMultFx/Cmd/Cr,    |
+//|    InpStratStopRangeBars, InpStratStopRangeMult,                  |
+//|    InpStratStopHardCapMult, InpStratStopJitterEnable,             |
+//|    InpStratStopJitterPct, InpStratStopMicroPts,                   |
 //|    InpRiskMode, InpRiskPct, InpFixedLot, InpMaxLot,               |
 //|    InpAutoLotDefault, InpMaxSpreadPt, InpIgnoreSpreadDefault,     |
 //|    InpStaleTickSec, InpBlockWeekend, InpUseSessions,              |
@@ -402,6 +407,19 @@ GsxEntryParams GsxCoreBuildEntryParams()
    p.verbose             = InpVerboseSignals;
    p.allowLong           = InpAllowLong;
    p.allowShort          = InpAllowShort;
+   p.stratUseDailyAtr      = InpStratStopUseDailyAtr;
+   p.stratDailyAtrLen      = InpStratStopDailyAtrLen;
+   p.stratDailyFloorMult   = InpStratStopDailyFloorMult;
+   p.stratClassMultFx      = InpStratStopClassMultFx;
+   p.stratClassMultCmd     = InpStratStopClassMultCmd;
+   p.stratClassMultCr      = InpStratStopClassMultCr;
+   p.stratRangeBars        = InpStratStopRangeBars;
+   p.stratRangeMult        = InpStratStopRangeMult;
+   p.stratSpreadBaseLimit  = InpMaxSpreadPt;
+   p.stratHardCapMult      = InpStratStopHardCapMult;
+   p.stratJitterEnable     = InpStratStopJitterEnable;
+   p.stratJitterPct        = InpStratStopJitterPct;
+   p.stratMicroPts         = InpStratStopMicroPts;
    return(p);
   }
 
@@ -1386,6 +1404,8 @@ void GsxCoreCycle()
    // Pending lifetime hygiene even while STOPPED (orphans from REM / old chart)
    GsxCleanupStalePendings(g_gsxTrade, InpMagic, InpPendMaxAgeMin);
    GsxCleanupOrphanPendings(g_gsxTrade, InpMagic, g_roster);
+   // Re-anchor catastrophe SL after pending fills (one-shot per ticket)
+   GsxStratStopRefreshFilled(g_gsxTrade, InpMagic, InpVerboseSignals);
 
    if(!g_svcEnabled)
       return;

@@ -227,16 +227,16 @@ void GsxTgwPoll(const long magic, const GsxTgConfig &cfg, const bool notify)
       int w = closedIdx[c];
       ulong t = closedTickets[c];
 
-      double pl = 0.0;
+      GsxCloseTriggerEvent ev;
+      GsxCtEventClear(ev);
       // Prefer CloseTrigger (Scouter tag); else DEAL_REASON → BROKER-SL / …
-      string reason = GsxCtResolveReason(t, magic, historyReady, pl);
+      GsxCtResolveEvent(t, magic, historyReady, ev);
+      double pl = ev.pl;
       if(MathAbs(pl) < 1e-12)
-         pl = GsxTgwCloseProfit(t, magic); // may re-select history; ok
+         pl = GsxTgwCloseProfit(t, magic);
 
-      // If consume already set pl from emit, keep it; GsxTgwCloseProfit as fallback
       if(MathAbs(pl) < 1e-12 && historyReady)
         {
-         // recompute from already-selected history without second HistorySelect
          int total = HistoryDealsTotal();
          for(int i = total - 1; i >= 0; i--)
            {
@@ -247,19 +247,47 @@ void GsxTgwPoll(const long magic, const GsxTgConfig &cfg, const bool notify)
                continue;
             if(HistoryDealGetInteger(d, DEAL_MAGIC) != magic)
                continue;
-            long entry = HistoryDealGetInteger(d, DEAL_ENTRY);
-            if(entry != DEAL_ENTRY_OUT && entry != DEAL_ENTRY_OUT_BY)
+            long entryType = HistoryDealGetInteger(d, DEAL_ENTRY);
+            if(entryType != DEAL_ENTRY_OUT && entryType != DEAL_ENTRY_OUT_BY)
                continue;
             pl += HistoryDealGetDouble(d, DEAL_PROFIT)
                   + HistoryDealGetDouble(d, DEAL_SWAP)
                   + HistoryDealGetDouble(d, DEAL_COMMISSION);
+            if(ev.exitPx <= 0.0)
+               ev.exitPx = HistoryDealGetDouble(d, DEAL_PRICE);
            }
         }
 
+      // Prefer watched SL/TP when event lacks them (broker path)
+      double sl = (ev.sl > 0.0 ? ev.sl : g_tgwSl[w]);
+      double tp = (ev.tp > 0.0 ? ev.tp : g_tgwTp[w]);
+      if(ev.sl <= 0.0)
+         ev.sl = sl;
+      if(ev.tp <= 0.0)
+         ev.tp = tp;
+      // Broker path may still need strat-stop detail using watched SL
+      if(ev.detail == "" && (ev.tag == GSX_CT_TAG_BROKER_SL || ev.tag == ""))
+        {
+         if(ev.tag == "")
+            ev.tag = GSX_CT_TAG_UNKNOWN;
+         GsxCtEnrichBrokerDetail(t, magic, ev);
+        }
+      else
+         GsxStratStopClear(t, magic); // cleanup persist even when Scouter closed
+
+      string reasonLine = GsxCtFormatReasonLine(ev);
       if(notify)
-         GsxTgNotifyClose(cfg, GsxTgFormatCloseEx(g_tgwSym[w],
-                                                  (g_tgwDir[w] > 0 ? "BUY" : "SELL"),
-                                                  g_tgwLots[w], g_tgwEntry[w], pl, reason));
+         GsxTgNotifyClose(cfg, GsxTgFormatCloseFull(g_tgwSym[w],
+                                                    (g_tgwDir[w] > 0 ? "BUY" : "SELL"),
+                                                    g_tgwLots[w],
+                                                    g_tgwEntry[w],
+                                                    ev.exitPx,
+                                                    pl,
+                                                    t,
+                                                    sl,
+                                                    tp,
+                                                    reasonLine,
+                                                    ev.source));
       g_tgwSessionPl += pl;
       g_tgwDayTrades++;
       if(pl > 0.0)

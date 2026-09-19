@@ -897,11 +897,28 @@ string GsxTgFormatClose(const string sym, const string side, const double lots,
 string GsxTgFormatCloseEx(const string sym, const string side, const double lots,
                           const double entry, const double pl, const string reason)
   {
-   if(reason == "")
-      return(StringFormat("%s %s lots=%.2f entry=%.5f P/L=%.2f",
-                          sym, side, lots, entry, pl));
-   return(StringFormat("%s %s lots=%.2f entry=%.5f P/L=%.2f | reason=%s",
-                       sym, side, lots, entry, pl, reason));
+   return(GsxTgFormatCloseFull(sym, side, lots, entry, 0.0, pl, 0, 0.0, 0.0, reason, ""));
+  }
+
+// Enriched CLOSE: exit / ticket / SL / source / detail for desk ops.
+string GsxTgFormatCloseFull(const string sym, const string side, const double lots,
+                            const double entry, const double exitPx, const double pl,
+                            const ulong ticket, const double sl, const double tp,
+                            const string reason, const string source)
+  {
+   string body = StringFormat("%s %s lots=%.2f entry=%.5f", sym, side, lots, entry);
+   if(exitPx > 0.0)
+      body += StringFormat(" exit=%.5f", exitPx);
+   body += StringFormat(" P/L=%.2f", pl);
+   if(ticket > 0)
+      body += StringFormat(" | #%I64u", ticket);
+   if(sl > 0.0 || tp > 0.0)
+      body += StringFormat(" SL=%.5f TP=%.5f", sl, tp);
+   if(source != "")
+      body += StringFormat(" src=%s", source);
+   if(reason != "")
+      body += " | reason=" + reason;
+   return(body);
   }
 
 string GsxTgBuildDailyBody(const double dayPl, const int trades, const int wins,

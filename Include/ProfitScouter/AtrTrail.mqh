@@ -205,14 +205,15 @@ bool HandleAtrTrailProfit()
       double profit = g_live[li].profit;
       int    r      = PosIndex(ticket, false);
       double peak   = (r >= 0 ? g_pos[r].peak : profit);
+      string detail = StringFormat("ATR-TRAIL #%I64u %s banked=%.2f peak=%.2f dist=%.2f mult=%.2f",
+                                   ticket, sym, profit, peak, dist, g_atrTrailLastMultEff);
 
-      if(CloseTicket(ticket, "ATR-TRAIL", false))
+      if(CloseTicket(ticket, "ATR-TRAIL", false, detail))
         {
          g_atrTrailClosedCycle++;
          g_atrTrailLastSym = sym;
          PsAtrTrailOptimizerUpdate(GsxSymbolCanon(sym), peak, profit, dist);
-         g_lastAction = StringFormat("ATR-TRAIL #%I64u %s banked=%.2f peak=%.2f dist=%.2f mult=%.2f",
-                                     ticket, sym, profit, peak, dist, g_atrTrailLastMultEff);
+         g_lastAction = detail;
          Notify(g_lastAction);
          any = true;
         }

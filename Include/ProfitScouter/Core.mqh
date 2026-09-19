@@ -1053,7 +1053,7 @@ double LiveProfitOfSelected()
    return p;
   }
 
-bool CloseTicket(ulong ticket, string tag, const bool allowLoss = false)
+bool CloseTicket(ulong ticket, string tag, const bool allowLoss = false, const string detailIn = "")
   {
    // Auto-harvest yields to fresh Service closer; manual BANK/CUT/FLAT bypasses.
    if(!g_closerAllows && !g_closerManualBypass)
@@ -1089,6 +1089,16 @@ bool CloseTicket(ulong ticket, string tag, const bool allowLoss = false)
    int    side  = (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY) ? 1 : -1;
    double lots  = PositionGetDouble(POSITION_VOLUME);
    double entry = PositionGetDouble(POSITION_PRICE_OPEN);
+   double slPx  = PositionGetDouble(POSITION_SL);
+   double tpPx  = PositionGetDouble(POSITION_TP);
+   string detail = detailIn;
+   if(detail == "")
+     {
+      if(g_lastAction != "" && StringFind(g_lastAction, tag) >= 0)
+         detail = g_lastAction;
+      else
+         detail = StringFormat("%s close livePL=%.2f SL=%.5f", tag, liveProfit, slPx);
+     }
 
    g_trade.SetExpertMagicNumber((ulong)magic);
    g_trade.SetTypeFillingBySymbol(sym);
@@ -1104,7 +1114,9 @@ bool CloseTicket(ulong ticket, string tag, const bool allowLoss = false)
          g_closedCycle++;
          g_closedSession++;
          g_realizedSession += liveProfit;
-         GsxCtEmit(ticket, magic, tag, "scouter", liveProfit, sym, side, lots, entry, -1);
+         GsxCtEmitEx(ticket, magic, tag, "scouter", liveProfit, sym, side, lots, entry,
+                     -1, true, 0.0, slPx, tpPx, detail);
+         GsxStratStopClear(ticket, magic);
          return true;
         }
       uint rc = g_trade.ResultRetcode();
@@ -1116,9 +1128,10 @@ bool CloseTicket(ulong ticket, string tag, const bool allowLoss = false)
       Sleep(200);
       if(!PositionSelectByTicket(ticket))
         {
-         // Closed by peer — still emit so Telegram can attribute the tag.
-         GsxCtEmit(ticket, magic, tag, "scouter", liveProfit, sym, side, lots, entry, -1);
-         return true; // gone already
+         GsxCtEmitEx(ticket, magic, tag, "scouter", liveProfit, sym, side, lots, entry,
+                     -1, true, 0.0, slPx, tpPx, detail);
+         GsxStratStopClear(ticket, magic);
+         return true;
         }
      }
    return false;

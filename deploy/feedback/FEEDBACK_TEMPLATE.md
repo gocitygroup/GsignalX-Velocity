@@ -79,9 +79,12 @@ One magic · FIXED 0.01 · EQ OFF unless floating-DD brake · Chart EA not filli
 | DIR present for all pairs; updates as each symbol finishes calc | | |
 | ASAP winners-only; losers via adverse Auto / catastrophe SL | | |
 | TG CLOSE carries `reason=` (ACC-TARGET / ATR-TRAIL / BROKER-SL / …) | | |
+| TG CLOSE shows exit, `#ticket`, SL/TP, source, detail why | | |
+| Catastrophe SL: D1 floor + class mult (CMD/CR wider) + attach jitter | | |
+| Pending fill re-anchors SL once to entry ± finalDist | | |
 | Scouter Experts tag matches Telegram reason | | |
 | Production: InpUseMagicFilter=true + desk magic | | |
-| Manual BANK → reason=BANK; broker SL → reason=BROKER-SL | | |
+| Manual BANK → reason=BANK; broker SL → reason=BROKER-SL + strat meta | | |
 | Service still WARN-only (no duplicate OPEN/CLOSE) | | |
 | TG SETTINGS LOAD on Desk attach (effective input+UI) | | |
 | TG SETTINGS on PLAY/STOP/HALT/FOLLOW/AUTOLOT/EQ | | |

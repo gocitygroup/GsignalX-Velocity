@@ -48,6 +48,7 @@
 #include <GSignalX/TgDealWatch.mqh>
 #include <GSignalX/CloseTrigger.mqh>
 #include <GSignalX/SettingsNotify.mqh>
+#include <GSignalX/StrategicStop.mqh>
 
 //+------------------------------------------------------------------+
 //| Enumerations                                                     |
@@ -138,6 +139,18 @@ input bool        InpUseStop       = true;         // ATR span (SL in legacy mod
 input double      InpStopMult      = 2.0;          // ATR Stop Multiplier (sizing / legacy SL)
 input bool        InpStrategicStopEnable = true;   // Scouter: attach wider catastrophe broker SL
 input double      InpStrategicStopMult   = 4.0;    // Catastrophe SL ATR mult (wider than sizing)
+input bool        InpStratStopUseDailyAtr = true;  // Floor SL with daily ATR
+input int         InpStratStopDailyAtrLen = 14;    // Daily ATR period
+input double      InpStratStopDailyFloorMult = 0.20; // D1 ATR × mult × class
+input double      InpStratStopClassMultFx  = 1.0;  // FX class SL scale
+input double      InpStratStopClassMultCmd = 1.35; // Commodity class SL scale
+input double      InpStratStopClassMultCr  = 1.75; // Crypto class SL scale
+input int         InpStratStopRangeBars    = 6;    // H1 avg-range floor bars
+input double      InpStratStopRangeMult    = 1.0;  // H1 range floor mult
+input double      InpStratStopHardCapMult  = 12.0; // Max SL vs signal ATR × class
+input bool        InpStratStopJitterEnable = true; // Attach-time SL jitter
+input double      InpStratStopJitterPct    = 8.0;  // ±% of base distance
+input int         InpStratStopMicroPts     = 5;    // Max micro point offset
 input bool        InpUseTarget     = false;        // Use ATR Take-Profit
 input double      InpTargetMult    = 4.0;          // ATR Target Multiplier
 input int         InpRiskAtrLen    = 14;           // Risk ATR Period
@@ -651,16 +664,39 @@ bool ScouterOwnsExits()
    return(InpExitMode == GSX_EXIT_SCOUTER);
   }
 
-// Strategic catastrophe stop distance (wider than sizing ATR span).
+// Strategic catastrophe stop — full DRY engine (D1/class/jitter).
+bool ChartBuildStratStop(const double atr, GsxStratStopDecision &out)
+  {
+   GsxStratStopDecisionClear(out);
+   if(!ScouterOwnsExits() || !InpStrategicStopEnable || atr <= 0.0)
+      return(false);
+   GsxStratStopParams sp;
+   GsxStratStopParamsClear(sp);
+   sp.enable           = true;
+   sp.strategicMult    = InpStrategicStopMult;
+   sp.useDailyAtr      = InpStratStopUseDailyAtr;
+   sp.dailyAtrLen      = InpStratStopDailyAtrLen;
+   sp.dailyFloorMult   = InpStratStopDailyFloorMult;
+   sp.classMultFx      = InpStratStopClassMultFx;
+   sp.classMultCmd     = InpStratStopClassMultCmd;
+   sp.classMultCr      = InpStratStopClassMultCr;
+   sp.rangeBars        = InpStratStopRangeBars;
+   sp.rangeMult        = InpStratStopRangeMult;
+   sp.spreadBaseLimit  = InpMaxSpreadPt;
+   sp.hardCapMult      = InpStratStopHardCapMult;
+   sp.jitterEnable     = InpStratStopJitterEnable;
+   sp.jitterPct        = InpStratStopJitterPct;
+   sp.microPts         = InpStratStopMicroPts;
+   sp.magic            = InpMagic;
+   return(GsxStratStopBuild(_Symbol, atr, sp, out));
+  }
+
 double StrategicStopDistance(const double atr)
   {
-   if(!ScouterOwnsExits() || !InpStrategicStopEnable || atr <= 0.0)
+   GsxStratStopDecision d;
+   if(!ChartBuildStratStop(atr, d))
       return(0.0);
-   double d = InpStrategicStopMult * atr;
-   double minD = MinStopDistance();
-   if(d < minD)
-      d = minD;
-   return(d);
+   return(d.finalDist);
   }
 
 //+------------------------------------------------------------------+
@@ -803,8 +839,7 @@ bool EntryRiskGuardsOk(string &blockReason)
 
 double MinStopDistance()
   {
-   long level = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL);
-   return((double)level * _Point);
+   return(GsxStratStopBrokerMin(_Symbol));
   }
 
 //+------------------------------------------------------------------+
@@ -1008,11 +1043,17 @@ bool PlacePending(int dir, bool isStop, double price, double atr)
 
    double sl = 0.0, tp = 0.0;
    double stratDist = 0.0;
+   GsxStratStopDecision stratDec;
+   GsxStratStopDecisionClear(stratDec);
    if(ScouterOwnsExits())
      {
-      stratDist = StrategicStopDistance(atr);
+      if(ChartBuildStratStop(atr, stratDec))
+         stratDist = stratDec.finalDist;
       if(stratDist > 0.0)
-         sl = (dir == 1) ? price - stratDist : price + stratDist;
+        {
+         sl = GsxStratStopPrice(dir, price, stratDist, digits);
+         sl = GsxStratStopValidateVsMarket(_Symbol, dir, price, sl);
+        }
      }
    else
      {
@@ -1050,7 +1091,11 @@ bool PlacePending(int dir, bool isStop, double price, double atr)
            {
             double reDist = (ScouterOwnsExits() ? stratDist : stopDist);
             if(reDist > 0.0)
-               sl = NormalizeDouble((dir == 1) ? price - reDist : price + reDist, digits);
+              {
+               sl = GsxStratStopPrice(dir, price, reDist, digits);
+               if(ScouterOwnsExits())
+                  sl = GsxStratStopValidateVsMarket(_Symbol, dir, price, sl);
+              }
            }
          if(tp > 0.0 && InpUseTarget && atr > 0.0)
            {
@@ -1083,9 +1128,11 @@ bool PlacePending(int dir, bool isStop, double price, double atr)
                  DoubleToString(lot, 2) + " @ " + DoubleToString(price, digits);
    Notify(((dir == 1) ? "BUY " : "SELL ") + (isStop ? "STOP " : "LIMIT ") +
           DoubleToString(lot, 2) + " @ " + DoubleToString(price, digits));
+   if(stratDec.ok)
+      GsxStratStopPersistPending(InpMagic, _Symbol, stratDec);
    if(ScouterOwnsExits() && sl > 0.0 && stratDist > 0.0)
-      PrintFormat("GsignalX: catastrophe SL attached %.5f (ATR x %.1f = %.5f price dist) — broker may close without Scouter tag",
-                  sl, InpStrategicStopMult, stratDist);
+      PrintFormat("GsignalX: catastrophe SL pending %.5f | %s",
+                  sl, stratDec.reason);
    return(true);
   }
 
@@ -1163,9 +1210,11 @@ bool PlaceEntry(int dir)
 //--- OCO, expiry and invalidation
 void ManagePendings()
   {
+   ChartStratStopRefreshFilled();
    if(CountOurPendings() == 0)
      {
       gPendDir = 0;
+      // still refresh fills when bracket already converted to position
       return;
      }
 
@@ -1241,17 +1290,23 @@ bool OpenTrade(int dir)
    double stopDist = 0.0;
    if(atr > 0.0 && (InpUseStop || ScouterOwnsExits()))
       stopDist = InpStopMult * atr;
-   double minDist  = MinStopDistance();
+   double minDist  = BrokerMinDistance();
    if(stopDist > 0.0 && stopDist < minDist)
       stopDist = minDist;
 
    double sl = 0.0, tp = 0.0;
    double stratDist = 0.0;
+   GsxStratStopDecision stratDec;
+   GsxStratStopDecisionClear(stratDec);
    if(ScouterOwnsExits())
      {
-      stratDist = StrategicStopDistance(atr);
+      if(ChartBuildStratStop(atr, stratDec))
+         stratDist = stratDec.finalDist;
       if(stratDist > 0.0)
-         sl = (dir == 1) ? price - stratDist : price + stratDist;
+        {
+         sl = GsxStratStopPrice(dir, price, stratDist, digits);
+         sl = GsxStratStopValidateVsMarket(_Symbol, dir, price, sl);
+        }
      }
    else
      {
@@ -1317,10 +1372,63 @@ bool OpenTrade(int dir)
                  " @ " + DoubleToString(price, digits);
    Notify(((dir == 1) ? "LONG " : "SHORT ") + DoubleToString(lot, 2) +
           " lots @ " + DoubleToString(price, digits));
+
+   int posDir = 0;
+   ulong ticket = FindPosition(posDir);
+   if(stratDec.ok && ticket > 0)
+      GsxStratStopPersist(ticket, InpMagic, stratDec);
    if(ScouterOwnsExits() && sl > 0.0 && stratDist > 0.0)
-      PrintFormat("GsignalX: catastrophe SL attached %.5f (ATR x %.1f = %.5f price dist) — broker may close without Scouter tag",
-                  sl, InpStrategicStopMult, stratDist);
+      PrintFormat("GsignalX: catastrophe SL attached %.5f | %s",
+                  sl, stratDec.reason);
    return(true);
+  }
+
+// One-shot: re-anchor SL after pending fill using stashed decision.
+void ChartStratStopRefreshFilled()
+  {
+   if(!ScouterOwnsExits() || !InpStrategicStopEnable)
+      return;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+     {
+      ulong ticket = PositionGetTicket(i);
+      if(ticket == 0)
+         continue;
+      if(PositionGetInteger(POSITION_MAGIC) != (long)InpMagic)
+         continue;
+      string sym = PositionGetString(POSITION_SYMBOL);
+      GsxStratStopDecision existing;
+      if(GsxStratStopLoad(ticket, InpMagic, existing))
+         continue;
+      GsxStratStopDecision pend;
+      if(!GsxStratStopLoadPending(InpMagic, sym, pend) || !pend.ok || pend.finalDist <= 0.0)
+         continue;
+      int dir = (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY) ? 1 : -1;
+      double entry = PositionGetDouble(POSITION_PRICE_OPEN);
+      double curSl = PositionGetDouble(POSITION_SL);
+      double curTp = PositionGetDouble(POSITION_TP);
+      int digits = (int)SymbolInfoInteger(sym, SYMBOL_DIGITS);
+      double wantSl = GsxStratStopPrice(dir, entry, pend.finalDist, digits);
+      wantSl = GsxStratStopValidateVsMarket(sym, dir, entry, wantSl);
+      if(wantSl <= 0.0)
+         continue;
+      double point = SymbolInfoDouble(sym, SYMBOL_POINT);
+      if(point <= 0.0)
+         point = _Point;
+      if(curSl > 0.0 && MathAbs(curSl - wantSl) < 2.0 * point)
+        {
+         GsxStratStopPersist(ticket, InpMagic, pend);
+         GsxStratStopClearPending(InpMagic, sym);
+         continue;
+        }
+      if(trade.PositionModify(ticket, wantSl, curTp))
+        {
+         GsxStratStopPersist(ticket, InpMagic, pend);
+         GsxStratStopClearPending(InpMagic, sym);
+         if(InpVerboseSignals)
+            PrintFormat("GsignalX: fill SL refresh #%I64u %s SL %.5f -> %.5f | %s",
+                        ticket, sym, curSl, wantSl, pend.reason);
+        }
+     }
   }
 
 void CloseCurrent(string why)
