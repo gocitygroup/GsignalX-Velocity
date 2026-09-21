@@ -672,7 +672,8 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
       if(GsxTgVerifyConnection(g_tgCfg, err))
         {
          GsxTgSendNow(g_tgCfg, "TG",
-                      "Connection verified — Trade Center\n" + GsxTvPubFooterLine());
+                      "Connection verified — Trade Center\n" + GsxTvPubFooterLine() +
+                      "\n" + GsxPremiumFooterLine());
          if(err != "")
            {
             string warn = err;

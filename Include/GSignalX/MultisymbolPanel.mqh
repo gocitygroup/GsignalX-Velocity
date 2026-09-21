@@ -1370,6 +1370,13 @@ bool GsxMsPanelOnChartEvent(const int id,
                           " TV pub → Experts / Alert";
          return(true);
         }
+      if(tag == "BTN_PRM")
+        {
+         GsxPremiumAnnounce();
+         g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                          " Premium → Experts / Alert";
+         return(true);
+        }
       if(tag == "BTN_PLAY" || tag == "ST_RUN" || tag == "ST_RUN_BG")
         {
          GsxFleetServiceRunSet(g_msMagic, true);

@@ -209,17 +209,9 @@
   }
 
   function injectHeaderCtas(el) {
-    if (!el || el.querySelector(".header-cta.community")) return;
-    var a = document.createElement("a");
-    a.className = "header-cta community";
-    a.href = "#community";
-    a.setAttribute("data-tab", "community");
-    a.title = "Macro channel · desk community";
-    a.innerHTML =
-      '<span class="cm-full">Channel</span><span class="cm-short">TG</span>';
-    var exec = el.querySelector(".header-cta:not(.gh):not(.community)");
-    if (exec) el.insertBefore(a, exec);
-    else el.appendChild(a);
+    // Header stays lean: community lives in Links menu + chapter mounts + banner.
+    if (!el || el.querySelector(".header-links") || el.querySelector(".header-cta.community"))
+      return;
   }
 
   function fillMounts(root) {

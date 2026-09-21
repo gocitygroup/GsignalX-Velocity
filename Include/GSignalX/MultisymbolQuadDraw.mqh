@@ -923,16 +923,19 @@ void GsxMsPanelDrawFull(const GsxMsSnapshot &snap)
    GsxLayAdvance(lay, footH);
 
    GsxLayRowStart(lay, footH);
-   int tvW = MathMax(GsxSx(40), MathMin(GsxSx(56), lay.contentW / 8));
+   int tvW = MathMax(GsxSx(40), MathMin(GsxSx(56), lay.contentW / 10));
    if(GsxLayPack(lay, tvW, s))
       GsxPanelSlotButtonPad("BTN_TV", s, GSX_TV_PUB_LABEL,
+                            g_msColAccent, g_msColBg, MathMax(1, pad / 2));
+   if(GsxLayPack(lay, tvW, s))
+      GsxPanelSlotButtonPad("BTN_PRM", s, GSX_PREMIUM_LABEL,
                             g_msColAccent, g_msColBg, MathMax(1, pad / 2));
    int half = MathMax(GsxSx(80), (lay.packRemain - GsxSp(4)) / 2);
    if(GsxLayPack(lay, half, s))
       GsxPanelSlotLabel("FT2", s, "Last · " + g_msLastAction, g_msColMuted, fs, false);
    GsxLayPackFlex(lay, s);
    GsxPanelSlotLabel("FT3", s,
-                     GsxTvPubTip() + " · " + GsxMsScoutStatusTxt(),
+                     GsxTvPubTip() + " · " + GsxPremiumTip() + " · " + GsxMsScoutStatusTxt(),
                      g_msColAccent, fs, true);
    GsxLayAdvance(lay, footH);
 

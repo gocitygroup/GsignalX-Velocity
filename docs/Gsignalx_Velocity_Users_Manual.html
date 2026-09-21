@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="assets/css/gsx-docs.css"/>
 <script src="assets/js/gsx-theme.js"></script>
 <script src="assets/js/gsx-community.js"></script>
+<script src="assets/js/gsx-premium.js"></script>
 <style>
 :root, [data-theme="dark"] {
   /* Executive / Gocity brand floor palette */
@@ -315,6 +316,88 @@ pre code { background: none; border: none; padding: 0; color: inherit; }
 }
 .header-cta.tv:hover { background: color-mix(in srgb, #2962ff 22%, var(--bg-card)); color: #2962ff; text-decoration: none; }
 .header-cta.tv .tv-short { display: none; }
+.header-cta.premium {
+  border-color: color-mix(in srgb, var(--gold) 55%, transparent);
+  color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 14%, var(--bg-card));
+}
+.header-cta.premium:hover {
+  background: color-mix(in srgb, var(--gold) 24%, var(--bg-card));
+  color: var(--gold);
+  text-decoration: none;
+}
+.header-cta.premium .prm-short { display: none; }
+
+/* Compact Links menu — replaces stacked header CTAs */
+.header-links {
+  position: relative;
+}
+.header-links > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+.header-links > summary::-webkit-details-marker { display: none; }
+.header-cta.links-toggle {
+  border-color: var(--edge);
+  color: var(--text);
+  background: var(--bg-card);
+  gap: 0;
+}
+.header-cta.links-toggle:hover {
+  border-color: var(--brand-blue);
+  color: var(--link);
+  background: var(--cta-gh-bg);
+  text-decoration: none;
+}
+.header-links .links-short { display: none; }
+.header-links-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 60;
+  width: min(320px, calc(100vw - 24px));
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--edge);
+  background: var(--bg-elev);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.header-link-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text);
+}
+.header-link-item:hover {
+  background: color-mix(in srgb, var(--brand-blue) 14%, transparent);
+  text-decoration: none;
+}
+.header-link-item strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.header-link-item span {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.header-link-item.premium {
+  border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent);
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  margin-bottom: 4px;
+}
+.header-link-item.premium strong { color: var(--gold); }
+.header-link-item.premium:hover {
+  background: color-mix(in srgb, var(--gold) 18%, transparent);
+}
 
 .theme-toggle {
   appearance: none;
@@ -672,6 +755,8 @@ tr:nth-child(even) td { background: var(--row-stripe); }
 .kbd-hint .hint-mobile { display: none; }
 .header-cta.gh .gh-short { display: none; }
 .header-cta.community .cm-short { display: none; }
+.header-cta.premium .prm-short { display: none; }
+.header-links .links-short { display: none; }
 .footer-note {
   margin-top: 48px;
   padding-top: 16px;
@@ -768,6 +853,10 @@ tr:nth-child(even) td { background: var(--row-stripe); }
   .header-cta.community .cm-short { display: inline; }
   .header-cta.tv .tv-full { display: none; }
   .header-cta.tv .tv-short { display: inline; }
+  .header-cta.premium .prm-full { display: none; }
+  .header-cta.premium .prm-short { display: inline; }
+  .header-links .links-full { display: none; }
+  .header-links .links-short { display: inline; }
   .header-actions { gap: 4px; }
   .main {
     padding: 16px 12px 56px;
@@ -796,7 +885,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
     --row-stripe: transparent;
   }
   body { background: #fff; color: #111; }
-  .site-header, .rail, .header-cta, .theme-toggle, .kbd-hint, .chapter-nav, .gsx-community-strip { display: none !important; }
+  .site-header, .rail, .header-cta, .theme-toggle, .kbd-hint, .chapter-nav, .gsx-community-strip, .gsx-premium-rail { display: none !important; }
   .shell { display: block; }
   .panel { display: block !important; page-break-before: always; }
   .panel:first-of-type { page-break-before: avoid; }
@@ -832,18 +921,41 @@ tr:nth-child(even) td { background: var(--row-stripe); }
           <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
         </svg>
       </button>
-      <a class="header-cta gh" href="https://github.com/gocitygroup/GsignalX-Velocity" target="_blank" rel="noopener">
-        <span class="gh-full">Clone on GitHub</span><span class="gh-short">GitHub</span>
-      </a>
-      <a class="header-cta community" href="#community" data-tab="community" title="Macro channel · desk community">
-        <span class="cm-full">Channel</span><span class="cm-short">TG</span>
-      </a>
-      <a class="header-cta tv" href="https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/" target="_blank" rel="noopener" title="GsignalX chart foundation on TradingView">
-        <span class="tv-full">Chart</span><span class="tv-short">TV</span>
-      </a>
-      <a class="header-cta" href="https://www.gsignalx.cloud/" target="_blank" rel="noopener" title="Executive">
-        <span class="header-cta-label">Executive</span><span class="hide-sm"> → cloud</span>
-      </a>
+      <details class="header-links">
+        <summary class="header-cta links-toggle" title="Service, Premium, community, chart">
+          <span class="links-full">Links</span><span class="links-short">···</span>
+        </summary>
+        <div class="header-links-panel" role="menu" aria-label="Quick links">
+          <a role="menuitem" class="header-link-item premium" href="https://ccity.gsignalx.cloud/Gsignalx_Velocity_Premium_Users_Manual#welcome" target="_blank" rel="noopener noreferrer">
+            <strong>Managed Premium</strong>
+            <span>Hosted desk manual · book via Service</span>
+          </a>
+          <a role="menuitem" class="header-link-item" href="https://www.gsignalx.cloud/pricing" target="_blank" rel="noopener noreferrer">
+            <strong>Book &amp; pricing</strong>
+            <span>Install &amp; maintenance · Profile → My Services</span>
+          </a>
+          <a role="menuitem" class="header-link-item" href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">
+            <strong>Executive / Service</strong>
+            <span>gsignalx.cloud</span>
+          </a>
+          <a role="menuitem" class="header-link-item" href="https://www.gsignalx.cloud/mentorship" target="_blank" rel="noopener noreferrer">
+            <strong>Mentorship</strong>
+            <span>Process &amp; market understanding</span>
+          </a>
+          <a role="menuitem" class="header-link-item" href="#community" data-tab="community">
+            <strong>Desk community</strong>
+            <span>Macro channel · group · WhatsApp</span>
+          </a>
+          <a role="menuitem" class="header-link-item" href="https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/" target="_blank" rel="noopener">
+            <strong>TradingView chart</strong>
+            <span>Foundation study · no MT5 orders</span>
+          </a>
+          <a role="menuitem" class="header-link-item" href="https://github.com/gocitygroup/GsignalX-Velocity" target="_blank" rel="noopener">
+            <strong>GitHub</strong>
+            <span>Clone self-serve toolkit</span>
+          </a>
+        </div>
+      </details>
     </div>
   </div>
   <div class="mobile-chapter-wrap">
@@ -916,7 +1028,12 @@ tr:nth-child(even) td { background: var(--row-stripe); }
         <div class="card">
           <h3>🔶 Velocity (this toolkit)</h3>
           <p>Local MT5 momentum engines + ProfitScouter <strong>cash floors</strong>. Use it to <em>execute the session</em> and bank closed P/L with process — then get the ping on Telegram.</p>
-          <p>Runs on your Windows terminal — no cloud order routing in this build.</p>
+          <p>Runs on your Windows terminal — no cloud order routing in this build. Self-serve City path.</p>
+        </div>
+        <div class="card">
+          <h3>⭐ Velocity Premium (managed)</h3>
+          <p>Hosted &amp; maintained Premium desk for clients — Premium trader manual, install &amp; maintenance on GSignalX Service. Register → <strong>Profile → My Services</strong> to book.</p>
+          <div data-gsx-premium="welcome"></div>
         </div>
         <div class="card">
           <h3>📈 TradingView publication</h3>
@@ -929,11 +1046,24 @@ tr:nth-child(even) td { background: var(--row-stripe); }
           <div data-gsx-community="macro"></div>
           <p><a href="#community" data-tab="community">Community chapter →</a></p>
         </div>
+        <div class="card">
+          <h3>🎓 Mentorship</h3>
+          <p>Structured coaching for session discipline and clearer risk habits — educational support for process and market understanding. Does <strong>not</strong> guarantee profit.</p>
+          <p><a href="https://www.gsignalx.cloud/mentorship" target="_blank" rel="noopener noreferrer">Apply mentorship →</a></p>
+        </div>
+      </div>
+
+      <div class="callout gold">
+        <strong class="label">Managed Premium vs self-serve</strong>
+        This City manual is the self-serve toolkit. Prefer hosted install &amp; maintenance? Open the
+        <a href="https://ccity.gsignalx.cloud/Gsignalx_Velocity_Premium_Users_Manual#welcome" target="_blank" rel="noopener noreferrer">Premium Users Manual</a>,
+        check <a href="https://www.gsignalx.cloud/pricing" target="_blank" rel="noopener noreferrer">pricing</a>,
+        then register on <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">gsignalx.cloud</a> and book from <strong>Profile → My Services</strong>.
       </div>
 
       <div class="callout">
         <strong class="label">Senior desk rule</strong>
-        Executive informs conviction. Velocity owns the book on MT5. The TradingView publication is a chart-study companion — it does <strong>not</strong> place MT5 orders. Do not confuse cloud signal pages or the Pine script with the EA’s local PP / SuperTrend / SuperBollinger engines — they can agree; only Velocity places and harvests tickets in this toolkit.
+        Executive informs conviction. Velocity owns the book on MT5. Managed Premium is the hosted desk path. The TradingView publication is a chart-study companion — it does <strong>not</strong> place MT5 orders. Do not confuse cloud signal pages or the Pine script with the EA’s local PP / SuperTrend / SuperBollinger engines — they can agree; only Velocity places and harvests tickets in this toolkit.
       </div>
 
       <h2>Who this manual is for</h2>
@@ -1252,6 +1382,7 @@ cd GsignalX-Velocity</pre>
       </table>
       <p>Longer table: <code>docs/WINDOWS_DEPLOY_SIMPLE.md</code> · Gates: <code>DEPLOYMENT_RUNBOOK.md</code> · Sign-off: <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.</p>
       <div data-gsx-community="stuck"></div>
+      <div data-gsx-premium="deploy"></div>
 
       <h2>Host this manual on GitHub Pages</h2>
       <ol>
@@ -2257,6 +2388,7 @@ cd GsignalX-Velocity</pre>
         </div>
       </div>
       <div data-gsx-community="macro"></div>
+      <div data-gsx-premium="community"></div>
 
       <h2>House rules (short)</h2>
       <ul>
@@ -2573,10 +2705,27 @@ MONITOR → MANAGE → EXIT → POST-TRADE REVIEW</div>
         — chart companion only; Velocity owns MT5 fills and harvest.
       </div>
 
+      <div class="callout gold">
+        <strong class="label">Managed Premium</strong>
+        Hosted desk manual:
+        <a href="https://ccity.gsignalx.cloud/Gsignalx_Velocity_Premium_Users_Manual#welcome" target="_blank" rel="noopener noreferrer">Premium Users Manual</a>
+        · Install &amp; maintenance pricing:
+        <a href="https://www.gsignalx.cloud/pricing" target="_blank" rel="noopener noreferrer">gsignalx.cloud/pricing</a>
+        · Book from <strong>Profile → My Services</strong> after you
+        <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">register</a>.
+        Mentorship:
+        <a href="https://www.gsignalx.cloud/mentorship" target="_blank" rel="noopener noreferrer">gsignalx.cloud/mentorship</a>
+        (educational — no profit guarantee).
+      </div>
+      <div data-gsx-premium="footer"></div>
+
       <p class="footer-note">© Gocity Group — Gsignalx Velocity <strong>2.14</strong>. Commercial research and educational use with MetaTrader 5. Trade responsibly. Past performance is not indicative of future results.<br/>
         Desk community (channel primary): <a href="https://t.me/+yURbcVkPi1kxNDg0" target="_blank" rel="noopener noreferrer">macro channel</a>
         · <a href="https://t.me/+ZDosSHfUCLU1ZGY0" target="_blank" rel="noopener noreferrer">group</a>
         · Chart study: <a href="https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/" target="_blank" rel="noopener">TradingView</a>
+        · Managed Premium: <a href="https://ccity.gsignalx.cloud/Gsignalx_Velocity_Premium_Users_Manual#welcome" target="_blank" rel="noopener noreferrer">Premium Manual</a>
+        · Book: <a href="https://www.gsignalx.cloud/pricing" target="_blank" rel="noopener noreferrer">pricing</a>
+        · Mentorship: <a href="https://www.gsignalx.cloud/mentorship" target="_blank" rel="noopener noreferrer">mentorship</a>
         · Manual chapter <a href="#community" data-tab="community">#community</a>
       </p>
     </section>
@@ -2721,13 +2870,26 @@ MONITOR → MANAGE → EXIT → POST-TRADE REVIEW</div>
   }
 
   document.body.addEventListener("click", function (e) {
+    var links = document.querySelector(".header-links");
+    if (links && links.open && !e.target.closest(".header-links")) {
+      links.open = false;
+    }
+    if (links && e.target.closest(".header-link-item")) {
+      // Close after choosing any quick link (in-page or external)
+      window.setTimeout(function () { links.open = false; }, 0);
+    }
     var t = e.target.closest("[data-tab]");
     if (!t || !t.dataset.tab) return;
     e.preventDefault();
+    if (links) links.open = false;
     activate(t.dataset.tab);
   });
 
   document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      var links = document.querySelector(".header-links");
+      if (links) links.open = false;
+    }
     if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
     var cur = ids.indexOf((location.hash || "#welcome").slice(1));
     if (cur < 0) cur = 0;

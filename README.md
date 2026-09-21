@@ -21,6 +21,8 @@ Default lot **FIXED 0.01**. Bus schema **v1**. Current cut **Velocity 2.14**.
 Cloud conviction signals (optional): [gsignalx.cloud](https://www.gsignalx.cloud/)  
 Chart publication (trend-following foundation): [GsignalX on TradingView](https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/) — visual thesis check; does not place MT5 orders.
 
+**Managed Premium** (hosted & maintained for clients): [Premium Users Manual](https://ccity.gsignalx.cloud/Gsignalx_Velocity_Premium_Users_Manual#welcome) · [Install & maintenance pricing](https://www.gsignalx.cloud/pricing) · Register on [gsignalx.cloud](https://www.gsignalx.cloud/) → **Profile → My Services** to book. Optional [mentorship](https://www.gsignalx.cloud/mentorship) for process and market understanding (educational — no profit guarantee).
+
 **Desk community** — same invites as GSignalX Executive:
 
 - **[Trading channel](https://t.me/+yURbcVkPi1kxNDg0) (primary)** — Macro overview for day trading: consult the composite current driver breakdown and the cited data sources for the quantitative basis  

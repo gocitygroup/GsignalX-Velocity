@@ -874,8 +874,9 @@ void GsxTgNotifyCustom(const GsxTgConfig &cfg, const string tag, const string bo
 
 void GsxTgNotifyDaily(const GsxTgConfig &cfg, const string body)
   {
-   // Chart foundation footer once per daily digest (not on every trade alert)
-   GsxTgSendNow(cfg, "DAILY", body + "\n" + GsxTvPubFooterLine());
+   // Chart foundation + Managed Premium footer once per daily digest (not on every trade alert)
+   GsxTgSendNow(cfg, "DAILY",
+                body + "\n" + GsxTvPubFooterLine() + "\n" + GsxPremiumFooterLine());
   }
 
 void GsxTgNotifyWeekly(const GsxTgConfig &cfg, const string body)
@@ -1019,7 +1020,8 @@ void GsxTgInit(const GsxTgConfig &cfg, const string accountTag)
 
    string who = (accountTag != "" ? accountTag : "GSignalX");
    GsxTgSendNow(cfg, "TG",
-                "Connection verified — " + who + "\n" + GsxTvPubFooterLine());
+                "Connection verified — " + who + "\n" +
+                GsxTvPubFooterLine() + "\n" + GsxPremiumFooterLine());
    GsxTgSendNow(cfg, "START", "EA started — " + who);
    if(g_tgMagic > 0)
       GsxTgPublishStatus(g_tgMagic);

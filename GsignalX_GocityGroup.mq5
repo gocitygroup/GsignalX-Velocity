@@ -2675,8 +2675,8 @@ void UpdatePanel(string tradeState)
       GsxLayAdvance(blay, bh);
 
       GsxLayRowStart(blay, bh);
-      GsxLayEqual(blay, 4, bslots);
-      if(ArraySize(bslots) >= 4)
+      GsxLayEqual(blay, 5, bslots);
+      if(ArraySize(bslots) >= 5)
         {
          GsxPanelSlotButtonPad("BTN_SPREAD", bslots[0],
                                gIgnoreSpread ? "IGN" : "SPREAD",
@@ -2692,6 +2692,8 @@ void UpdatePanel(string tradeState)
                                eqOn ? InpColAccent : chipIdle,
                                eqOn ? InpColPanelBg : InpColText, bpad);
          GsxPanelSlotButtonPad("BTN_TV", bslots[3], GSX_TV_PUB_LABEL,
+                               InpColAccent, InpColPanelBg, bpad);
+         GsxPanelSlotButtonPad("BTN_PRM", bslots[4], GSX_PREMIUM_LABEL,
                                InpColAccent, InpColPanelBg, bpad);
         }
 
@@ -3111,15 +3113,24 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                               UpdatePanel(g_lastPanelState);
                              }
                            else
-                              if(click == gPfx + "TITLE")
+                              if(click == gPfx + "BTN_PRM")
                                 {
-                                 g_panelDragging = true;
-                                 g_panelDragOffSet = false;
-                                 ObjectSetInteger(0, click, OBJPROP_SELECTED, false);
-                                 return;
+                                 GsxPremiumAnnounce();
+                                 gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                                               " Premium → Experts / Alert";
+                                 GsxUiMarkDirty();
+                                 UpdatePanel(g_lastPanelState);
                                 }
                               else
-                                 return;
+                                 if(click == gPfx + "TITLE")
+                                   {
+                                    g_panelDragging = true;
+                                    g_panelDragOffSet = false;
+                                    ObjectSetInteger(0, click, OBJPROP_SELECTED, false);
+                                    return;
+                                   }
+                                 else
+                                    return;
 
       ObjectSetInteger(0, click, OBJPROP_SELECTED, false);
       ChartRedraw();
