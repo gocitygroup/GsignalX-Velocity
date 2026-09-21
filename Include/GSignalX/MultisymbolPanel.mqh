@@ -8,6 +8,7 @@
 
 #include <Trade\Trade.mqh>
 #include <GSignalX/ChartPanel.mqh>
+#include <GSignalX/BrandLinks.mqh>
 #include <GSignalX/RosterViewModel.mqh>
 #include <GSignalX/RosterStore.mqh>
 #include <GSignalX/Fleet.mqh>
@@ -18,6 +19,7 @@
 #include <GSignalX/TelegramNotifier.mqh>
 #include <GSignalX/SettingsNotify.mqh>
 #include <GSignalX/PracticeSim.mqh>
+#include <GSignalX/RiskGuidance.mqh>
 #include <GSignalX/LotSizing.mqh>
 
 #define GSXMS_PFX        "GSXMS_"
@@ -1361,6 +1363,13 @@ bool GsxMsPanelOnChartEvent(const int id,
          return(true);
         }
 
+      if(tag == "BTN_TV")
+        {
+         GsxTvPubAnnounce();
+         g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                          " TV pub → Experts / Alert";
+         return(true);
+        }
       if(tag == "BTN_PLAY" || tag == "ST_RUN" || tag == "ST_RUN_BG")
         {
          GsxFleetServiceRunSet(g_msMagic, true);

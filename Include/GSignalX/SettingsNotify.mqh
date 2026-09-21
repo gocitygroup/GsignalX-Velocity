@@ -15,6 +15,7 @@
 #include <GSignalX/Fleet.mqh>
 #include <GSignalX/RosterStore.mqh>
 #include <GSignalX/PropRisk.mqh>
+#include <GSignalX/RiskGuidance.mqh>
 
 #define GSX_SET_DEBOUNCE_SEC   2
 #define GSX_SET_AUDIT_MAX      131072
@@ -207,52 +208,53 @@ string GsxSettingsImpact(const string action, const GsxSettingsSnapshot &s)
   {
    string a = action;
    StringToUpper(a);
+   string core = "settings applied";
    if(StringFind(a, "PLAY") >= 0 || StringFind(a, "RUN") == 0)
-      return("entries ON; scout harvest " + (s.scoutRun ? "ON" : "OFF"));
-   if(StringFind(a, "HALT") >= 0 || StringFind(a, "FLAT") >= 0)
-      return("entries OFF; scout harvest OFF; open tickets untouched");
-   if(StringFind(a, "STOP") >= 0)
-      return("entries OFF; pendings cleared; Scouter still harvests");
-   if(StringFind(a, "FOLLOW") >= 0 || StringFind(a, "FLIP") >= 0)
-      return(s.flipWait ? "WAIT: block new-dir vs opposite exposure"
-                        : "FOLLOW: fill latest signal direction");
-   if(StringFind(a, "AUTOLOT") >= 0)
-      return(s.autoLot ? "lots sized by risk%/ATR" : "FIXED lot sizing");
-   if(StringFind(a, "EQ") >= 0)
-      return(s.eqPct <= 0.0 ? "equity DD guard OFF"
-                            : StringFormat("block new entries at %.0f%% account DD", s.eqPct));
-   if(StringFind(a, "SPREAD") >= 0 || StringFind(a, "IGN") >= 0)
-      return(s.spreadIgn ? "max-spread gate ignored" : "max-spread gate ON");
-   if(StringFind(a, "CASH") >= 0)
-      return(s.scoutCash ? "Scouter single profit floor (trail/window off)"
-                         : "Scouter layered targets/trails");
-   if(StringFind(a, "TRAIL") >= 0)
-      return(s.scoutTrail ? "ATR trail harvest armed" : "ATR trail off");
-   if(StringFind(a, "LOSS") >= 0)
-      return(s.scoutLoss ? "Loss CASH arm ON (cut losers at floor)"
-                         : "Loss CASH arm OFF");
-   if(StringFind(a, "AUTO") >= 0 || StringFind(a, "ADVERSE") >= 0)
-      return(s.scoutAdverse ? "adverse-bar loser exit armed"
-                            : "adverse-bar loser exit off");
-   if(StringFind(a, "SCOUT") >= 0 || StringFind(a, "START") >= 0)
-      return(s.scoutRun ? "profit scouting armed (closes enabled)"
-                        : "profit scouting paused (watch only)");
-   if(StringFind(a, "PROP") >= 0)
-      return(s.propLocked ? ("Prop LOCK " + s.propReason + " — entries stopped")
-                          : "Prop unlocked — entries may resume");
-   if(StringFind(a, "FDIR") >= 0 || StringFind(a, "FOLLOWDIR") >= 0)
-      return("desk FollowDir filter applied to new entries");
-   if(StringFind(a, "FLEET") >= 0)
-      return("fleet target pairs changed — fill cadence");
-   if(StringFind(a, "PAIR") >= 0 || StringFind(a, "STATE") >= 0)
-      return("pair START/STOP — signal eligibility only (no closes)");
-   if(StringFind(a, "ADD") >= 0 || StringFind(a, "REM") >= 0 || StringFind(a, "SWAP") >= 0)
-      return("roster book changed — signal universe updated");
-   if(StringFind(a, "EVT") >= 0)
-      return("event gate TRADE/SKIP for new entries");
-   if(StringFind(a, "LOAD") >= 0)
-      return("effective input+UI state at host start");
-   return("settings applied");
+      core = "entries ON; scout harvest " + (s.scoutRun ? "ON" : "OFF");
+   else if(StringFind(a, "HALT") >= 0 || StringFind(a, "FLAT") >= 0)
+      core = "entries OFF; scout harvest OFF; open tickets untouched";
+   else if(StringFind(a, "STOP") >= 0)
+      core = "entries OFF; pendings cleared; Scouter still harvests";
+   else if(StringFind(a, "FOLLOW") >= 0 || StringFind(a, "FLIP") >= 0)
+      core = (s.flipWait ? "WAIT: block new-dir vs opposite exposure"
+                         : "FOLLOW: fill latest signal direction");
+   else if(StringFind(a, "AUTOLOT") >= 0)
+      core = (s.autoLot ? "lots sized by risk%/ATR" : "FIXED lot sizing");
+   else if(StringFind(a, "EQ") >= 0)
+      core = (s.eqPct <= 0.0 ? "equity DD guard OFF"
+                             : StringFormat("block new entries at %.0f%% account DD", s.eqPct));
+   else if(StringFind(a, "SPREAD") >= 0 || StringFind(a, "IGN") >= 0)
+      core = (s.spreadIgn ? "max-spread gate ignored" : "max-spread gate ON");
+   else if(StringFind(a, "CASH") >= 0)
+      core = (s.scoutCash ? "Scouter single profit floor (trail/window off)"
+                          : "Scouter layered targets/trails");
+   else if(StringFind(a, "TRAIL") >= 0)
+      core = (s.scoutTrail ? "ATR trail harvest armed" : "ATR trail off");
+   else if(StringFind(a, "LOSS") >= 0)
+      core = (s.scoutLoss ? "Loss CASH arm ON (cut losers at floor)"
+                          : "Loss CASH arm OFF");
+   else if(StringFind(a, "AUTO") >= 0 || StringFind(a, "ADVERSE") >= 0)
+      core = (s.scoutAdverse ? "adverse-bar loser exit armed"
+                             : "adverse-bar loser exit off");
+   else if(StringFind(a, "SCOUT") >= 0 || StringFind(a, "START") >= 0)
+      core = (s.scoutRun ? "profit scouting armed (closes enabled)"
+                         : "profit scouting paused (watch only)");
+   else if(StringFind(a, "PROP") >= 0)
+      core = (s.propLocked ? ("Prop LOCK " + s.propReason + " — entries stopped")
+                           : "Prop unlocked — entries may resume");
+   else if(StringFind(a, "FDIR") >= 0 || StringFind(a, "FOLLOWDIR") >= 0)
+      core = "desk FollowDir filter applied to new entries";
+   else if(StringFind(a, "FLEET") >= 0)
+      core = "fleet target pairs changed — fill cadence";
+   else if(StringFind(a, "PAIR") >= 0 || StringFind(a, "STATE") >= 0)
+      core = "pair START/STOP — signal eligibility only (no closes)";
+   else if(StringFind(a, "ADD") >= 0 || StringFind(a, "REM") >= 0 || StringFind(a, "SWAP") >= 0)
+      core = "roster book changed — signal universe updated";
+   else if(StringFind(a, "EVT") >= 0)
+      core = "event gate TRADE/SKIP for new entries";
+   else if(StringFind(a, "LOAD") >= 0)
+      core = "effective input+UI state at host start";
+   return(core + " · " + GsxRiskSettingsClause(a));
   }
 
 string GsxSettingsFormatLoad(const GsxSettingsSnapshot &s)

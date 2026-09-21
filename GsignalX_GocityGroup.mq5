@@ -37,6 +37,7 @@
 #include <GSignalX/OpportunityGrade.mqh>
 #include <GSignalX/LotSizing.mqh>
 #include <GSignalX/ChartPanel.mqh>
+#include <GSignalX/BrandLinks.mqh>
 #include <GSignalX/Fleet.mqh>
 #include <GSignalX/ScoutLink.mqh>
 #include <GSignalX/Engines.mqh>
@@ -2355,6 +2356,9 @@ void UpdatePanel(string tradeState)
    GsxPanelApplyChrome(estH, InpColPanelBg, InpColPanelEdge, C'36,42,54',
                        InpColAccent, InpColNeutral, "GsignalX", densHint);
 
+   // Foundation tip under title (full URL only via TV chip click)
+   GsxPanelRowSmall("Chart study", GsxTvPubTip(), InpColNeutral, InpColAccent);
+
    bool marketOpen = (StringFind(tradeState, "OPEN") == 0);
 
    //--- Status (surface waiting / block reason for investors)
@@ -2671,8 +2675,8 @@ void UpdatePanel(string tradeState)
       GsxLayAdvance(blay, bh);
 
       GsxLayRowStart(blay, bh);
-      GsxLayEqual(blay, 3, bslots);
-      if(ArraySize(bslots) >= 3)
+      GsxLayEqual(blay, 4, bslots);
+      if(ArraySize(bslots) >= 4)
         {
          GsxPanelSlotButtonPad("BTN_SPREAD", bslots[0],
                                gIgnoreSpread ? "IGN" : "SPREAD",
@@ -2687,6 +2691,8 @@ void UpdatePanel(string tradeState)
          GsxPanelSlotButtonPad("BTN_EQGUARD", bslots[2], eqLbl,
                                eqOn ? InpColAccent : chipIdle,
                                eqOn ? InpColPanelBg : InpColText, bpad);
+         GsxPanelSlotButtonPad("BTN_TV", bslots[3], GSX_TV_PUB_LABEL,
+                               InpColAccent, InpColPanelBg, bpad);
         }
 
       // Grow panel to real button stack (fixes black gap / roster collision)
@@ -3096,15 +3102,24 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                            GsxSettingsAnnounce("EQ");
                           }
                         else
-                           if(click == gPfx + "TITLE")
+                           if(click == gPfx + "BTN_TV")
                              {
-                              g_panelDragging = true;
-                              g_panelDragOffSet = false;
-                              ObjectSetInteger(0, click, OBJPROP_SELECTED, false);
-                              return;
+                              GsxTvPubAnnounce();
+                              gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                                            " TV pub → Experts / Alert";
+                              GsxUiMarkDirty();
+                              UpdatePanel(g_lastPanelState);
                              }
                            else
-                              return;
+                              if(click == gPfx + "TITLE")
+                                {
+                                 g_panelDragging = true;
+                                 g_panelDragOffSet = false;
+                                 ObjectSetInteger(0, click, OBJPROP_SELECTED, false);
+                                 return;
+                                }
+                              else
+                                 return;
 
       ObjectSetInteger(0, click, OBJPROP_SELECTED, false);
       ChartRedraw();

@@ -229,6 +229,17 @@
   background: color-mix(in srgb, #25d366 20%, transparent);
   text-decoration: none;
 }
+.gsx-community-btn.tv {
+  color: #2962ff;
+  border-color: rgba(41, 98, 255, 0.55);
+  background: color-mix(in srgb, #2962ff 12%, transparent);
+}
+.gsx-community-btn.tv:hover {
+  color: #1e4fd6;
+  border-color: rgba(41, 98, 255, 0.8);
+  background: color-mix(in srgb, #2962ff 20%, transparent);
+  text-decoration: none;
+}
 .gsx-community-dual.channel-primary .gsx-community-lead {
   border-left: 3px solid var(--gold);
   padding-left: 10px;
@@ -274,4 +285,47 @@
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Adaptive risk guidance (shared) */
+.risk-block {
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin: 1em 0;
+  border: 1px solid rgba(70, 154, 212, 0.45);
+  background: linear-gradient(135deg, rgba(70, 154, 212, 0.10), var(--bg-card));
+  font-size: 0.95rem;
+}
+.risk-block .rb-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand-blue);
+  border: 1px solid rgba(70, 154, 212, 0.4);
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin-bottom: 8px;
+}
+.risk-block.warn {
+  border-color: rgba(251, 169, 39, 0.55);
+  background: linear-gradient(135deg, rgba(251, 169, 39, 0.10), var(--bg-card));
+}
+.risk-block.warn .rb-tag { color: var(--gold); border-color: rgba(251, 169, 39, 0.45); }
+.risk-block.bear {
+  border-color: rgba(220, 38, 38, 0.45);
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.08), var(--bg-card));
+}
+.risk-block.bear .rb-tag { color: var(--bear); border-color: rgba(220, 38, 38, 0.4); }
+.decision-tree {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.55;
+  background: var(--bg-soft);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  overflow-x: auto;
+  white-space: pre;
 }

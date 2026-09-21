@@ -9,6 +9,9 @@
 #ifndef GSX_TELEGRAM_NOTIFIER_MQH
 #define GSX_TELEGRAM_NOTIFIER_MQH
 
+#include <GSignalX/RiskGuidance.mqh>
+#include <GSignalX/BrandLinks.mqh>
+
 #define GSX_TG_QUEUE_CAP   10
 #define GSX_TG_HTTP_TO_MS  5000
 #define GSX_TG_RATE_WIN_S  60
@@ -870,7 +873,10 @@ void GsxTgNotifyCustom(const GsxTgConfig &cfg, const string tag, const string bo
   { GsxTgSendNow(cfg, tag, body); }
 
 void GsxTgNotifyDaily(const GsxTgConfig &cfg, const string body)
-  { GsxTgSendNow(cfg, "DAILY", body); }
+  {
+   // Chart foundation footer once per daily digest (not on every trade alert)
+   GsxTgSendNow(cfg, "DAILY", body + "\n" + GsxTvPubFooterLine());
+  }
 
 void GsxTgNotifyWeekly(const GsxTgConfig &cfg, const string body)
   { GsxTgSendNow(cfg, "WEEKLY", body); }
@@ -879,8 +885,12 @@ void GsxTgNotifyWeekly(const GsxTgConfig &cfg, const string body)
 string GsxTgFormatOpen(const string sym, const string side, const double lots,
                        const double entry, const double sl, const double tp)
   {
-   return(StringFormat("%s %s %.2f lots @ %.5f SL=%.5f TP=%.5f",
-                       sym, side, lots, entry, sl, tp));
+   string body = StringFormat("%s %s %.2f lots @ %.5f SL=%.5f TP=%.5f",
+                              sym, side, lots, entry, sl, tp);
+   string tip = GsxRiskTipForSymbol(sym, GSX_RISK_PHASE_ENTRY);
+   if(tip != "")
+      body += " | tip:" + tip;
+   return(body);
   }
 
 string GsxTgFormatModify(const string sym, const double sl, const double tp)
@@ -1008,7 +1018,8 @@ void GsxTgInit(const GsxTgConfig &cfg, const string accountTag)
      }
 
    string who = (accountTag != "" ? accountTag : "GSignalX");
-   GsxTgSendNow(cfg, "TG", "Connection verified — " + who);
+   GsxTgSendNow(cfg, "TG",
+                "Connection verified — " + who + "\n" + GsxTvPubFooterLine());
    GsxTgSendNow(cfg, "START", "EA started — " + who);
    if(g_tgMagic > 0)
       GsxTgPublishStatus(g_tgMagic);

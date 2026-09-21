@@ -22,6 +22,7 @@ By opening a pull request or issue with patches, you agree that your contributio
 - **GitHub Issues:** https://github.com/gocitygroup/GsignalX-Velocity/issues — reproducible bugs, deploy failures, panel defects  
 - **Discussions / PR comments:** use the same repository  
 - **Executive cloud signals & product programs:** https://www.gsignalx.cloud/  
+- **TradingView chart foundation:** https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/ — visual thesis; does not place MT5 orders  
 - **Manual:** [Desk Community](docs/Gsignalx_Velocity_Users_Manual.html#community)
 
 ## Before you open an issue

@@ -8,6 +8,8 @@
 #ifndef GSX_PRACTICE_SIM_MQH
 #define GSX_PRACTICE_SIM_MQH
 
+#include <GSignalX/RiskGuidance.mqh>
+
 enum ENUM_GSX_PRACTICE_BAND
   {
    GSX_PRAC_BAND_20  = 20,
@@ -241,9 +243,7 @@ string GsxPracticeFormatTipLine(const GsxPracticeProfile &p)
    if(p.secondaryPairsCsv != "")
       tip += " · 2nd " + p.secondaryPairsCsv;
    tip += StringFormat(" · lossBudget%d · %s", p.lossBudget, p.expectancyNote);
-   if(StringLen(tip) > 96)
-      tip = StringSubstr(tip, 0, 96) + "..";
-   return(tip);
+   return(GsxRiskPracticeEnrich(p.softCat, tip));
   }
 
 #endif // GSX_PRACTICE_SIM_MQH

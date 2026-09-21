@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="description" content="Gsignalx Velocity 2.14 — commercial MT5 prop desk. Profit CASH bank, opt-in Loss CASH, Telegram soft VERIFY, FIXED 0.01, Prop soft STOP."/>
+<meta name="description" content="Gsignalx Velocity 2.14 — adaptive risk trader manual. Profit CASH bank, Prop soft STOP, market-condition framework, RiskGuidance digital tips."/>
 <meta name="color-scheme" content="dark light"/>
 <title>Gsignalx Velocity 2.14 — Trader Manual | Gocity Group</title>
 <link rel="icon" href="assets/icons/group-icon.svg" type="image/svg+xml"/>
@@ -308,6 +308,13 @@ pre code { background: none; border: none; padding: 0; color: inherit; }
 }
 .header-cta.community:hover { background: var(--cta-gh-hover); color: var(--link); }
 .header-cta.community .cm-short { display: none; }
+.header-cta.tv {
+  border-color: rgba(41, 98, 255, 0.55);
+  color: #2962ff;
+  background: color-mix(in srgb, #2962ff 12%, var(--bg-card));
+}
+.header-cta.tv:hover { background: color-mix(in srgb, #2962ff 22%, var(--bg-card)); color: #2962ff; text-decoration: none; }
+.header-cta.tv .tv-short { display: none; }
 
 .theme-toggle {
   appearance: none;
@@ -477,7 +484,50 @@ h3 { font-size: 1.05rem; margin: 1.5em 0 0.5em; color: var(--heading-sub); }
 .callout.warn { border-color: rgba(251, 169, 39, 0.55); }
 .callout strong.label { display: block; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; color: var(--gold); }
 
-/* Cards & tables */
+/* Adaptive risk guidance blocks */
+.risk-block {
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin: 1em 0;
+  border: 1px solid rgba(70, 154, 212, 0.45);
+  background: linear-gradient(135deg, rgba(70, 154, 212, 0.10), var(--bg-card));
+  font-size: 0.95rem;
+}
+.risk-block .rb-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand-blue);
+  border: 1px solid rgba(70, 154, 212, 0.4);
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin-bottom: 8px;
+}
+.risk-block.warn {
+  border-color: rgba(251, 169, 39, 0.55);
+  background: linear-gradient(135deg, rgba(251, 169, 39, 0.10), var(--bg-card));
+}
+.risk-block.warn .rb-tag { color: var(--gold); border-color: rgba(251, 169, 39, 0.45); }
+.risk-block.bear {
+  border-color: rgba(220, 38, 38, 0.45);
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.08), var(--bg-card));
+}
+.risk-block.bear .rb-tag { color: var(--bear); border-color: rgba(220, 38, 38, 0.4); }
+.risk-block ul { margin: 0.35em 0 0; padding-left: 1.2em; }
+.risk-block p:last-child { margin-bottom: 0; }
+.decision-tree {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.55;
+  background: var(--bg-soft);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  overflow-x: auto;
+  white-space: pre;
+}
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
@@ -716,6 +766,8 @@ tr:nth-child(even) td { background: var(--row-stripe); }
   .header-cta.gh .gh-short { display: inline; }
   .header-cta.community .cm-full { display: none; }
   .header-cta.community .cm-short { display: inline; }
+  .header-cta.tv .tv-full { display: none; }
+  .header-cta.tv .tv-short { display: inline; }
   .header-actions { gap: 4px; }
   .main {
     padding: 16px 12px 56px;
@@ -786,6 +838,9 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       <a class="header-cta community" href="#community" data-tab="community" title="Macro channel · desk community">
         <span class="cm-full">Channel</span><span class="cm-short">TG</span>
       </a>
+      <a class="header-cta tv" href="https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/" target="_blank" rel="noopener" title="GsignalX chart foundation on TradingView">
+        <span class="tv-full">Chart</span><span class="tv-short">TV</span>
+      </a>
       <a class="header-cta" href="https://www.gsignalx.cloud/" target="_blank" rel="noopener" title="Executive">
         <span class="header-cta-label">Executive</span><span class="hide-sm"> → cloud</span>
       </a>
@@ -845,6 +900,12 @@ tr:nth-child(even) td { background: var(--row-stripe); }
         Trading involves risk of loss, including loss of capital. This manual describes software behaviour for MetaTrader 5. It is not investment advice, not a performance guarantee, and not a substitute for your prop firm’s rules or your broker’s risk controls. Practise on demo before live capital.
       </div>
 
+      <div class="risk-block warn">
+        <span class="rb-tag">Risk principle</span>
+        <p><strong>Manage the reason for the trade, not merely the current profit or loss.</strong> An open position must continue to earn its right to remain open. These are decision principles — not guarantees of success.</p>
+        <p style="margin:0.5em 0 0">Adaptive chapters: <a href="#risk-framework" data-tab="risk-framework">Risk Framework</a> · <a href="#market-conditions" data-tab="market-conditions">Market Conditions</a> · <a href="#trade-lifecycle" data-tab="trade-lifecycle">Trade Lifecycle</a> · <a href="#asset-matrix" data-tab="asset-matrix">Asset Matrix</a> · <a href="#risk-checks" data-tab="risk-checks">Checklists</a></p>
+      </div>
+
       <h2>Executive vs Velocity</h2>
       <div class="card-grid">
         <div class="card">
@@ -858,6 +919,11 @@ tr:nth-child(even) td { background: var(--row-stripe); }
           <p>Runs on your Windows terminal — no cloud order routing in this build.</p>
         </div>
         <div class="card">
+          <h3>📈 TradingView publication</h3>
+          <p>Official open-source chart study for the same multi-engine trend logic (PP SuperTrend · ATR SuperTrend · SuperBollingerTrend). Use it as a <em>visual thesis check</em> while Velocity owns the book on MT5.</p>
+          <p><a href="https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/" target="_blank" rel="noopener">Open GsignalX on TradingView →</a></p>
+        </div>
+        <div class="card">
           <h3>💬 Trader community</h3>
           <p><strong>Channel (main this update):</strong> macro overview for day trading — consult the composite current driver breakdown and the cited data sources for the quantitative basis. <strong>Group</strong> remains optional for feedback and peer setups.</p>
           <div data-gsx-community="macro"></div>
@@ -867,7 +933,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
 
       <div class="callout">
         <strong class="label">Senior desk rule</strong>
-        Executive informs conviction. Velocity owns the book on MT5. Do not confuse cloud signal pages with the EA’s local PP / SuperTrend / SuperBollinger engines — both can agree; only Velocity places and harvests tickets in this toolkit.
+        Executive informs conviction. Velocity owns the book on MT5. The TradingView publication is a chart-study companion — it does <strong>not</strong> place MT5 orders. Do not confuse cloud signal pages or the Pine script with the EA’s local PP / SuperTrend / SuperBollinger engines — they can agree; only Velocity places and harvests tickets in this toolkit.
       </div>
 
       <h2>Who this manual is for</h2>
@@ -905,6 +971,13 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       <div class="callout gold">
         <strong class="label">Preliminary desk = M5</strong>
         Prefer <strong>GsignalX_Service</strong> for entries (or M5 charts). Set Scouter adverse TF to <strong>M5</strong>. Drill pace, bus direction, and loser cuts stay aligned.
+      </div>
+
+      <div class="callout">
+        <strong class="label">Chart foundation (TradingView)</strong>
+        The published Pine study documents the same PP / ATR SuperTrend / SuperBollingerTrend signal foundation used by Velocity.
+        Follow it on TradingView while you execute on MT5 — it does not route orders.
+        <p style="margin:0.6em 0 0"><a href="https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/" target="_blank" rel="noopener">Open GsignalX on TradingView →</a></p>
       </div>
 
       <pre>GsignalX_Service (OWN=1)     Multisymbol Dashboard (v1.26)
@@ -971,6 +1044,25 @@ tr:nth-child(even) td { background: var(--row-stripe); }
         <li><strong>Trade Center / PropRisk</strong> soft STOP never closes tickets; only Scouter (or Harvest script) may close.</li>
         <li><strong>Service OWN</strong> and chart entries must not double-fill the same magic.</li>
       </ul>
+
+      <div class="risk-block">
+        <span class="rb-tag">Position-size check</span>
+        <ul>
+          <li><strong>Position size</strong> ≠ <strong>risk per trade</strong> ≠ <strong>margin used</strong> ≠ <strong>maximum possible loss</strong>.</li>
+          <li>FIXED 0.01 is the production default; AUTOLOT sizes from balance × risk% ÷ sizing ATR — high leverage does not raise acceptable risk.</li>
+          <li>StrategicStop (default 4×ATR) is a <em>catastrophe</em> broker SL; lot sizing uses a tighter signal ATR distance. Do not widen StrategicStopMult to “give room.”</li>
+          <li>Verify tick value, contract size, and min lot from the <strong>current instrument specification</strong>.</li>
+        </ul>
+      </div>
+
+      <div class="risk-block warn">
+        <span class="rb-tag">Bot safety check</span>
+        <ul>
+          <li>One Scouter closer per Instance ID; stale bus / VPS / terminal failure ≠ strategy failure.</li>
+          <li>Symbol suffix mismatch and wrong contract specs cause bad lots — use SymbolCanon-aware hosts.</li>
+          <li>Trade Center tip row and Telegram OPEN now carry context tips from <code>RiskGuidance.mqh</code> (advisory only).</li>
+        </ul>
+      </div>
 
       <h2 id="profit-cash">Profit CASH &amp; Loss CASH — best use</h2>
       <p class="lede" style="margin-top:0">One cash number the desk can teach, set, and trust. Stock Scouter default: <strong>Profit CASH +100</strong> (account or target currency). Micro/demo books still ladder smaller floors — see <a href="#growth">Fund Growth</a>.</p>
@@ -1182,6 +1274,11 @@ cd GsignalX-Velocity</pre>
         Floor ≈ <strong>0.5–1% of balance</strong> per harvest cycle (challenge desks often prefer the lower end). Never widen catastrophe SL above <strong>4.0×ATR</strong>. Re-ladder monthly or every +50% equity, whichever comes first.
       </div>
 
+      <div class="risk-block warn">
+        <span class="rb-tag">Market-specific note</span>
+        <p>Ladders below are <strong>worked examples</strong> for risk geometry — not performance forecasts. At micro balances, broker <strong>min lot</strong> dominates percent-risk math. Prefer FIXED 0.01 in production until you intentionally enable AUTOLOT. Verify spreads, commission, and leverage from your broker.</p>
+      </div>
+
       <h2>Growth ladder (sample)</h2>
       <table>
         <thead>
@@ -1267,12 +1364,17 @@ cd GsignalX-Velocity</pre>
       </div>
 
       <h2>Practice live packs — $20 / $50 / $100 (Standard + Raw)</h2>
-      <p>Trade Center buttons <strong>20 · 50 · 100 · RAW · STD · SCALP · DAY · SWING</strong> show coach tips (pairs, sessions, loss budget). Soft-apply updates fleet + category only. Load matching Service + Scouter presets, then restart Services:</p>
-      <ul>
-        <li><code>deploy/presets/GSignalX_Service_Practice_{20|50|100}_{Raw|Standard}.set</code></li>
-        <li><code>deploy/presets/ProfitScouter_Practice_{20|50|100}_{Raw|Standard}.set</code></li>
-      </ul>
-      <p>Full maths (expectancy, Kelly proxy, Standard vs Raw floors): <code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code>. Demo first; no virtual balance — use a real funded demo near the band.</p>
+      <p>Canonical risk geometry for micro books (also in <code>PracticeSim.mqh</code>). Trade Center buttons <strong>20 · 50 · 100 · RAW · STD · SCALP · DAY · SWING</strong> show coach tips. Soft-apply updates fleet + category only — money floors stay in <code>.set</code> files. Load matching Service + Scouter presets, then restart Services.</p>
+      <table>
+        <thead><tr><th>Band</th><th>Day loss halt</th><th>Day profit bank</th><th>Fleet</th><th>Max lot</th><th>Day max trades</th></tr></thead>
+        <tbody>
+          <tr><td>20</td><td>1.00 (5%)</td><td>0.40 (2%)</td><td>1</td><td>0.01</td><td>2</td></tr>
+          <tr><td>50</td><td>2.00 (4%)</td><td>1.00 (2%)</td><td>2</td><td>0.02</td><td>3</td></tr>
+          <tr><td>100</td><td>3.50 (~3.5%)</td><td>1.50 (1.5%)</td><td>2</td><td>0.10</td><td>4</td></tr>
+        </tbody>
+      </table>
+      <p>ASAP / lock / minWin (Raw): 0.20/0.20/0.10 · 0.50/0.50/0.25 · 1.00/1.00/0.50. Standard uses higher floors. Style trade caps (coach): Scalp 4/6/8 · Day 2/3/4 · Swing 1/1/2. These are <strong>discipline rules</strong>, not forecasts — demo first.</p>
+      <p>Preset files: <code>deploy/presets/GSignalX_Service_Practice_{BAND}_{Raw|Standard}.set</code> + matching ProfitScouter practice presets. Expectancy / Kelly proxy detail: <code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code> (pointer — canonical tables live here). Demo first; no virtual balance.</p>
       <div class="callout gold">
         <strong class="label">After your first practice pack</strong>
         Check the <strong>trading channel</strong> first for the day’s macro overview (composite current driver breakdown + cited sources), then ask peers in the <strong>group</strong> — or post a process tip on the channel (preset + floor, not P/L).
@@ -1359,6 +1461,9 @@ cd GsignalX-Velocity</pre>
           <li>Session end → <strong>STOP</strong> every chart. Leave Friday rules ON.</li>
         </ol>
         <p>You just ran: <strong>signal → entry → scout → harvest → optional re-entry</strong>. Commercial stock default is <strong>+100</strong>; practice/micro books keep smaller floors via presets — see <a href="#growth">Fund Growth</a>.</p>
+        <p style="margin:0.75em 0 0">Optional chart companion: follow the same engines on
+          <a href="https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/" target="_blank" rel="noopener">TradingView</a>
+          while you watch the MT5 panel — study only; Velocity places the tickets.</p>
       </div>
 
       <h2>First settings that matter</h2>
@@ -1381,6 +1486,10 @@ cd GsignalX-Velocity</pre>
         <li>Drag <code>ProfitHarvest_Now</code> for a one-shot bank (default account target 10; Confirm ON).</li>
         <li>Use <strong>HALT</strong> when walking away mid-book without wanting harvest to continue.</li>
       </ul>
+      <div class="risk-block">
+        <span class="rb-tag">Signal validation</span>
+        <p>A signal (local DIR or Executive cloud) is <strong>not</strong> an automatic order. Confirm market condition, spread, fleet room, and invalidation before you click. See <a href="#risk-checks">Risk Checklists</a>.</p>
+      </div>
       <div class="callout gold">
         <strong class="label">First session done?</strong>
         Read the <strong>trading channel</strong> macro overview for day trading (driver breakdown + cited sources), then ask a process question in the <strong>group</strong> if needed.
@@ -1402,7 +1511,10 @@ cd GsignalX-Velocity</pre>
           <tr><td>Advanced</td><td>Need <code>InpMinAgree</code> (default 2) among PP / ST / SBT</td></tr>
         </tbody>
       </table>
-      <p>Stock often enables PP + SuperBollingerTrend; ATR SuperTrend optional.</p>
+      <p>Stock often enables PP + SuperBollingerTrend; ATR SuperTrend optional.
+        Optional: align bias with the
+        <a href="https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/" target="_blank" rel="noopener">TradingView publication</a>
+        before PLAY — chart study only; Velocity still owns fills.</p>
 
       <h2>FOLLOW vs WAIT</h2>
       <ul>
@@ -1887,6 +1999,15 @@ cd GsignalX-Velocity</pre>
         <strong class="label">Challenge killers</strong>
         Over-fleet on micro capital · ASAP floor still at 5 on a €100 book · Algo green overnight without hour filter · Two Scouters racing · Widening strategic SL past 4.0×ATR.
       </div>
+
+      <div class="risk-block bear">
+        <span class="rb-tag">Do not override</span>
+        <ul>
+          <li>Prop soft LOCK exists to protect the challenge — CLEAR only when you understand the reason.</li>
+          <li>Valid early exit = thesis broken or budget hit. Emotional CUT because “it feels red” is not the same thing.</li>
+          <li>Structured Profit CASH banking ≠ greed hold; fear BANK of a planned floor is also a process break.</li>
+        </ul>
+      </div>
     </section>
 
     <!-- PERFORMANCE -->
@@ -1993,6 +2114,9 @@ cd GsignalX-Velocity</pre>
         </header>
         <ul>
           <li>Read Executive signals on <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">gsignalx.cloud</a></li>
+          <li>Optionally confirm trend structure on the
+            <a href="https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/" target="_blank" rel="noopener">TradingView publication</a>
+            (visual thesis — does not place MT5 orders)</li>
           <li>Enter manually or with GSignalX on selective PLAY charts that match Executive bias</li>
           <li>Keep ProfitScouter_Service running for dollar targets regardless</li>
           <li>Do not expect the MQ5 files to poll the cloud API in this release</li>
@@ -2022,11 +2146,12 @@ cd GsignalX-Velocity</pre>
           <tr><td><strong>SPREAD / IGN</strong></td><td>Enforce vs bypass entry max-spread gate</td></tr>
           <tr><td><strong>FIXED / AUTOLOT</strong></td><td>Default FIXED 0.01; shares desk <code>GSX_MS_AUTOLOT_*</code></td></tr>
           <tr><td><strong>EQ OFF / 5% / 10% / 20%</strong></td><td>Shares desk <code>GSX_MS_EQGUARD_*</code></td></tr>
+          <tr><td><strong>TV</strong></td><td>Alert + Experts log with the TradingView chart-foundation URL (does not open a browser)</td></tr>
         </tbody>
       </table>
 
       <h2>Trade Center desk buttons (see <a href="#desk213">Best Use</a>)</h2>
-      <p>Automation: FIXED|AUTOLOT · EQ OFF/5/10/20 · REKICK · FollowDir FOLLOW/BUY/SELL/WAIT · PROP CLEAR · START/STOP ALL · ADD/REM. Default lot <strong>FIXED 0.01</strong>.</p>
+      <p>Automation: FIXED|AUTOLOT · EQ OFF/5/10/20 · REKICK · FollowDir FOLLOW/BUY/SELL/WAIT · PROP CLEAR · START/STOP ALL · ADD/REM · <strong>TV</strong> (TradingView foundation Alert). Default lot <strong>FIXED 0.01</strong>.</p>
 
       <h2>ProfitScouter buttons</h2>
       <table>
@@ -2125,6 +2250,11 @@ cd GsignalX-Velocity</pre>
           <p>Live desk meet-up and quick chat — session windows, M5 book notes, and real-time peer check-ins. Complements Telegram; does not replace the macro channel.</p>
           <p><a href="https://chat.whatsapp.com/EemGekqMwDgKrLj0tkqYlB" target="_blank" rel="noopener noreferrer">Join WhatsApp meet-up →</a></p>
         </div>
+        <div class="card">
+          <h3>📈 TradingView · chart study</h3>
+          <p>Official GsignalX trend-following publication — follow the same multi-engine logic visually. Does not place MT5 orders; Velocity owns the book.</p>
+          <p><a href="https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/" target="_blank" rel="noopener">Open GsignalX on TradingView →</a></p>
+        </div>
       </div>
       <div data-gsx-community="macro"></div>
 
@@ -2143,6 +2273,203 @@ cd GsignalX-Velocity</pre>
       </div>
     </section>
 
+    <!-- RISK FRAMEWORK -->
+    <section class="panel" id="risk-framework" data-title="Risk Framework" data-short="Risk">
+      <div class="kicker">Adaptive risk management</div>
+      <h1>Risk framework</h1>
+      <p class="lede">Risk guidance belongs at every decision — not only in a final chapter. Velocity maps each layer to concrete desk knobs. Full audit: <code>docs/RISK_MANUAL_AUDIT.md</code>.</p>
+
+      <div class="risk-block warn">
+        <span class="rb-tag">Risk principle</span>
+        <p>Ask <em>“Has the reason for the trade changed?”</em> — not merely <em>“Am I in profit or loss?”</em></p>
+      </div>
+
+      <h2>Layers A–Q → Velocity controls</h2>
+      <div class="table-scroll">
+      <table>
+        <thead><tr><th>Layer</th><th>Meaning</th><th>Velocity hook</th></tr></thead>
+        <tbody>
+          <tr><td>A Market / asset</td><td>How the asset class behaves</td><td>SymbolClass FX/CMD/CR/OTH · <a href="#asset-matrix">Asset matrix</a></td></tr>
+          <tr><td>B Instrument</td><td>Contract / tick / hours</td><td>Verify from instrument specification · SymbolCanon</td></tr>
+          <tr><td>C Market condition</td><td>Trend / range / news / illiquid</td><td><a href="#market-conditions">Market Conditions</a> · EventGate proxies</td></tr>
+          <tr><td>D Timeframe</td><td>HTF context vs LTF entry</td><td>Preliminary desk <strong>M5</strong> · practice tfHint</td></tr>
+          <tr><td>E Signal</td><td>Generation ≠ execution</td><td>Bus DIR · FOLLOW/WAIT · FollowDir · Executive cloud advisory</td></tr>
+          <tr><td>F Entry</td><td>Fill conditions</td><td>MarketGates · spread · fleet · drill</td></tr>
+          <tr><td>G Position sizing</td><td>Lots vs risk budget</td><td>FIXED / AUTOLOT · LotSizing · MaxLot</td></tr>
+          <tr><td>H Stop-loss</td><td>Sizing stop ≠ catastrophe</td><td>Signal ATR vs StrategicStop 4×ATR</td></tr>
+          <tr><td>I Take-profit</td><td>Bank plan</td><td>Profit CASH / LAYER / ATR TRAIL</td></tr>
+          <tr><td>J Open-trade mgmt</td><td>Monitor thesis</td><td>Scouter START · adverse Auto · tip row</td></tr>
+          <tr><td>K Event / news</td><td>Calendar risk</td><td>EventGate TRADE/SKIP · Prop news CSV</td></tr>
+          <tr><td>L Liquidity / exec</td><td>Spread / slippage</td><td>SPREAD/IGN · class spread floors</td></tr>
+          <tr><td>M Leverage / margin</td><td>Buying power ≠ risk</td><td>Broker spec · do not confuse with risk%</td></tr>
+          <tr><td>N Correlation</td><td>Portfolio overlap</td><td>Fleet counts FX/CMD/CR · correlated majors</td></tr>
+          <tr><td>O Technology / bot</td><td>Execution &amp; infra</td><td>Bus HB · one Scouter · VPS · TG VERIFY</td></tr>
+          <tr><td>P Human behaviour</td><td>Emotion overrides</td><td>Prop LOCK · practice loss budget · no revenge PLAY</td></tr>
+          <tr><td>Q Exit / protection</td><td>Structured vs emotional</td><td>BANK/CUT/FLAT · Loss CASH · CloseTrigger tags</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h2>Sizing ATR ≠ StrategicStop ≠ Scouter</h2>
+      <div class="flow">
+        <span class="node">Sizing ATR</span>
+        <span class="arrow">→</span>
+        <span class="node">Lot / FIXED</span>
+        <span class="arrow">→</span>
+        <span class="node gold">Strategic SL</span>
+        <span class="arrow">→</span>
+        <span class="node bull">Scouter harvest</span>
+      </div>
+      <p>Three different jobs. Confusing them causes oversize risk or premature “room” for losers.</p>
+    </section>
+
+    <!-- MARKET CONDITIONS -->
+    <section class="panel" id="market-conditions" data-title="Market Conditions" data-short="Conditions">
+      <div class="kicker">Condition → management</div>
+      <h1>Market-condition framework</h1>
+      <p class="lede">Trend ≠ guaranteed continuation. Pullback ≠ guaranteed reversal. Breakout ≠ guaranteed follow-through. Support/resistance are <strong>decision zones</strong>, not guarantees.</p>
+
+      <div class="table-scroll">
+      <table>
+        <thead><tr><th>Condition</th><th>Check</th><th>Primary risk</th><th>Manage</th><th>Avoid</th><th>Invalidate</th></tr></thead>
+        <tbody>
+          <tr><td>Strong trend</td><td>HTF structure intact?</td><td>Exiting noise pullbacks early</td><td>Hold thesis; Scouter banks by plan</td><td>Treating every retrace as reversal</td><td>Structure break vs DIR</td></tr>
+          <tr><td>Weak trend / pullback</td><td>Pullback vs reversal clues</td><td>Adding without rule</td><td>WAIT if mixed; size down</td><td>Revenge add</td><td>Opposite DIR + structure fail</td></tr>
+          <tr><td>Range / consolidation</td><td>S/R zone boundaries</td><td>False breakouts</td><td>Reduce directional confidence</td><td>Every crossover as trend</td><td>Accepted break + retest fail</td></tr>
+          <tr><td>Breakout</td><td>Close beyond zone + follow-through</td><td>Liquidity sweep / fake</td><td>Confirm; watch retest</td><td>Chasing mid-spike with IGN</td><td>Immediate reclaim of zone</td></tr>
+          <tr><td>High volatility / news</td><td>EventGate · calendar</td><td>Slippage · spread blowout</td><td>SKIP or cut size; reassess floors</td><td>“Never trade vol” absolutism <em>or</em> ignoring event risk</td><td>SKIP window active</td></tr>
+          <tr><td>Illiquid / session transition</td><td>Session strip · spread</td><td>Bad fills</td><td>Hour filter; SUSPEND thin books</td><td>Asia FX without a plan</td><td>Spread &gt; policy</td></tr>
+          <tr><td>Gap / open</td><td>Broker hours (CMD/indices/equities)</td><td>Gap through mental stops</td><td>Verify SL behaviour; reduce overnight</td><td>Assuming FX-like continuity</td><td>Untradable session</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="risk-block">
+        <span class="rb-tag">Support / resistance risk</span>
+        <ul>
+          <li>Prefer <strong>zones</strong> over exact prices; expect liquidity sweeps beyond the level.</li>
+          <li>Place invalidation beyond the zone with volatility-aware distance — not “1 pip past.”</li>
+          <li>Multi-timeframe: higher TF zone context, lower TF entry — LTF signal does not auto-override HTF structure unless your written rules say so.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- TRADE LIFECYCLE -->
+    <section class="panel" id="trade-lifecycle" data-title="Trade Lifecycle" data-short="Lifecycle">
+      <div class="kicker">Nine phases</div>
+      <h1>Trade lifecycle risk</h1>
+      <p class="lede">Block catalog: <code>docs/risk/RISK_GUIDANCE_BLOCKS.md</code>. Desk tips use the same IDs via <code>RiskGuidance.mqh</code>.</p>
+
+      <h2>Phases</h2>
+      <table>
+        <thead><tr><th>Phase</th><th>Monitor</th><th>Permitted</th><th>Prohibited</th></tr></thead>
+        <tbody>
+          <tr><td>1 Pre-trade</td><td>Class, session, Prop, Event, Profit CASH</td><td>Load presets · VERIFY TG</td><td>Dual entry hosts same magic</td></tr>
+          <tr><td>2 Signal validation</td><td>DIR freshness · FOLLOW/WAIT · Executive vs local</td><td>WAIT / SUSPEND</td><td>Entering stale DIR after structure change</td></tr>
+          <tr><td>3 Entry</td><td>Spread · fleet · lot mode</td><td>PLAY when checks pass</td><td>IGN + full size on thin liquidity</td></tr>
+          <tr><td>4 Initial protection</td><td>Strategic SL attached</td><td>Confirm SL</td><td>Widen / remove catastrophe SL</td></tr>
+          <tr><td>5 Open monitoring</td><td>Thesis · bus DIR · session</td><td>Soft STOP pair</td><td>Micromanage every tick</td></tr>
+          <tr><td>6 Profit management</td><td>CASH/TRAIL plan</td><td>BANK by plan</td><td>Greed hold without rule</td></tr>
+          <tr><td>7 Drawdown</td><td>Adverse / Loss CASH / day budget</td><td>Valid thesis cut</td><td>Revenge AUTOLOT · hope-hold</td></tr>
+          <tr><td>8 Exit</td><td>CloseTrigger reason</td><td>Scouter / CUT / FLAT</td><td>Expecting STOP to flatten</td></tr>
+          <tr><td>9 Post-trade</td><td>Journal class+tag</td><td>One process change</td><td>Five knobs after one loser</td></tr>
+        </tbody>
+      </table>
+
+      <div class="risk-block warn">
+        <span class="rb-tag">Exit decision</span>
+        <p><strong>Valid early exit:</strong> reason/thesis changed, budget hit, Event SKIP on add, structure invalidation.</p>
+        <p><strong>Emotional early exit:</strong> temporary noise, fear of green→red, or “I need a win today.”</p>
+        <p style="margin:0"><strong>Structured profit:</strong> Profit CASH / TRAIL / BANK plan. <strong>Greed failure:</strong> moving targets because price “might go further” with no rule.</p>
+      </div>
+    </section>
+
+    <!-- ASSET MATRIX -->
+    <section class="panel" id="asset-matrix" data-title="Asset-Class Matrix" data-short="Assets">
+      <div class="kicker">Not one rule for every market</div>
+      <h1>Asset-class difference matrix</h1>
+      <p class="lede">Runtime taxonomy is <strong>FX / CMD / CR / OTH</strong>. Indices, equities, CFDs, and futures are documented here for decision quality; map them to OTH or the closest class and <strong>verify instrument specification</strong> for hours, tick value, and margin.</p>
+
+      <div class="table-scroll">
+      <table>
+        <thead><tr><th>Concept</th><th>Forex</th><th>Commodities</th><th>Crypto</th><th>Indices / equities</th><th>CFDs / futures</th></tr></thead>
+        <tbody>
+          <tr><td>Liquidity</td><td>Session-dependent</td><td>Contract hours / rolls</td><td>24h; venue-dependent</td><td>Cash session + gaps</td><td>Exchange hours — verify</td></tr>
+          <tr><td>Volatility</td><td>Pair-specific</td><td>Often higher (metals/oil)</td><td>Typically elevated</td><td>Open/news spikes</td><td>Contract-specific</td></tr>
+          <tr><td>Spreads</td><td>MaxSpreadPt FX floors</td><td>Wider class floors</td><td>Wider; weekend noise</td><td>Broker CFD quote</td><td>Verify</td></tr>
+          <tr><td>Sessions</td><td>ASIA/LDN/NY matter</td><td>USD/news sensitive</td><td>Always “open”</td><td>Exchange open</td><td>Verify</td></tr>
+          <tr><td>Gaps / overnight</td><td>Weekend gap risk</td><td>Gap / roll risk</td><td>Continuous but thin</td><td>High gap risk</td><td>High — verify</td></tr>
+          <tr><td>News</td><td>EventGate currencies</td><td>Often USD-linked</td><td>Crypto-specific events</td><td>Earnings / data</td><td>Underlying events</td></tr>
+          <tr><td>Position sizing</td><td>Pip value from spec</td><td>Contract size from spec</td><td>Contract/lot from spec</td><td>Point value from spec</td><td>Multiplier from spec</td></tr>
+          <tr><td>Velocity default posture</td><td>Primary practice book</td><td>START when liquid</td><td>Often SUSPEND overnight</td><td>OTH — manual care</td><td>OTH — manual care</td></tr>
+          <tr><td>Common failure</td><td>Asia noise fills</td><td>Ignoring USD print</td><td>Spread blowout</td><td>Gap through stop</td><td>Wrong contract month</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="risk-block">
+        <span class="rb-tag">Market-specific note</span>
+        <p>Do not invent universal pip distances or lot tables. When broker/exchange specs determine the correct value, obtain it from the instrument specification before sizing.</p>
+      </div>
+
+      <h2>Portfolio / correlation</h2>
+      <p>EURUSD long + GBPUSD long is overlapping EUR/GBP/USD exposure — not two independent “ideas.” Gold + USD pairs can concentrate the same macro bet. Cap fleet and diversity by <strong>exposure</strong>, not only by pair count.</p>
+    </section>
+
+    <!-- RISK CHECKS -->
+    <section class="panel" id="risk-checks" data-title="Risk Checklists" data-short="Checklists">
+      <div class="kicker">Decision tree &amp; quick reference</div>
+      <h1>Risk checklists &amp; decision tree</h1>
+
+      <h2>Decision tree</h2>
+      <div class="decision-tree">MARKET / INSTRUMENT VERIFIED
+↓
+MARKET CONDITION IDENTIFIED
+↓
+SIGNAL VALID? (DIR fresh · FOLLOW/WAIT)
+↓
+ENTRY CONDITIONS VALID? (spread · fleet · session)
+↓
+INVALIDATION DEFINED? (zone / Strategic SL)
+↓
+POSITION SIZE ACCEPTABLE? (FIXED/AUTO · MaxLot)
+↓
+EVENT / LIQUIDITY CHECKED?
+↓
+CORRELATED EXPOSURE CHECKED?
+↓
+EXECUTION OK? → ENTER / WAIT / CANCEL
+↓
+MONITOR → MANAGE → EXIT → POST-TRADE REVIEW</div>
+
+      <h2>Manual Trade Risk Check</h2>
+      <ul class="checklist">
+        <li>Market condition identified (trend / range / news / illiquid)</li>
+        <li>Signal still valid (not aged past structure change)</li>
+        <li>Entry zone / DIR aligned with FollowDir</li>
+        <li>Invalidation level defined (sizing vs catastrophe SL clear)</li>
+        <li>Position size calculated; leverage not confused with risk</li>
+        <li>Event / news risk checked (EventGate)</li>
+        <li>Spread / liquidity acceptable (or intentional IGN with smaller size)</li>
+        <li>Correlated exposure within fleet policy</li>
+        <li>Exit conditions defined (Profit CASH / adverse / Loss CASH)</li>
+        <li>Emotional override detected? If yes — WAIT</li>
+      </ul>
+
+      <h2>Digital tips (v1)</h2>
+      <p>Trade Center tip row · Settings impact clause · Telegram OPEN <code>| tip:</code> · Practice tip enrichment. Spec: <code>docs/risk/RISK_GUIDANCE_SPEC.md</code>.</p>
+
+      <div class="risk-block">
+        <span class="rb-tag">Post-trade review</span>
+        <ul>
+          <li>What was the reason? Did it change before exit?</li>
+          <li>Close tag (BANK / CUT / adverse / ATR-TRAIL / broker SL)?</li>
+          <li>Class + session + correlation note for next pre-trade</li>
+          <li>One process improvement only</li>
+        </ul>
+      </div>
+    </section>
+
     <!-- APPENDIX -->
     <section class="panel" id="appendix" data-title="Appendix" data-short="Appendix">
       <div class="kicker">Documents &amp; glossary</div>
@@ -2153,12 +2480,15 @@ cd GsignalX-Velocity</pre>
         <thead><tr><th>Document</th><th>Topic</th></tr></thead>
         <tbody>
           <tr><td><code>README.md</code></td><td>Toolkit overview + start here</td></tr>
-          <tr><td><code>docs/RELEASE_v2.14_Input_Reliability.md</code></td><td>Current production cut · Best use</td></tr>
+          <tr><td><code>docs/RISK_MANUAL_AUDIT.md</code></td><td>Stage 1 adaptive risk audit</td></tr>
+          <tr><td><code>docs/risk/RISK_GUIDANCE_BLOCKS.md</code></td><td>Reusable risk blocks</td></tr>
+          <tr><td><code>docs/risk/RISK_GUIDANCE_SPEC.md</code></td><td>Digital tip selector spec</td></tr>
+          <tr><td><code>docs/RELEASE_v2.14_Input_Reliability.md</code></td><td>Production cut pointer → Best Use</td></tr>
           <tr><td><code>docs/WINDOWS_DEPLOY_SIMPLE.md</code></td><td>Non-tech Windows install</td></tr>
-          <tr><td><code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code></td><td>Practice $20/$50/$100</td></tr>
-          <tr><td><code>docs/PRESET_100EUR_RawSpread.md</code></td><td>Micro capital preset</td></tr>
+          <tr><td><code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code></td><td>Practice packs pointer → Growth / Risk</td></tr>
+          <tr><td><code>docs/PRESET_100EUR_RawSpread.md</code></td><td>EUR100 preset pointer → Growth</td></tr>
           <tr><td><code>DEPLOYMENT.md</code> / <code>DEPLOYMENT_RUNBOOK.md</code></td><td>Install &amp; Confirm gates</td></tr>
-          <tr><td><code>README_ProfitScouter.md</code></td><td>Harvest depth</td></tr>
+          <tr><td><code>README_ProfitScouter.md</code></td><td>Harvest depth pointer → System / Profit CASH</td></tr>
           <tr><td><code>ARCHITECTURE_CONNECTOR_BUS.md</code></td><td>Bus protocol</td></tr>
           <tr><td><code>LICENSE</code> / <code>NOTICE</code></td><td>PolyForm Noncommercial 1.0.0</td></tr>
         </tbody>
@@ -2199,6 +2529,7 @@ cd GsignalX-Velocity</pre>
           <tr><td><strong>Gsignalx Velocity</strong></td><td>This MT5 momentum + harvest desk brand</td></tr>
           <tr><td><strong>Preliminary chart</strong></td><td><strong>M5</strong> — primary desk TF for GSignalX + Scouter adverse pairing</td></tr>
           <tr><td><strong>Executive</strong></td><td>Cloud confluence signals at gsignalx.cloud</td></tr>
+          <tr><td><strong>TradingView publication</strong></td><td>Official chart study for the GsignalX multi-engine trend foundation — visual thesis check; does not place MT5 orders</td></tr>
           <tr><td><strong>PLAY / STOP / HALT</strong></td><td>Per-chart arming; never closes tickets</td></tr>
           <tr><td><strong>SPREAD / IGN</strong></td><td>Enforce vs bypass entry max-spread gate (entry-only)</td></tr>
           <tr><td><strong>FIXED / AUTOLOT</strong></td><td>Default FIXED 0.01; AUTOLOT = risk% (desk <code>GSX_MS_*</code>)</td></tr>
@@ -2220,6 +2551,9 @@ cd GsignalX-Velocity</pre>
           <tr><td><strong>Soft STOP</strong></td><td>PropRisk / operator pause entries; never closes</td></tr>
           <tr><td><strong>Adverse Auto</strong></td><td>Close same-symbol losers after ≥3 opposing bars (+ age / once-green)</td></tr>
           <tr><td><strong>FILE_COMMON bus</strong></td><td>Shared JSON across terminals on one Windows user (schema v1)</td></tr>
+          <tr><td><strong>RiskGuidance</strong></td><td>Advisory tip selector (<code>RiskGuidance.mqh</code>) — Trade Center / TG / Settings</td></tr>
+          <tr><td><strong>Reason for trade</strong></td><td>Decision principle: manage thesis validity, not floating P/L alone</td></tr>
+          <tr><td><strong>Strategic vs sizing SL</strong></td><td>Catastrophe broker SL vs tighter ATR used for AUTOLOT distance</td></tr>
         </tbody>
       </table>
 
@@ -2232,9 +2566,17 @@ cd GsignalX-Velocity</pre>
         <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">https://www.gsignalx.cloud/</a>.
       </div>
 
+      <div class="callout">
+        <strong class="label">TradingView chart foundation</strong>
+        Study the same multi-engine trend logic on
+        <a href="https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/" target="_blank" rel="noopener">TradingView</a>
+        — chart companion only; Velocity owns MT5 fills and harvest.
+      </div>
+
       <p class="footer-note">© Gocity Group — Gsignalx Velocity <strong>2.14</strong>. Commercial research and educational use with MetaTrader 5. Trade responsibly. Past performance is not indicative of future results.<br/>
         Desk community (channel primary): <a href="https://t.me/+yURbcVkPi1kxNDg0" target="_blank" rel="noopener noreferrer">macro channel</a>
         · <a href="https://t.me/+ZDosSHfUCLU1ZGY0" target="_blank" rel="noopener noreferrer">group</a>
+        · Chart study: <a href="https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/" target="_blank" rel="noopener">TradingView</a>
         · Manual chapter <a href="#community" data-tab="community">#community</a>
       </p>
     </section>

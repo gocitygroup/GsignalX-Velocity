@@ -486,9 +486,24 @@ void GsxMsDrawQuadLL(GsxLayCtx &col, const GsxMsSnapshot &snap,
    avail = MathMax(1, col.packRemain - inset);
    col.packRemain = avail;
    GsxLayPackFlex(col, s);
-   GsxMsSlotLabelBudget("FDIR_TIP", s,
-                        "New entries only — open positions unchanged",
-                        g_msColMuted, fs, false, g_msLay.clipTip);
+   {
+    bool propLockedTip = (StringFind(snap.propStatus, "LOCK") >= 0);
+    bool eventSkipTip  = (snap.eventMode == GSX_EVT_MODE_SKIP);
+    string riskTip = GsxRiskDeskTip(snap.catFilter,
+                                    propLockedTip,
+                                    eventSkipTip,
+                                    snap.session.overlap,
+                                    snap.session.londonOpen,
+                                    snap.session.nyOpen,
+                                    snap.session.asiaOpen,
+                                    snap.autoLot,
+                                    snap.ignoreSpread);
+    // Practice coach tip when practice UI is visible and a tip was built
+    if(g_msShowPractice && snap.tipLine != "")
+       riskTip = snap.tipLine;
+    GsxMsSlotLabelBudget("FDIR_TIP", s, riskTip,
+                         g_msColMuted, fs, false, g_msLay.clipTip);
+   }
    GsxLayAdvance(col, tipH);
 
    if(g_msShowPractice && g_msShowButtons)
@@ -908,12 +923,16 @@ void GsxMsPanelDrawFull(const GsxMsSnapshot &snap)
    GsxLayAdvance(lay, footH);
 
    GsxLayRowStart(lay, footH);
-   int half = lay.contentW / 2;
+   int tvW = MathMax(GsxSx(40), MathMin(GsxSx(56), lay.contentW / 8));
+   if(GsxLayPack(lay, tvW, s))
+      GsxPanelSlotButtonPad("BTN_TV", s, GSX_TV_PUB_LABEL,
+                            g_msColAccent, g_msColBg, MathMax(1, pad / 2));
+   int half = MathMax(GsxSx(80), (lay.packRemain - GsxSp(4)) / 2);
    if(GsxLayPack(lay, half, s))
       GsxPanelSlotLabel("FT2", s, "Last · " + g_msLastAction, g_msColMuted, fs, false);
    GsxLayPackFlex(lay, s);
    GsxPanelSlotLabel("FT3", s,
-                     "Exits · " + GsxMsScoutStatusTxt() + " · STOP entries · HALT+scout",
+                     GsxTvPubTip() + " · " + GsxMsScoutStatusTxt(),
                      g_msColAccent, fs, true);
    GsxLayAdvance(lay, footH);
 

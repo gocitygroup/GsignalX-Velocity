@@ -3,6 +3,7 @@
 [![License: PolyForm-Noncommercial-1.0.0](https://img.shields.io/badge/License-PolyForm--NC--1.0.0-blue.svg)](LICENSE)
 [![GitHub](https://img.shields.io/badge/GitHub-GsignalX--Velocity-469AD4?logo=github)](https://github.com/gocitygroup/GsignalX-Velocity)
 [![Manual](https://img.shields.io/badge/Manual-Gsignalx%20Velocity-FBA927)](docs/Gsignalx_Velocity_Users_Manual.html)
+[![TradingView](https://img.shields.io/badge/TradingView-GsignalX%20chart%20foundation-2962FF?logo=tradingview&logoColor=white)](https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/)
 
 **For prop traders, small-fund desks, and practice investors.**  
 Structured entries · winners-only harvest · prop-safe soft STOP · one magic.
@@ -12,11 +13,13 @@ Default lot **FIXED 0.01**. Bus schema **v1**. Current cut **Velocity 2.14**.
 
 **Start here**
 
-1. [Trader & investor manual](docs/Gsignalx_Velocity_Users_Manual.html)  
+1. [Trader & investor manual](docs/Gsignalx_Velocity_Users_Manual.html) — includes [Risk Framework](docs/Gsignalx_Velocity_Users_Manual.html#risk-framework)  
 2. [Windows deploy (non-tech)](docs/WINDOWS_DEPLOY_SIMPLE.md)  
-3. [Current RELEASE 2.14 — Best use](docs/RELEASE_v2.14_Input_Reliability.md)
+3. [Current RELEASE 2.14 — Best use](docs/RELEASE_v2.14_Input_Reliability.md)  
+4. [Risk guidance blocks / digital tip spec](docs/risk/RISK_GUIDANCE_SPEC.md)
 
-Cloud conviction signals (optional): [gsignalx.cloud](https://www.gsignalx.cloud/)
+Cloud conviction signals (optional): [gsignalx.cloud](https://www.gsignalx.cloud/)  
+Chart publication (trend-following foundation): [GsignalX on TradingView](https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/) — visual thesis check; does not place MT5 orders.
 
 **Desk community** — same invites as GSignalX Executive:
 

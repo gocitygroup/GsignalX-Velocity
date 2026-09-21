@@ -13,6 +13,8 @@
   var CHANNEL_URL = "https://t.me/+yURbcVkPi1kxNDg0";
   var GROUP_URL = "https://t.me/+ZDosSHfUCLU1ZGY0";
   var WHATSAPP_URL = "https://chat.whatsapp.com/EemGekqMwDgKrLj0tkqYlB";
+  var TV_URL =
+    "https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/";
   var BANNER_PANELS = { deploy: 1, telegram: 1, performance: 1, community: 1, welcome: 1 };
 
   var MACRO_LEAD =
@@ -64,6 +66,18 @@
       whatsappLabel: "WhatsApp · meet-up",
       whatsappHint: "Live desk chat"
     },
+    foundation: {
+      lead:
+        "Chart foundation — follow the GsignalX TradingView publication while Velocity owns the MT5 book.",
+      channelLabel: "Trading channel · primary",
+      channelHint: "Macro drivers & day-trading basis",
+      groupLabel: "Trading group",
+      groupHint: "Feedback & peer desk",
+      whatsappLabel: "WhatsApp · meet-up",
+      whatsappHint: "Live desk chat",
+      tvLabel: "TradingView · chart study",
+      tvHint: "Does not place MT5 orders"
+    },
     banner: {
       lead: "Macro · day trading (channel)",
       channelLabel: "Channel · main",
@@ -71,7 +85,9 @@
       groupLabel: "Group",
       groupHint: "",
       whatsappLabel: "WhatsApp",
-      whatsappHint: ""
+      whatsappHint: "",
+      tvLabel: "Chart",
+      tvHint: ""
     }
   };
 
@@ -100,6 +116,21 @@
       : "";
     var waHint = cfg.whatsappHint
       ? '<span class="gsx-community-hint">' + esc(cfg.whatsappHint) + "</span>"
+      : "";
+    var showTv = intent === "foundation" || !!cfg.tvLabel;
+    var tvHint =
+      showTv && cfg.tvHint
+        ? '<span class="gsx-community-hint">' + esc(cfg.tvHint) + "</span>"
+        : "";
+    var tvBtn = showTv
+      ? '<a class="gsx-community-btn tv" href="' +
+        esc(TV_URL) +
+        '" ' +
+        linkAttrs() +
+        ">" +
+        esc(cfg.tvLabel || "TradingView · chart study") +
+        tvHint +
+        "</a>"
       : "";
     return (
       '<div class="gsx-community-dual channel-primary" data-intent="' +
@@ -131,6 +162,7 @@
       esc(cfg.whatsappLabel || "WhatsApp · meet-up") +
       waHint +
       "</a>" +
+      tvBtn +
       "</div></div>"
     );
   }
@@ -163,6 +195,13 @@
       linkAttrs() +
       ">" +
       esc(cfg.whatsappLabel || "WhatsApp") +
+      "</a>" +
+      '<a class="gsx-community-btn tv" href="' +
+      esc(TV_URL) +
+      '" ' +
+      linkAttrs() +
+      ">" +
+      esc(cfg.tvLabel || "Chart") +
       "</a>" +
       '<a class="gsx-community-btn more" href="#community" data-tab="community">More →</a>' +
       "</div></div>"
@@ -228,9 +267,11 @@
     channelUrl: CHANNEL_URL,
     groupUrl: GROUP_URL,
     whatsappUrl: WHATSAPP_URL,
+    tvUrl: TV_URL,
     channelLabel: "Trading channel",
     groupLabel: "Trading group",
     whatsappLabel: "WhatsApp meet-up",
+    tvLabel: "TradingView chart study",
     macroLead: MACRO_LEAD,
     primary: "channel",
     renderDualCtaHtml: renderDualCtaHtml,

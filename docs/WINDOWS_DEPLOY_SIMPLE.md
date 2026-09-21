@@ -205,3 +205,5 @@ Full Best use: [RELEASE_v2.14](RELEASE_v2.14_Input_Reliability.md) · [Manual §
 5. Prefer demo until Confirm PASS and one full session is understood.  
 
 Full community house rules: [Desk Community](Gsignalx_Velocity_Users_Manual.html#community) · Bugs with steps: [GitHub Issues](https://github.com/gocitygroup/GsignalX-Velocity/issues)
+
+**See also:** learn the signal visually on [GsignalX TradingView](https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/) (chart study only — Velocity owns MT5 fills).

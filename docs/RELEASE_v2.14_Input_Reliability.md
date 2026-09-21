@@ -4,7 +4,9 @@
 **Date:** 2026-09-17  
 **Hosts:** Trade Center / Service **`#property version "2.14"`**  
 **Bus schema:** still **`version: 1`** (`GSignalX/bus/v1`)  
-**Manual:** [Gsignalx_Velocity_Users_Manual.html#desk213](Gsignalx_Velocity_Users_Manual.html#desk213) · Deploy: [WINDOWS_DEPLOY_SIMPLE.md](WINDOWS_DEPLOY_SIMPLE.md)
+**Canonical manual:** [Gsignalx_Velocity_Users_Manual.html#desk213](Gsignalx_Velocity_Users_Manual.html#desk213) (System UI Best Use) · Adaptive risk: [#risk-framework](Gsignalx_Velocity_Users_Manual.html#risk-framework) · Deploy: [WINDOWS_DEPLOY_SIMPLE.md](WINDOWS_DEPLOY_SIMPLE.md)
+
+> Operator cut below remains valid. Prefer the HTML manual for risk lifecycle, asset matrix, and digital tip behaviour (`RiskGuidance.mqh`).
 
 ---
 

@@ -5,6 +5,8 @@
 #ifndef GSX_CHART_PANEL_MQH
 #define GSX_CHART_PANEL_MQH
 
+#include <GSignalX/BrandLinks.mqh>
+
 #define GSX_PANEL_MAX_BODY_ROWS 48
 #define GSX_UI_SCALE_MIN        0.55
 #define GSX_UI_SCALE_MAX        3.0

@@ -671,6 +671,8 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
       // Soft VERIFY: Verified if ≥1 chat delivers; dead chats skipped for sends
       if(GsxTgVerifyConnection(g_tgCfg, err))
         {
+         GsxTgSendNow(g_tgCfg, "TG",
+                      "Connection verified — Trade Center\n" + GsxTvPubFooterLine());
          if(err != "")
            {
             string warn = err;

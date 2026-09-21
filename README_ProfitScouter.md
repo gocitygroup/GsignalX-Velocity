@@ -2,7 +2,9 @@
 
 A money-based profit monitoring and harvesting engine for MetaTrader 5. It does **not** open trades. It watches open positions and banks **winners** when a clear **Profit CASH** floor (or layered trail/window rules) fires.
 
-**Velocity hosts:** `ProfitScouter_DollarTarget` / `ProfitScouter_Service` (bus schema `"version":1`). Desk topology: [docs/RELEASE_v2.14_Input_Reliability.md](docs/RELEASE_v2.14_Input_Reliability.md) · Trader manual: [docs/Gsignalx_Velocity_Users_Manual.html](docs/Gsignalx_Velocity_Users_Manual.html#profit-cash).
+**Canonical trader guidance:** [Velocity Manual — Profit CASH](docs/Gsignalx_Velocity_Users_Manual.html#profit-cash) · [Trade Lifecycle](docs/Gsignalx_Velocity_Users_Manual.html#trade-lifecycle) · [Risk blocks](docs/risk/RISK_GUIDANCE_BLOCKS.md)
+
+**Velocity hosts:** `ProfitScouter_DollarTarget` / `ProfitScouter_Service` (bus schema `"version":1`). Desk topology: [docs/RELEASE_v2.14_Input_Reliability.md](docs/RELEASE_v2.14_Input_Reliability.md).
 
 **Profit CASH (stock default +100):** `InpAccTargetMoney`, `InpMinWinProfit`, and `InpProfitLockArm` default to **100** account/target currency (blank `InpTargetCurrency` = account USD/EUR). **CASH mode** (seeded by `InpScalpAsapAccountOnly`, toggled on chart as **CASH / LAYER**, persisted `PS{id}_CASH`) drives account + pair + position hard targets from that single floor and skips trail/window. **LAYER** restores per-layer targets, trail, and window rules.
 
