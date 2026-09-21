@@ -1,4 +1,4 @@
-; GSignalX Service — Prop Desk 30 (Velocity 2.01 production hardening)
+; GSignalX Service — Prop Desk 30 / Scale Large (Velocity 2.15 Memory Scale)
 ; Attach: Navigator → Services → GsignalX_Service
 ; Target: 24–30 roster symbols (8 FX + 8 CMD + 8–14 CRYPTO). SUSPEND unused crypto on Trade Center.
 ; Match ProfitScouter InpSymbolList / All symbols to this roster.
@@ -6,9 +6,10 @@
 
 InpSymbolList=EURUSD,GBPUSD,USDJPY,AUDUSD,USDCAD,NZDUSD,EURGBP,EURJPY,XAUUSD,XAGUSD,USOIL,UKOIL,XPTUSD,XPDUSD,NATGAS,COPPER,BTCUSD,ETHUSD,XRPUSD,LTCUSD,BNBUSD,SOLUSD,ADAUSD,DOGEUSD
 InpTimeframe=5
+InpScaleProfile=3
 InpCycleMs=200
 InpRespectChartRunState=true
-InpEngineBudgetPerCycle=4
+InpEngineBudgetPerCycle=5
 InpFleetEnable=true
 InpFleetTargetPairs=4
 InpFleetFillCooldownSec=10

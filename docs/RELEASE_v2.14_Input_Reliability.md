@@ -2,7 +2,7 @@
 
 **Banner:** Current production cut for Gsignalx Velocity (Gocity Group)  
 **Date:** 2026-09-17  
-**Hosts:** Trade Center / Service **`#property version "2.14"`**  
+**Hosts:** Trade Center / Service **`#property version "2.15"`** (was 2.14)  
 **Bus schema:** still **`version: 1`** (`GSignalX/bus/v1`)  
 **Canonical manual:** [Gsignalx_Velocity_Users_Manual.html#desk213](Gsignalx_Velocity_Users_Manual.html#desk213) (System UI Best Use) · Adaptive risk: [#risk-framework](Gsignalx_Velocity_Users_Manual.html#risk-framework) · Deploy: [WINDOWS_DEPLOY_SIMPLE.md](WINDOWS_DEPLOY_SIMPLE.md)
 
@@ -86,6 +86,29 @@ START · STOP · AUTO · **BANK +** · **CUT −** · **FLAT** (confirm closes).
 | Input sync (2.14) | AUTOLOT/EQ survive reattach; chart chips use desk GVs |
 | Service | Instant yield on Desk OWN; multi-fill per cycle; Prop day locks clear at UTC rollover |
 | Perf (2.14.1) | RR publish-as-ready; roster seq cache; cycle fleet snap; snapshot PL batch; desk-mirror ≤15s |
+
+---
+
+## V2.15 Memory Scale (follow-on)
+
+**Hosts:** Trade Center / Service **`#property version "2.15"`**  
+**Goal:** less steady-state RAM + fewer bus I/O ops on Small / Medium / Large Windows desks without changing trading semantics.
+
+| Area | Takeaway |
+|------|----------|
+| Engine tip retain | Core/Service keep tip + scalars after calc (`GsxEngStateCompactTip`); chart may keep full series |
+| AccountBook | One Positions+Orders walk per cycle → busy / class / PL (Core + Trade Center snapshot) |
+| Bus I/O | Sized `GsxBusReadAll`; desk mirror always; tid path on full-sync or first register |
+| ATR pool | Persistent iATR handles; prune on REM / roster apply |
+| Scale profile | `InpScaleProfile` 0=Manual 1=Small 2=Medium 3=Large; presets `Scale_Small` / `Scale_Medium` / `PropDesk_30` |
+
+| Profile | Roster | Cycle | Budget | Lookback | Bus full sync |
+|---------|--------|-------|--------|----------|---------------|
+| Small | 8–12 | 250 ms | 3 | 250 | 10 s |
+| Medium | 12–20 | 200 ms | 4 | 400 | 5–10 s |
+| Large | 24–30 | 200 ms | 4–5 | 400 tip | 10 s |
+
+**Soak targets:** cycle p95 Small &lt;40 ms · Medium &lt;60 ms · Large &lt;80 ms; bus dual-writes cut ≈50% under dirty publish.
 
 ---
 

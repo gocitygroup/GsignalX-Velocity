@@ -1760,11 +1760,11 @@ function Confirm-Functional {
     $script:fail++
   }
 
-  if ($dashText -match 'version\s+"2\.14"' -and $svcText -match 'version\s+"2\.14"') {
-    Add-Line "PASS  V2.14 host versions Dashboard/Service"
+  if ($dashText -match 'version\s+"2\.15"' -and $svcText -match 'version\s+"2\.15"') {
+    Add-Line "PASS  V2.15 host versions Dashboard/Service"
   }
   else {
-    Add-Line "FAIL  V2.14 host version bump missing"
+    Add-Line "FAIL  V2.15 host version bump missing"
     $script:fail++
   }
 
@@ -1812,6 +1812,64 @@ function Confirm-Functional {
   }
   else {
     Add-Line "FAIL  V2.14.1 desk-mirror age guard missing"
+    $script:fail++
+  }
+
+  # --- V2.15 Memory Scale ---
+  $candle     = Join-Path $RepoRoot "Include\GSignalX\CandleMetrics.mqh"
+  $candleText = if (Test-Path $candle) { Get-Content $candle -Raw } else { "" }
+  $presetSmall  = Join-Path $RepoRoot "deploy\presets\GSignalX_Service_Scale_Small.set"
+  $presetMedium = Join-Path $RepoRoot "deploy\presets\GSignalX_Service_Scale_Medium.set"
+  $presetLarge  = Join-Path $RepoRoot "deploy\presets\GSignalX_Service_PropDesk_30.set"
+
+  if ($fleetText -match 'GsxAccountBookBuild' -and $fleetText -match 'GsxAccountBookBusy' -and
+      $coreText -match 'g_coreAccountBook' -and $coreText -match 'GsxAccountBookBuild\(InpMagic' -and
+      $rvmText -match 'GsxAccountBookBuild\(magic' -and $rvmText -match 'GsxAccountBookBusy') {
+    Add-Line "PASS  V2.15 AccountBook one-scan (Fleet + Core + RosterViewModel)"
+  }
+  else {
+    Add-Line "FAIL  V2.15 AccountBook missing"
+    $script:fail++
+  }
+
+  if ($engText -match 'GsxEngStateCompactTip' -and $engText -match 'lastSigOpen' -and
+      $engText -match 'compacted' -and $coreText -match 'GsxEngStateCompactTip\(g_eng' -and
+      $entryExText -match 'lastSigOpen' -and $entryExText -match 'GsxEngTipAtr') {
+    Add-Line "PASS  V2.15 EngCompactTip + tip scalars (Core/Service)"
+  }
+  else {
+    Add-Line "FAIL  V2.15 EngCompactTip missing"
+    $script:fail++
+  }
+
+  if ($busIoText -match 'FileReadArray' -and $busIoText -match 'CharArrayToString' -and
+      $busIoText -match 'FILE_BIN' -and
+      $sigBusText -match 'writeTidPath' -and $sigBusText -match 'GsxBusDeskSignalPath' -and
+      $coreText -match 'writeTid' -and $coreText -match 'fullSync \|\| \(g_busFp') {
+    Add-Line "PASS  V2.15 BusReadSized + desk-mirror coalesce (tid on full-sync/first)"
+  }
+  else {
+    Add-Line "FAIL  V2.15 bus I/O coalesce missing"
+    $script:fail++
+  }
+
+  if ($candleText -match 'GsxAtrCachePrune' -and $candleText -match 'handle' -and
+      $candleText -match 'IndicatorRelease' -and $candleText -match 'GSX_ATR_CACHE_MAX' -and
+      $coreText -match 'GsxAtrCachePruneSymbol' -and $coreText -match 'GsxAtrCachePrune\(newRoster') {
+    Add-Line "PASS  V2.15 AtrHandleReuse + prune on REM/roster"
+  }
+  else {
+    Add-Line "FAIL  V2.15 ATR pool/prune missing"
+    $script:fail++
+  }
+
+  if ($dashText -match 'InpScaleProfile' -and $svcText -match 'InpScaleProfile' -and
+      $coreText -match 'GsxCoreScaleLookback' -and $coreText -match 'GsxCoreScaleCycleMs' -and
+      (Test-Path $presetSmall) -and (Test-Path $presetMedium) -and (Test-Path $presetLarge)) {
+    Add-Line "PASS  V2.15 Scale presets Small/Medium/Large + InpScaleProfile"
+  }
+  else {
+    Add-Line "FAIL  V2.15 Scale profile/presets missing"
     $script:fail++
   }
 
@@ -1877,7 +1935,7 @@ function Confirm-Functional {
     $script:fail++
   }
 
-  if ($tgText -match 'GsxTgFormatCloseEx' -and $tgText -match 'reason=%s') {
+  if ($tgText -match 'GsxTgFormatCloseEx' -and $tgText -match 'reason=') {
     Add-Line "PASS  V2.15 GsxTgFormatCloseEx reason= field"
   }
   else {
@@ -1885,7 +1943,7 @@ function Confirm-Functional {
     $script:fail++
   }
 
-  if ($tgwText -match 'GsxCtResolveReason' -and $tgwText -match 'GsxTgFormatCloseEx' -and
+  if ($tgwText -match 'GsxCtResolveEvent' -and $tgwText -match 'GsxTgFormatCloseFull' -and
       $tgwText -match 'HistorySelect' -and $tgwText -match 'CloseTrigger\.mqh') {
     Add-Line "PASS  V2.15 TgDealWatch consume-before-history + CloseEx"
   }
@@ -1903,7 +1961,7 @@ function Confirm-Functional {
     $script:fail++
   }
 
-  if ($entryText -match 'catastrophe SL attached' -and $entryText -match 'broker may close without Scouter tag') {
+  if ($entryText -match 'catastrophe SL' -and $entryText -match 'stratDec\.reason') {
     Add-Line "PASS  V2.15 EntryExec catastrophe SL open log"
   }
   else {

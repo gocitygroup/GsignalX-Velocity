@@ -210,17 +210,24 @@ double GsxSignalAnchorOpen(const string symbol,
    double base = 0.0;
    if(pendFromSignalOpen)
      {
-      if(st.lastSigIdx >= 0 && st.lastSigIdx < st.n && st.open[st.lastSigIdx] > 0.0)
+      // v2.15: tip scalar first (compacted Core engines)
+      if(st.lastSigOpen > 0.0)
+         base = st.lastSigOpen;
+      else if(st.lastSigIdx >= 0 && st.lastSigIdx < st.n && st.open[st.lastSigIdx] > 0.0)
          base = st.open[st.lastSigIdx];
      }
    if(base <= 0.0 && fallbackIdx >= 0 && fallbackIdx < st.n && st.open[fallbackIdx] > 0.0)
       base = st.open[fallbackIdx];
+   if(base <= 0.0 && st.lastClose > 0.0)
+      base = st.lastClose;
    if(base <= 0.0)
       return(mid);
 
    // v2.10: if signal bar is too far from market, re-anchor so BOTH can place
    double atr = 0.0;
-   if(st.ready && st.n >= 1 && fallbackIdx >= 0 && fallbackIdx < st.n)
+   if(st.lastAtrRisk > 0.0)
+      atr = st.lastAtrRisk;
+   else if(st.ready && st.n >= 1 && fallbackIdx >= 0 && fallbackIdx < st.n)
       atr = st.atrRisk[fallbackIdx];
    if(atr <= 0.0 && st.ready && st.n >= 1)
       atr = st.atrRisk[st.n - 1];
@@ -446,7 +453,7 @@ bool GsxOpenMarket(CTrade &trade,
    if(!st.ready || st.n < 1)
      { action = "engines not ready"; return(false); }
 
-   double atr = st.atrRisk[st.n - 1];
+   double atr = GsxEngTipAtr(st);
    double ask = SymbolInfoDouble(symbol, SYMBOL_ASK);
    double bid = SymbolInfoDouble(symbol, SYMBOL_BID);
    double price = (dir == 1) ? ask : bid;
@@ -732,7 +739,7 @@ bool GsxPlaceEntry(CTrade &trade,
    if(!st.ready || st.n < 1)
      { action = "engines not ready"; return(false); }
 
-   double atr    = st.atrRisk[st.n - 1];
+   double atr    = GsxEngTipAtr(st);
    int    digits = (int)SymbolInfoInteger(symbol, SYMBOL_DIGITS);
    double point  = SymbolInfoDouble(symbol, SYMBOL_POINT);
    double minD   = GsxBrokerMinDistance(symbol);

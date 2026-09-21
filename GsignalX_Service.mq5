@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property service
 #property copyright "Gocity Group"
-#property version   "2.14"
+#property version   "2.15"
 #property description "Gsignalx Velocity 2.13 Service - multi-symbol roster scan + fleet fill"
 #property description "Entry only (Scouter exits). Yields to DeskExecute OWN when InpYieldToDesk."
 #property description "OWN/HOST GV prevents chart+desk+service double-fill. V2.13 host-scoped HB."
@@ -47,6 +47,7 @@ enum EnOffsetUnit
 input group "1) Roster & cycle"
 input string          InpSymbolList   = "EURUSD,GBPUSD,XAUUSD,USDJPY";
 input ENUM_TIMEFRAMES InpTimeframe    = PERIOD_M5;
+input int             InpScaleProfile = 0;    // v2.15: 0=Manual 1=Small 2=Medium 3=Large
 input int             InpCycleMs      = 100;
 input bool            InpRespectChartRunState = true; // Honor GSX_SVC_RUN_{magic}
 input int             InpEngineBudgetPerCycle = 4;    // max engine rebuilds per cycle (v2.01)
@@ -325,12 +326,13 @@ void OnStart()
      }
    g_svcTgLastOwn = GsxFleetServiceOwns(InpMagic);
 
-   int ms = (int)MathMax(100, InpCycleMs);
-   PrintFormat("GsignalX service started | core=%s | roster=%s | tf=%s | cycle=%dms | magic=%I64d | fleet=%d | yieldDesk=%s | yieldHits=%d",
+   int ms = GsxCoreScaleCycleMs(InpCycleMs);
+   PrintFormat("GsignalX service started | core=%s | roster=%s | tf=%s | cycle=%dms | scale=%s | magic=%I64d | fleet=%d | yieldDesk=%s | yieldHits=%d",
                (coreOn ? "ON" : "YIELD"),
                InpSymbolList,
                EnumToString(InpTimeframe),
                ms,
+               GsxCoreScaleLabel(),
                InpMagic,
                InpFleetTargetPairs,
                (InpYieldToDesk ? "ON" : "OFF"),

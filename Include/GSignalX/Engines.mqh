@@ -34,6 +34,18 @@ struct GsxEngineState
    int      lastSigDir; int lastSigIdx;
    datetime lastSigChangeTime; // when lastSigDir last changed (staleness)
    string   status;
+   // v2.15 tip retention (Core/Service): scalars survive after series freed
+   bool     compacted;     // true when only tip (n<=1) retained
+   double   lastClose;
+   double   lastMa;
+   double   lastAtrRisk;
+   double   lastSigOpen;   // open of signal bar (or tip open)
+   int      tipPpDir;
+   int      tipStDir;
+   int      tipSbtDir;
+   double   tipPpLine;
+   double   tipStLine;
+   double   tipSbtLine;
   };
 
 // Break MQL5 shared-buffer aliasing on arrays-of-structs with dynamic series.
@@ -65,6 +77,88 @@ void GsxEngStateClearMeta(GsxEngineState &st)
    st.lastSigIdx = -1;
    st.lastSigChangeTime = 0;
    st.status = "";
+   st.compacted = false;
+   st.lastClose = 0.0;
+   st.lastMa = 0.0;
+   st.lastAtrRisk = 0.0;
+   st.lastSigOpen = 0.0;
+   st.tipPpDir = 0;
+   st.tipStDir = 0;
+   st.tipSbtDir = 0;
+   st.tipPpLine = 0.0;
+   st.tipStLine = 0.0;
+   st.tipSbtLine = 0.0;
+  }
+
+//+------------------------------------------------------------------+
+//| V2.15: keep tip + scalars; free full lookback series (Core path) |
+//+------------------------------------------------------------------+
+void GsxEngStateCompactTip(GsxEngineState &st)
+  {
+   if(!st.ready || st.n < 1)
+      return;
+   if(st.compacted && st.n <= 1)
+      return;
+
+   int last = st.n - 1;
+   st.tipPpDir  = (last < ArraySize(st.ppDir)  ? st.ppDir[last]  : 0);
+   st.tipStDir  = (last < ArraySize(st.stDir)  ? st.stDir[last]  : 0);
+   st.tipSbtDir = (last < ArraySize(st.sbtDir) ? st.sbtDir[last] : 0);
+   st.tipPpLine  = (last < ArraySize(st.ppLine)  ? st.ppLine[last]  : 0.0);
+   st.tipStLine  = (last < ArraySize(st.stLine)  ? st.stLine[last]  : 0.0);
+   st.tipSbtLine = (last < ArraySize(st.sbtLine) ? st.sbtLine[last] : 0.0);
+   st.lastClose   = (last < ArraySize(st.close)   ? st.close[last]   : 0.0);
+   st.lastMa      = (last < ArraySize(st.ma)      ? st.ma[last]      : 0.0);
+   st.lastAtrRisk = (last < ArraySize(st.atrRisk) ? st.atrRisk[last] : 0.0);
+   if(st.lastSigIdx >= 0 && st.lastSigIdx < ArraySize(st.open) && st.open[st.lastSigIdx] > 0.0)
+      st.lastSigOpen = st.open[st.lastSigIdx];
+   else if(last < ArraySize(st.open))
+      st.lastSigOpen = st.open[last];
+   else
+      st.lastSigOpen = 0.0;
+
+   datetime tipBar = (last < ArraySize(st.barTime) ? st.barTime[last] : st.lastBarTime);
+   double tipOpen  = (last < ArraySize(st.open)  ? st.open[last]  : 0.0);
+   double tipHigh  = (last < ArraySize(st.high)  ? st.high[last]  : 0.0);
+   double tipLow   = (last < ArraySize(st.low)   ? st.low[last]   : 0.0);
+
+   GsxEngStateDetach(st);
+
+   ArrayResize(st.ppDir, 1);  st.ppDir[0]  = st.tipPpDir;
+   ArrayResize(st.stDir, 1);  st.stDir[0]  = st.tipStDir;
+   ArrayResize(st.sbtDir, 1); st.sbtDir[0] = st.tipSbtDir;
+   ArrayResize(st.ppLine, 1);  st.ppLine[0]  = st.tipPpLine;
+   ArrayResize(st.stLine, 1);  st.stLine[0]  = st.tipStLine;
+   ArrayResize(st.sbtLine, 1); st.sbtLine[0] = st.tipSbtLine;
+   ArrayResize(st.ma, 1);      st.ma[0]      = st.lastMa;
+   ArrayResize(st.atrRisk, 1); st.atrRisk[0] = st.lastAtrRisk;
+   ArrayResize(st.close, 1);   st.close[0]   = st.lastClose;
+   ArrayResize(st.open, 1);    st.open[0]    = tipOpen;
+   ArrayResize(st.high, 1);    st.high[0]    = tipHigh;
+   ArrayResize(st.low, 1);     st.low[0]     = tipLow;
+   ArrayResize(st.barTime, 1); st.barTime[0] = tipBar;
+
+   st.n = 1;
+   st.lastSigIdx = (st.lastSigDir != 0 ? 0 : -1);
+   st.compacted = true;
+  }
+
+// Rough series byte estimate (for cycle telemetry)
+int GsxEngStateBytesEst(const GsxEngineState &st)
+  {
+   int n = st.n;
+   if(n < 0) n = 0;
+   // 6 int series + 7 double series approx (pp/st/sbt dir+line, ma, atr, ohlc, barTime)
+   return(n * (6 * 4 + 7 * 8) + 64);
+  }
+
+double GsxEngTipAtr(const GsxEngineState &st)
+  {
+   if(st.lastAtrRisk > 0.0)
+      return(st.lastAtrRisk);
+   if(st.ready && st.n >= 1 && ArraySize(st.atrRisk) >= st.n)
+      return(st.atrRisk[st.n - 1]);
+   return(0.0);
   }
 
 //+------------------------------------------------------------------+
@@ -400,6 +494,21 @@ bool GsxCalcEngines(const string symbol,
    st.tf = (int)tf;
    st.ready = true;
    st.status = "ok";
+   st.compacted = false;
+   // Tip scalars populated even before CompactTip (EntryExec / bus can use them)
+   st.tipPpDir  = st.ppDir[n - 1];
+   st.tipStDir  = st.stDir[n - 1];
+   st.tipSbtDir = st.sbtDir[n - 1];
+   st.tipPpLine  = st.ppLine[n - 1];
+   st.tipStLine  = st.stLine[n - 1];
+   st.tipSbtLine = st.sbtLine[n - 1];
+   st.lastClose   = st.close[n - 1];
+   st.lastMa      = st.ma[n - 1];
+   st.lastAtrRisk = st.atrRisk[n - 1];
+   if(st.lastSigIdx >= 0 && st.open[st.lastSigIdx] > 0.0)
+      st.lastSigOpen = st.open[st.lastSigIdx];
+   else
+      st.lastSigOpen = st.open[n - 1];
    return(true);
   }
 

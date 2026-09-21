@@ -217,7 +217,7 @@ input long        InpMagic         = 20260904;     // Magic number
 input int         InpSlippage      = 20;           // Max deviation (points)
 input int         InpMaxSpreadPt   = 40;           // Max spread (points, 0 = off)
 input bool        InpIgnoreSpreadDefault = false;  // Chart SPREAD/IGN default (persisted)
-input int         InpLookback      = 1200;         // Bars used for calculation
+input int         InpLookback      = 400;          // Bars used for calculation (v2.15 align Service)
 input string      InpComment       = "GsignalX";   // Order comment
 
 input group "10) Chart appearance & controls"

@@ -211,15 +211,20 @@ void GsxMsFillRow(const long magic,
                   const string grades,
                   const string tid,
                   GsxMsRow &row,
-                  const double floatingPl = 0.0,
-                  const bool floatingPlKnown = false)
+                  const double floatingPl,
+                  const bool floatingPlKnown,
+                  const GsxAccountBook &book)
   {
    string canon = GsxSymbolCanon(sym);
    row.symbol     = sym;
    row.canon      = canon;
    row.direction  = 0;
    row.spreadPt   = (int)SymbolInfoInteger(sym, SYMBOL_SPREAD);
-   row.busy       = GsxFleetSymbolBusy(sym, magic);
+   // v2.15: prefer snapshot AccountBook when valid
+   if(book.valid)
+      row.busy = GsxAccountBookBusy(book, sym);
+   else
+      row.busy = GsxFleetSymbolBusy(sym, magic);
    row.pairState  = GsxRosterStateGet(magic, sym);
    row.muted      = (row.pairState != GSX_PAIR_START);
    row.symClass   = (int)GsxSymbolClass(sym);
@@ -425,8 +430,13 @@ void GsxMsBuildSnapshot(const long magic,
 
    int ov = GsxRosterFleetTargetGet(magic);
    out.fleetTarget  = (ov > 0 ? ov : MathMax(0, defaultFleetTarget));
-   out.fleetActive  = GsxFleetActivePairs(magic);
-   GsxFleetFloating(magic, out.fleetPl, out.positions);
+
+   // One AccountBook walk: fleet stats + busy + per-symbol PL
+   GsxAccountBook book;
+   GsxAccountBookBuild(magic, book);
+   out.fleetActive  = GsxAccountBookActivePairs(book);
+   out.fleetPl      = book.pl;
+   out.positions    = book.posCount;
 
    string names[];
    if(!GsxRosterStoreLoad(magic, names))
@@ -438,19 +448,14 @@ void GsxMsBuildSnapshot(const long magic,
    string tid = GsxMakeTid();
    string grades = GsxBusReadGrades();
 
-   // One positions walk for all roster rows
-   string plSyms[];
-   double plVals[];
-   GsxMsBuildFloatingPlMap(magic, plSyms, plVals);
-
    out.countFx = 0;
    out.countCmd = 0;
    out.countCr = 0;
 
    for(int i = 0; i < nAll; i++)
      {
-      double rowPl = GsxMsFloatingPlLookup(plSyms, plVals, names[i]);
-      GsxMsFillRow(magic, names[i], grades, tid, out.allRows[i], rowPl, true);
+      double rowPl = GsxAccountBookSymbolPl(book, names[i]);
+      GsxMsFillRow(magic, names[i], grades, tid, out.allRows[i], rowPl, true, book);
       if(out.allRows[i].symClass == GSX_CLASS_FOREX)     out.countFx++;
       if(out.allRows[i].symClass == GSX_CLASS_COMMODITY) out.countCmd++;
       if(out.allRows[i].symClass == GSX_CLASS_CRYPTO)    out.countCr++;

@@ -5,7 +5,7 @@
 //|  NEVER closes positions. Scouter owns exits.                      |
 //+------------------------------------------------------------------+
 #property copyright   "Gocity Group"
-#property version     "2.14"
+#property version     "2.15"
 #property description "Gsignalx Trade Center — single-chart multi-symbol runtime (v2.13)"
 #property description "DeskExecute embeds Core. Soft STOP only — Scouter owns closes."
 #property description "V2.13: EQ pads, Prop/EQ guidance, continuous fleet, desk risk UI."
@@ -53,6 +53,7 @@ input bool   InpDeskExecute      = true;   // v2.12: embed Core (signals + fills
 
 input group "1b) Core cycle (DeskExecute)"
 input ENUM_TIMEFRAMES InpTimeframe    = PERIOD_M5; // fallback TF if desk chart TF invalid
+input int             InpScaleProfile = 0;         // v2.15: 0=Manual 1=Small 2=Medium 3=Large
 input int             InpCycleMs      = 200;       // Core cadence (ms)
 input bool            InpRespectChartRunState = true; // Honor PLAY/STOP (GSX_SVC_RUN)
 input int             InpEngineBudgetPerCycle = 4;
@@ -540,7 +541,7 @@ int OnInit()
 
    ChartSetInteger(0, CHART_EVENT_MOUSE_MOVE, true);
    ChartSetInteger(0, CHART_EVENT_MOUSE_WHEEL, true);
-   int cycle = (int)MathMax(50, InpCycleMs);
+   int cycle = GsxCoreScaleCycleMs(InpCycleMs);
    int uiMs  = (int)MathMax(100, InpRefreshMs);
    int ms = (InpDeskExecute ? (int)MathMin(cycle, uiMs) : uiMs);
    EventSetMillisecondTimer(ms);
@@ -549,16 +550,17 @@ int OnInit()
 
    DashPollEvents(true);
 
-   PrintFormat("GSX Trade Center v2.13 | magic=%I64d | deskExec=%s core=%s | tg=%s | prop=%s | cycle=%dms ui=%dms | roster=%d | contFleet=%s",
+   PrintFormat("GSX Trade Center v2.15 | magic=%I64d | deskExec=%s core=%s | scale=%s | tg=%s | prop=%s | cycle=%dms ui=%dms | roster=%d | contFleet=%s",
                InpMagic,
                (InpDeskExecute ? "ON" : "OFF"),
                (g_deskCoreActive ? "ACTIVE" : "OFF"),
+               GsxCoreScaleLabel(),
                (InpTgEnable ? GsxTgStatusText() : "OFF"),
                (InpPropEnable ? "ON" : "OFF"),
                cycle, uiMs,
                ArraySize(names),
                (InpContinuousFleet ? "ON" : "OFF"));
-   Print("GSX v2.13: attach Dashboard once · DeskExecute=true · stop Service to avoid OWN clash · Scouter owns exits");
+   Print("GSX v2.15: Memory Scale — tip engines + AccountBook + bus coalesce · DeskExecute=true · Scouter owns exits");
    DashRefreshPanel(true);
    return(INIT_SUCCEEDED);
   }
@@ -576,7 +578,7 @@ void OnDeinit(const int reason)
 void OnTimer()
   {
    ulong now = GetTickCount();
-   int cycle = (int)MathMax(50, InpCycleMs);
+   int cycle = GsxCoreScaleCycleMs(InpCycleMs);
    int uiMs  = (int)MathMax(100, InpRefreshMs);
 
    // Claim Core if needed; keep DeskExecute as primary owner (Service yields)

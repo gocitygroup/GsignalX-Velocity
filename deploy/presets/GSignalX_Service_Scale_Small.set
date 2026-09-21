@@ -1,0 +1,42 @@
+; GSignalX Service — Scale Small (V2.15 Memory Scale)
+; Target: 8–12 symbols on lighter Windows PCs
+; Attach: Navigator → Services → GsignalX_Service
+
+InpSymbolList=EURUSD,GBPUSD,USDJPY,AUDUSD,XAUUSD,XAGUSD,BTCUSD,ETHUSD
+InpTimeframe=5
+InpScaleProfile=1
+InpCycleMs=250
+InpRespectChartRunState=true
+InpEngineBudgetPerCycle=3
+InpFleetEnable=true
+InpFleetTargetPairs=3
+InpFleetFillCooldownSec=10
+InpMode=0
+InpTrigPP=true
+InpTrigST=false
+InpTrigSBT=true
+InpMinAgree=2
+InpEvalClosedBar=true
+InpEntryMode=3
+InpOffsetUnit=0
+InpLimitOffset=5
+InpStopOffset=5
+InpPendFromSignalOpen=true
+InpPendMaxAgeMin=240
+InpStrategicStopEnable=true
+InpStrategicStopMult=4.0
+InpFlipWaitDefault=false
+InpRiskMode=1
+InpRiskPct=1.0
+InpFixedLot=0.01
+InpMaxLot=5.0
+InpAutoLotDefault=false
+InpMaxSpreadPt=40
+InpMagic=20260904
+InpLookback=250
+InpComment=GsignalX-Svc
+InpBusEnable=true
+InpBusFullSyncSec=10
+InpVerboseSignals=false
+InpPropEnable=true
+InpPropMaxEquityDdPct=5.0

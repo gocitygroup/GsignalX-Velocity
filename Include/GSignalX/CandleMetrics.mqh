@@ -2,9 +2,12 @@
 //|                                            CandleMetrics.mqh      |
 //|  Shared ATR + closed-bar range/body helpers (Scouter + gates).    |
 //|  Bar-time keyed caches — no CopyRates thrash per poll.            |
+//|  v2.15: reuse indicator handles; prune on roster REM.             |
 //+------------------------------------------------------------------+
 #ifndef GSX_CANDLE_METRICS_MQH
 #define GSX_CANDLE_METRICS_MQH
+
+#define GSX_ATR_CACHE_MAX  96
 
 //+------------------------------------------------------------------+
 struct GsxAtrCache
@@ -14,9 +17,82 @@ struct GsxAtrCache
    int               period;
    datetime          barTime;
    double            atrPts;
+   int               handle;   // v2.15 persistent iATR handle
   };
 
 GsxAtrCache g_gsxAtrCache[];
+
+//+------------------------------------------------------------------+
+void GsxAtrCacheReleaseAt(const int ix)
+  {
+   if(ix < 0 || ix >= ArraySize(g_gsxAtrCache))
+      return;
+   if(g_gsxAtrCache[ix].handle != INVALID_HANDLE && g_gsxAtrCache[ix].handle != 0)
+     {
+      IndicatorRelease(g_gsxAtrCache[ix].handle);
+      g_gsxAtrCache[ix].handle = INVALID_HANDLE;
+     }
+  }
+
+void GsxAtrCacheClearAll()
+  {
+   for(int i = 0; i < ArraySize(g_gsxAtrCache); i++)
+      GsxAtrCacheReleaseAt(i);
+   ArrayResize(g_gsxAtrCache, 0);
+  }
+
+// Drop cache entries whose symbol is not in keepSyms[].
+void GsxAtrCachePrune(const string &keepSyms[])
+  {
+   int n = ArraySize(g_gsxAtrCache);
+   if(n <= 0)
+      return;
+   int w = 0;
+   for(int i = 0; i < n; i++)
+     {
+      bool keep = false;
+      string s = g_gsxAtrCache[i].sym;
+      for(int k = 0; k < ArraySize(keepSyms); k++)
+        {
+         if(keepSyms[k] == s)
+           {
+            keep = true;
+            break;
+           }
+        }
+      if(keep)
+        {
+         if(w != i)
+            g_gsxAtrCache[w] = g_gsxAtrCache[i];
+         w++;
+        }
+      else
+         GsxAtrCacheReleaseAt(i);
+     }
+   if(w != n)
+      ArrayResize(g_gsxAtrCache, w);
+  }
+
+void GsxAtrCachePruneSymbol(const string symbol)
+  {
+   if(symbol == "")
+      return;
+   int n = ArraySize(g_gsxAtrCache);
+   int w = 0;
+   for(int i = 0; i < n; i++)
+     {
+      if(g_gsxAtrCache[i].sym == symbol)
+        {
+         GsxAtrCacheReleaseAt(i);
+         continue;
+        }
+      if(w != i)
+         g_gsxAtrCache[w] = g_gsxAtrCache[i];
+      w++;
+     }
+   if(w != n)
+      ArrayResize(g_gsxAtrCache, w);
+  }
 
 //+------------------------------------------------------------------+
 int GsxAtrCacheIndex(const string sym, const ENUM_TIMEFRAMES tf, const int period, const bool create)
@@ -30,13 +106,23 @@ int GsxAtrCacheIndex(const string sym, const ENUM_TIMEFRAMES tf, const int perio
      }
    if(!create)
       return(-1);
+   // Cap: drop oldest when full
    int n = ArraySize(g_gsxAtrCache);
+   if(n >= GSX_ATR_CACHE_MAX)
+     {
+      GsxAtrCacheReleaseAt(0);
+      for(int i = 1; i < n; i++)
+         g_gsxAtrCache[i - 1] = g_gsxAtrCache[i];
+      ArrayResize(g_gsxAtrCache, n - 1);
+      n = n - 1;
+     }
    ArrayResize(g_gsxAtrCache, n + 1);
    g_gsxAtrCache[n].sym     = sym;
    g_gsxAtrCache[n].tf      = tf;
    g_gsxAtrCache[n].period  = period;
    g_gsxAtrCache[n].barTime = 0;
    g_gsxAtrCache[n].atrPts  = 0.0;
+   g_gsxAtrCache[n].handle  = INVALID_HANDLE;
    return(n);
   }
 
@@ -56,19 +142,19 @@ double GsxAtrPoints(const string symbol, const ENUM_TIMEFRAMES tf, const int per
    if(bt != 0 && bt == g_gsxAtrCache[ix].barTime && g_gsxAtrCache[ix].atrPts > 0.0)
       return(g_gsxAtrCache[ix].atrPts);
 
-   int handle = iATR(symbol, tf, period);
-   if(handle == INVALID_HANDLE)
-      return(0.0);
+   // v2.15: reuse handle across bars
+   if(g_gsxAtrCache[ix].handle == INVALID_HANDLE || g_gsxAtrCache[ix].handle == 0)
+     {
+      g_gsxAtrCache[ix].handle = iATR(symbol, tf, period);
+      if(g_gsxAtrCache[ix].handle == INVALID_HANDLE)
+         return(0.0);
+     }
 
    double buf[];
    ArraySetAsSeries(buf, true);
    // shift 1 = last closed bar ATR
-   if(CopyBuffer(handle, 0, 1, 1, buf) < 1)
-     {
-      IndicatorRelease(handle);
+   if(CopyBuffer(g_gsxAtrCache[ix].handle, 0, 1, 1, buf) < 1)
       return(0.0);
-     }
-   IndicatorRelease(handle);
 
    double point = SymbolInfoDouble(symbol, SYMBOL_POINT);
    if(point <= 0.0)

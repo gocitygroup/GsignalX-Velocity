@@ -130,20 +130,25 @@ string GsxBusReadAll(const string relativePath)
   {
    if(!FileIsExist(relativePath, FILE_COMMON))
       return "";
-   int h = FileOpen(relativePath, FILE_READ | FILE_TXT | FILE_ANSI | FILE_COMMON);
+   // v2.15: sized single read (avoid quadratic line concat)
+   int h = FileOpen(relativePath, FILE_READ | FILE_BIN | FILE_COMMON);
    if(h == INVALID_HANDLE)
       return "";
-   string data = "";
-   while(!FileIsEnding(h))
+   ulong size = FileSize(h);
+   if(size == 0)
      {
-      string line = FileReadString(h);
-      if(data == "")
-         data = line;
-      else
-         data += "\n" + line;
+      FileClose(h);
+      return "";
      }
+   // Cap pathological reads (audit/bus JSON docs stay small)
+   int want = (int)MathMin(size, (ulong)4 * 1024 * 1024);
+   uchar bytes[];
+   ArrayResize(bytes, want);
+   uint got = FileReadArray(h, bytes, 0, want);
    FileClose(h);
-   return data;
+   if(got == 0)
+      return "";
+   return(CharArrayToString(bytes, 0, (int)got, CP_ACP));
   }
 
 //+------------------------------------------------------------------+

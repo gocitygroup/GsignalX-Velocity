@@ -120,22 +120,161 @@ void GsxFleetAddUniqueSymbol(string &syms[], const string s)
   }
 
 //+------------------------------------------------------------------+
-//| Account-wide floating P/L + position count for magic             |
+//| V2.15: one Positions+Orders walk → busy / PL / class counts      |
 //+------------------------------------------------------------------+
-void GsxFleetFloating(const long magic, double &pl, int &count)
+struct GsxAccountBook
   {
-   pl    = 0.0;
-   count = 0;
-   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   long   magic;
+   bool   valid;
+   double pl;
+   int    posCount;
+   string busySyms[];   // distinct symbols with pos or pending
+   string plSyms[];     // symbols with open positions
+   double plBySym[];    // floating PL aligned with plSyms
+   int    classBusyFx;
+   int    classBusyCmd;
+   int    classBusyCr;
+   int    classBusyOth;
+  };
+
+void GsxAccountBookClear(GsxAccountBook &book)
+  {
+   book.magic = 0;
+   book.valid = false;
+   book.pl = 0.0;
+   book.posCount = 0;
+   ArrayResize(book.busySyms, 0);
+   ArrayResize(book.plSyms, 0);
+   ArrayResize(book.plBySym, 0);
+   book.classBusyFx = 0;
+   book.classBusyCmd = 0;
+   book.classBusyCr = 0;
+   book.classBusyOth = 0;
+  }
+
+void GsxAccountBookAddPl(GsxAccountBook &book, const string sym, const double add)
+  {
+   if(sym == "")
+      return;
+   for(int k = 0; k < ArraySize(book.plSyms); k++)
+     {
+      if(book.plSyms[k] == sym)
+        {
+         book.plBySym[k] += add;
+         return;
+        }
+     }
+   int n = ArraySize(book.plSyms);
+   ArrayResize(book.plSyms, n + 1);
+   ArrayResize(book.plBySym, n + 1);
+   book.plSyms[n] = sym;
+   book.plBySym[n] = add;
+  }
+
+void GsxAccountBookNoteBusyClass(GsxAccountBook &book, const string sym)
+  {
+   // Count unique busy symbols per class (call only when newly added to busySyms)
+   int c = (int)GsxSymbolClass(sym);
+   if(c == GSX_CLASS_FOREX)           book.classBusyFx++;
+   else if(c == GSX_CLASS_COMMODITY)  book.classBusyCmd++;
+   else if(c == GSX_CLASS_CRYPTO)     book.classBusyCr++;
+   else                               book.classBusyOth++;
+  }
+
+void GsxAccountBookAddBusy(GsxAccountBook &book, const string sym)
+  {
+   if(sym == "")
+      return;
+   for(int k = 0; k < ArraySize(book.busySyms); k++)
+      if(book.busySyms[k] == sym)
+         return;
+   int n = ArraySize(book.busySyms);
+   ArrayResize(book.busySyms, n + 1);
+   book.busySyms[n] = sym;
+   GsxAccountBookNoteBusyClass(book, sym);
+  }
+
+void GsxAccountBookBuild(const long magic, GsxAccountBook &book)
+  {
+   GsxAccountBookClear(book);
+   book.magic = magic;
+
+   int total = PositionsTotal();
+   for(int i = 0; i < total; i++)
      {
       ulong ticket = PositionGetTicket(i);
       if(ticket == 0 || !PositionSelectByTicket(ticket))
          continue;
       if(PositionGetInteger(POSITION_MAGIC) != magic)
          continue;
-      pl += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
-      count++;
+      string sym = PositionGetString(POSITION_SYMBOL);
+      double add = PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
+      book.pl += add;
+      book.posCount++;
+      GsxAccountBookAddBusy(book, sym);
+      GsxAccountBookAddPl(book, sym, add);
      }
+
+   int ototal = OrdersTotal();
+   for(int i = 0; i < ototal; i++)
+     {
+      ulong ticket = OrderGetTicket(i);
+      if(ticket == 0)
+         continue;
+      if(OrderGetInteger(ORDER_MAGIC) != magic)
+         continue;
+      GsxAccountBookAddBusy(book, OrderGetString(ORDER_SYMBOL));
+     }
+
+   book.valid = true;
+  }
+
+bool GsxAccountBookBusy(const GsxAccountBook &book, const string symbol)
+  {
+   if(!book.valid || symbol == "")
+      return(false);
+   for(int i = 0; i < ArraySize(book.busySyms); i++)
+      if(book.busySyms[i] == symbol)
+         return(true);
+   return(false);
+  }
+
+int GsxAccountBookActivePairs(const GsxAccountBook &book)
+  {
+   if(!book.valid)
+      return(0);
+   return(ArraySize(book.busySyms));
+  }
+
+int GsxAccountBookActiveInClass(const GsxAccountBook &book, const int symClass)
+  {
+   if(!book.valid)
+      return(0);
+   if(symClass == GSX_CLASS_FOREX)     return(book.classBusyFx);
+   if(symClass == GSX_CLASS_COMMODITY) return(book.classBusyCmd);
+   if(symClass == GSX_CLASS_CRYPTO)    return(book.classBusyCr);
+   return(book.classBusyOth);
+  }
+
+double GsxAccountBookSymbolPl(const GsxAccountBook &book, const string symbol)
+  {
+   if(!book.valid || symbol == "")
+      return(0.0);
+   for(int i = 0; i < ArraySize(book.plSyms); i++)
+      if(book.plSyms[i] == symbol)
+         return(book.plBySym[i]);
+   return(0.0);
+  }
+
+//+------------------------------------------------------------------+
+//| Account-wide floating P/L + position count for magic             |
+//+------------------------------------------------------------------+
+void GsxFleetFloating(const long magic, double &pl, int &count)
+  {
+   GsxAccountBook book;
+   GsxAccountBookBuild(magic, book);
+   pl = book.pl;
+   count = book.posCount;
   }
 
 //+------------------------------------------------------------------+
@@ -143,66 +282,17 @@ void GsxFleetFloating(const long magic, double &pl, int &count)
 //+------------------------------------------------------------------+
 int GsxFleetActivePairs(const long magic)
   {
-   string syms[];
-
-   int total = PositionsTotal();
-   for(int i = 0; i < total; i++)
-     {
-      ulong ticket = PositionGetTicket(i);
-      if(ticket == 0 || !PositionSelectByTicket(ticket))
-         continue;
-      if(PositionGetInteger(POSITION_MAGIC) != magic)
-         continue;
-      GsxFleetAddUniqueSymbol(syms, PositionGetString(POSITION_SYMBOL));
-     }
-
-   int ototal = OrdersTotal();
-   for(int i = 0; i < ototal; i++)
-     {
-      ulong ticket = OrderGetTicket(i);
-      if(ticket == 0)
-         continue;
-      if(OrderGetInteger(ORDER_MAGIC) != magic)
-         continue;
-      GsxFleetAddUniqueSymbol(syms, OrderGetString(ORDER_SYMBOL));
-     }
-
-   return(ArraySize(syms));
+   GsxAccountBook book;
+   GsxAccountBookBuild(magic, book);
+   return(GsxAccountBookActivePairs(book));
   }
 
 // How many busy (pos/pending) symbols of a given asset class for this magic.
 int GsxFleetActiveInClass(const long magic, const int symClass)
   {
-   string syms[];
-   ArrayResize(syms, 0);
-
-   int total = PositionsTotal();
-   for(int i = 0; i < total; i++)
-     {
-      ulong ticket = PositionGetTicket(i);
-      if(ticket == 0 || !PositionSelectByTicket(ticket))
-         continue;
-      if(PositionGetInteger(POSITION_MAGIC) != magic)
-         continue;
-      string s = PositionGetString(POSITION_SYMBOL);
-      if((int)GsxSymbolClass(s) == symClass)
-         GsxFleetAddUniqueSymbol(syms, s);
-     }
-
-   int ototal = OrdersTotal();
-   for(int i = 0; i < ototal; i++)
-     {
-      ulong ticket = OrderGetTicket(i);
-      if(ticket == 0)
-         continue;
-      if(OrderGetInteger(ORDER_MAGIC) != magic)
-         continue;
-      string s = OrderGetString(ORDER_SYMBOL);
-      if((int)GsxSymbolClass(s) == symClass)
-         GsxFleetAddUniqueSymbol(syms, s);
-     }
-
-   return(ArraySize(syms));
+   GsxAccountBook book;
+   GsxAccountBookBuild(magic, book);
+   return(GsxAccountBookActiveInClass(book, symClass));
   }
 
 //+------------------------------------------------------------------+
@@ -235,31 +325,9 @@ bool GsxFleetSymbolBusy(const string symbol, const long magic)
   {
    if(symbol == "")
       return(false);
-
-   int total = PositionsTotal();
-   for(int i = 0; i < total; i++)
-     {
-      ulong ticket = PositionGetTicket(i);
-      if(ticket == 0 || !PositionSelectByTicket(ticket))
-         continue;
-      if(PositionGetInteger(POSITION_MAGIC) != magic)
-         continue;
-      if(PositionGetString(POSITION_SYMBOL) == symbol)
-         return(true);
-     }
-
-   int ototal = OrdersTotal();
-   for(int i = 0; i < ototal; i++)
-     {
-      ulong ticket = OrderGetTicket(i);
-      if(ticket == 0)
-         continue;
-      if(OrderGetInteger(ORDER_MAGIC) != magic)
-         continue;
-      if(OrderGetString(ORDER_SYMBOL) == symbol)
-         return(true);
-     }
-   return(false);
+   GsxAccountBook book;
+   GsxAccountBookBuild(magic, book);
+   return(GsxAccountBookBusy(book, symbol));
   }
 
 #endif // GSX_FLEET_MQH

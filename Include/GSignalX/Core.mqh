@@ -33,6 +33,7 @@
 //|    InpFleetFillsPerCycle, InpSignalMaxAgeSec (v2.06)              |
 //|    InpDrillEnable, InpDrillMinutes, InpDrillAllowReentry (v2.10)   |
 //|    InpContinuousFleet (v2.13; optional continuous fills)          |
+//|    InpScaleProfile (v2.15; 0=Manual 1=Small 2=Medium 3=Large)      |
 //|                                                                   |
 //|  Enums may be redefined in the host; Core uses int casts.         |
 //+------------------------------------------------------------------+
@@ -50,6 +51,7 @@
 #include <GSignalX/SignalBus.mqh>
 #include <GSignalX/LotSizing.mqh>
 #include <GSignalX/PropRisk.mqh>
+#include <GSignalX/CandleMetrics.mqh>
 
 //+------------------------------------------------------------------+
 //| Globals                                                          |
@@ -101,6 +103,11 @@ bool           g_coreClaimedOwn = false;
 // v2.14.1: one fleet scan per cycle — reused by PublishBus / PublishBusIndex / fills
 GsxBusFleetSnap g_coreFleetSnap;
 bool            g_coreFleetSnapFresh = false;
+// v2.15: one Positions+Orders walk per cycle (busy / class / PL)
+GsxAccountBook  g_coreAccountBook;
+int             g_coreBookBuilds = 0;
+int             g_coreCompactTips = 0;
+int             g_coreBusWrites = 0;
 
 //+------------------------------------------------------------------+
 void GsxEngStateCopy(const GsxEngineState &src, GsxEngineState &dst)
@@ -116,6 +123,17 @@ void GsxEngStateCopy(const GsxEngineState &src, GsxEngineState &dst)
    dst.lastSigIdx = src.lastSigIdx;
    dst.lastSigChangeTime = src.lastSigChangeTime;
    dst.status = src.status;
+   dst.compacted = src.compacted;
+   dst.lastClose = src.lastClose;
+   dst.lastMa = src.lastMa;
+   dst.lastAtrRisk = src.lastAtrRisk;
+   dst.lastSigOpen = src.lastSigOpen;
+   dst.tipPpDir = src.tipPpDir;
+   dst.tipStDir = src.tipStDir;
+   dst.tipSbtDir = src.tipSbtDir;
+   dst.tipPpLine = src.tipPpLine;
+   dst.tipStLine = src.tipStLine;
+   dst.tipSbtLine = src.tipSbtLine;
    ArrayCopy(dst.ppDir, src.ppDir);
    ArrayCopy(dst.stDir, src.stDir);
    ArrayCopy(dst.sbtDir, src.sbtDir);
@@ -153,7 +171,11 @@ bool GsxCoreEngOwnsSymbol(const int idx, const string symbol, const ENUM_TIMEFRA
 
 int GsxCoreEngineBudget()
   {
+   // v2.15 scale profiles override Manual inputs
    int b = InpEngineBudgetPerCycle;
+   if(InpScaleProfile == 1) b = 3;
+   else if(InpScaleProfile == 2) b = (b <= 0 ? 4 : b);
+   else if(InpScaleProfile == 3) b = (b <= 0 ? 5 : MathMax(b, 4));
    if(b <= 0)
       b = 4;
    if(g_coreBurstBudgetCycles > 0)
@@ -354,10 +376,48 @@ bool GsxCoreOnboardTerminalSkip(const string skip)
 
 int GsxCoreBusFullSyncSec()
   {
+   // v2.15 scale profiles (InpScaleProfile: 0=Manual 1=Small 2=Medium 3=Large)
+   if(InpScaleProfile == 1) return(10);
+   if(InpScaleProfile == 2) return(MathMax(5, InpBusFullSyncSec > 0 ? InpBusFullSyncSec : 5));
+   if(InpScaleProfile == 3) return(10);
    int s = InpBusFullSyncSec;
    if(s <= 0)
       return 3; // v2.06 desk: keep direction ts fresh
    return s;
+  }
+
+int GsxCoreScaleCycleMs(const int inputCycleMs)
+  {
+   if(InpScaleProfile == 1) return(250);
+   if(InpScaleProfile == 2) return(200);
+   if(InpScaleProfile == 3) return(200);
+   return((int)MathMax(50, inputCycleMs));
+  }
+
+int GsxCoreScaleLookback()
+  {
+   if(InpScaleProfile == 1) return(250);
+   if(InpScaleProfile == 2) return(400);
+   if(InpScaleProfile == 3) return(400);
+   int lb = InpLookback;
+   if(lb < 100) lb = 100;
+   return(lb);
+  }
+
+string GsxCoreScaleLabel()
+  {
+   if(InpScaleProfile == 1) return("Small");
+   if(InpScaleProfile == 2) return("Medium");
+   if(InpScaleProfile == 3) return("Large");
+   return("Manual");
+  }
+
+int GsxCoreEngineBytesEstAll()
+  {
+   int sum = 0;
+   for(int i = 0; i < ArraySize(g_eng); i++)
+      sum += GsxEngStateBytesEst(g_eng[i]);
+   return(sum);
   }
 
 //+------------------------------------------------------------------+
@@ -365,7 +425,7 @@ GsxEngineParams GsxCoreBuildEngineParams()
   {
    GsxEngineParams p;
    p.evalClosedBar = InpEvalClosedBar;
-   p.lookback      = InpLookback;
+   p.lookback      = GsxCoreScaleLookback();
    p.pivotPrd      = InpPivotPrd;
    p.ppFactor      = InpPPFactor;
    p.ppAtrLen      = InpPPAtrLen;
@@ -517,19 +577,21 @@ bool GsxCoreGatesOk(const string symbol, string &why)
 
 // Sort fill candidates: lower class-busy count first so CMD/CR are not
 // starved by FX-first roster order under a small fleet target.
+// v2.15: uses cycle AccountBook when fresh (no O(n²) rescans).
 void GsxCoreSortFillOrderByClassDiversity(int &order[])
   {
    int n = ArraySize(order);
    if(n <= 1)
       return;
+   GsxCoreEnsureFleetSnap();
    for(int a = 0; a < n - 1; a++)
      {
       for(int b = a + 1; b < n; b++)
         {
          int ia = order[a];
          int ib = order[b];
-         int ca = GsxFleetActiveInClass(InpMagic, (int)GsxSymbolClass(g_roster[ia]));
-         int cb = GsxFleetActiveInClass(InpMagic, (int)GsxSymbolClass(g_roster[ib]));
+         int ca = GsxAccountBookActiveInClass(g_coreAccountBook, (int)GsxSymbolClass(g_roster[ia]));
+         int cb = GsxAccountBookActiveInClass(g_coreAccountBook, (int)GsxSymbolClass(g_roster[ib]));
          if(cb < ca || (cb == ca && ib < ia))
            {
             order[a] = ib;
@@ -554,6 +616,7 @@ void GsxCoreRetireSymbol(const string symbol)
    GsxRosterStateSet(InpMagic, symbol, GSX_PAIR_STOP);
    GsxDeletePendings(g_gsxTrade, symbol, InpMagic, "roster retire");
    GsxRosterClearSymbolMeta(InpMagic, symbol);
+   GsxAtrCachePruneSymbol(symbol); // v2.15
    if(InpVerboseSignals)
       PrintFormat("GsignalX Core: retired %s (pendings+meta cleared; positions left for Scouter)",
                   symbol);
@@ -656,13 +719,14 @@ void GsxCoreApplyRoster(const string &newRoster[])
          ENUM_TIMEFRAMES tfWarm = GsxRosterTimeframeGet(InpMagic, InpTimeframe);
          if(!GsxRosterTimeframeValid(tfWarm))
             tfWarm = PERIOD_M5;
-         GsxEngPrefetchHistory(newRoster[i], tfWarm, InpLookback);
+         GsxEngPrefetchHistory(newRoster[i], tfWarm, GsxCoreScaleLookback());
         }
      }
 
    // Burst until onboard symbols are ready (or fail sticky)
    g_coreBurstBudgetCycles = MathMax(2, (newCount > 0 ? MathMax(8, newCount + 2) : 2));
    g_coreNewOnboard = newCount; // cycle starts drill when RUN (ADD under PLAY)
+   GsxAtrCachePrune(newRoster); // v2.15 drop ATR handles for removed symbols
   }
 
 bool GsxCoreReloadRoster()
@@ -822,7 +886,8 @@ bool GsxCoreTryFillIndex(const int i, const GsxEntryParams &ep, const int target
       GsxCoreSetFillSkip(i, "event block");
       return(false);
      }
-   if(GsxFleetSymbolBusy(sym, InpMagic))
+   GsxCoreEnsureFleetSnap();
+   if(GsxAccountBookBusy(g_coreAccountBook, sym))
      {
       GsxCoreSetFillSkip(i, "busy");
       return(false);
@@ -833,7 +898,7 @@ bool GsxCoreTryFillIndex(const int i, const GsxEntryParams &ep, const int target
       return(false);
      }
 
-   int active = GsxFleetActivePairs(InpMagic);
+   int active = GsxAccountBookActivePairs(g_coreAccountBook);
    if(active >= target)
      {
       GsxCoreSetFillSkip(i, StringFormat("fleet full %d/%d", active, target));
@@ -965,7 +1030,8 @@ void GsxCoreFleetFillOnce()
       return;
 
    int target = GsxCoreEffectiveFleetTarget();
-   g_fleetActive = GsxFleetActivePairs(InpMagic);
+   GsxCoreEnsureFleetSnap();
+   g_fleetActive = GsxAccountBookActivePairs(g_coreAccountBook);
    if(g_fleetActive >= target)
      {
       // Surface fleet-full on candidates so desk can show fill_skip
@@ -975,7 +1041,7 @@ void GsxCoreFleetFillOnce()
             continue;
          if(!GsxRosterIsFleetCandidate(InpMagic, g_roster[i]))
             continue;
-         if(GsxFleetSymbolBusy(g_roster[i], InpMagic))
+         if(GsxAccountBookBusy(g_coreAccountBook, g_roster[i]))
             continue;
          GsxCoreSetFillSkip(i, StringFormat("fleet full %d/%d", g_fleetActive, target));
         }
@@ -1031,9 +1097,8 @@ void GsxCoreFleetFillOnce()
       if(GsxCoreTryFillIndex(i, ep, target, fillsDone))
         {
          fillsDone++;
-         g_fleetActive = GsxFleetActivePairs(InpMagic);
-         if(g_coreFleetSnapFresh)
-            g_coreFleetSnap.active = g_fleetActive;
+         // Refresh book after a fill so subsequent Busy/active stay accurate
+         GsxCoreRefreshFleetSnap();
          if(i < ArraySize(g_joinDirChangedAt))
             g_joinDirChangedAt[i] = 0;
         }
@@ -1042,10 +1107,12 @@ void GsxCoreFleetFillOnce()
 
 void GsxCoreRefreshFleetSnap()
   {
-   g_coreFleetSnap.pl = 0.0;
-   g_coreFleetSnap.pos = 0;
-   GsxFleetFloating(InpMagic, g_coreFleetSnap.pl, g_coreFleetSnap.pos);
-   g_coreFleetSnap.active = GsxFleetActivePairs(InpMagic);
+   // v2.15: one Positions+Orders walk fills book + bus fleet snap
+   GsxAccountBookBuild(InpMagic, g_coreAccountBook);
+   g_coreBookBuilds++;
+   g_coreFleetSnap.pl = g_coreAccountBook.pl;
+   g_coreFleetSnap.pos = g_coreAccountBook.posCount;
+   g_coreFleetSnap.active = GsxAccountBookActivePairs(g_coreAccountBook);
    g_coreFleetSnap.valid = true;
    g_coreFleetSnapFresh = true;
    g_fleetActive = g_coreFleetSnap.active;
@@ -1088,7 +1155,7 @@ bool GsxCorePublishBusIndex(const int i, const bool forceThrottleBypass)
                                  InpSwingStartHour, InpSwingEndHour, InpCryptoExtraList,
                                  true, g_closedCount, g_closedWins, g_closedLosses,
                                  g_closedRealized, "service", g_coreFleetSnap, skip, jd,
-                                 InpFridayStop, InpFridayStopHr))
+                                 InpFridayStop, InpFridayStopHr, true))
       return(false);
 
    string fp = GsxSignalBusFingerprint(g_roster[i], g_eng[i], InpMinAgree, maxSp,
@@ -1096,6 +1163,7 @@ bool GsxCorePublishBusIndex(const int i, const bool forceThrottleBypass)
                                        InpSwingStartHour, InpSwingEndHour,
                                        InpCryptoExtraList, InpFridayStop, InpFridayStopHr);
    g_busFp[i] = fp + "|" + skip + "|" + IntegerToString(jd);
+   g_coreBusWrites++;
    // Do not stamp throttle on forced onboard writes — cycle still needs full bus/heartbeat
    if(!forceThrottleBypass)
       g_busLastPub = TimeCurrent();
@@ -1141,15 +1209,18 @@ void GsxCorePublishBus()
       if(jd != 0)
          GsxRosterLastDirSet(InpMagic, g_roster[i], jd);
 
+      // v2.15: tid path on full sync or first register; mirror always
+      bool writeTid = fullSync || (g_busFp[i] == "");
       if(GsxSignalBusWriteSymbolEx(g_roster[i], g_eng[i], InpMagic, InpMinAgree,
                                    (int)InpMode, maxSp, InpStaleTickSec, g_ignoreSpread,
                                    InpSwingStartHour, InpSwingEndHour, InpCryptoExtraList,
                                    true, g_closedCount, g_closedWins, g_closedLosses,
                                    g_closedRealized, "service", g_coreFleetSnap, skip, jd,
-                                   InpFridayStop, InpFridayStopHr))
+                                   InpFridayStop, InpFridayStopHr, writeTid))
         {
          g_busFp[i] = fp;
          wrote++;
+         g_coreBusWrites++;
         }
      }
    if(fullSync)
@@ -1182,6 +1253,9 @@ bool GsxCoreCalcIndex(const int i, const ENUM_TIMEFRAMES deskTf, const GsxEngine
      }
    if(GsxCalcEngines(sym, deskTf, ep, g_eng[i]))
      {
+      // v2.15: Core/Service do not retain full lookback series
+      GsxEngStateCompactTip(g_eng[i]);
+      g_coreCompactTips++;
       g_formWatch[i] = form;
       g_engineRecalcs++;
       return(true);
@@ -1396,8 +1470,10 @@ void GsxCoreCycle()
       (g_coreCycleLogAt == 0 || TimeCurrent() - g_coreCycleLogAt >= 10) &&
       g_coreLastCycleMs >= 80)
      {
-      PrintFormat("GsignalX Core: cycle_ms=%I64u recalcs=%d fills=%d roster=%d",
-                  g_coreLastCycleMs, g_engineRecalcs, g_fleetFills, ArraySize(g_roster));
+      PrintFormat("GsignalX Core: cycle_ms=%I64u recalcs=%d fills=%d roster=%d book=%d busW=%d tip=%d engKB=%d scale=%s",
+                  g_coreLastCycleMs, g_engineRecalcs, g_fleetFills, ArraySize(g_roster),
+                  g_coreBookBuilds, g_coreBusWrites, g_coreCompactTips,
+                  GsxCoreEngineBytesEstAll() / 1024, GsxCoreScaleLabel());
       g_coreCycleLogAt = TimeCurrent();
      }
 

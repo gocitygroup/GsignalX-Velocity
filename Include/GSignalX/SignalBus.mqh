@@ -110,7 +110,8 @@ bool GsxSignalBusWriteSymbolEx(const string symbol,
                                const string fillSkip = "",
                                const int joinDirOverride = 999,
                                const bool fridayStop = true,
-                               const int fridayStopHr = 20)
+                               const int fridayStopHr = 20,
+                               const bool writeTidPath = true)
   {
    if(!busEnable)
       return(false);
@@ -213,11 +214,16 @@ bool GsxSignalBusWriteSymbolEx(const string symbol,
    j += GsxJsonKV_S("fill_skip", fillSkip, false);
    j += "}";
 
-   if(!GsxBusWriteAtomic(GsxBusSignalPath(tid, canon), j))
+   // v2.15: always write desk mirror (UI freshest); tid path on full-sync/register
+   bool okMirror = GsxBusWriteAtomic(GsxBusDeskSignalPath(canon), j);
+   if(!okMirror)
       return(false);
+   if(writeTidPath)
+     {
+      if(!GsxBusWriteAtomic(GsxBusSignalPath(tid, canon), j))
+         return(false);
+     }
    GsxBusRegisterSignal(tid, canon);
-   // Tid-independent desk mirror for Multi-Symbol UI on any terminal
-   GsxBusWriteAtomic(GsxBusDeskSignalPath(canon), j);
    return(true);
   }
 
