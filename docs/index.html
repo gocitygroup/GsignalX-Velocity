@@ -14,7 +14,12 @@
 <script>
 (function () {
   try {
-    var lang = localStorage.getItem("gsx-velocity-lang");
+    var lang = null;
+    var params = new URLSearchParams(location.search || "");
+    var q = params.get("lang");
+    if (q) lang = String(q).toLowerCase().split("-")[0];
+    if (!lang) lang = localStorage.getItem("gsx-velocity-lang");
+    if (lang && lang.indexOf("zh") === 0) lang = "zh";
     if (lang && lang !== "en") document.documentElement.setAttribute("data-i18n-pending", "");
   } catch (e) {}
 })();
