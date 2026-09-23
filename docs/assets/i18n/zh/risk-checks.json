@@ -1,0 +1,23 @@
+{
+  "risk-checks.kicker1": "决策树与快速参考",
+  "risk-checks.h11": "风险清单与决策树",
+  "risk-checks.h21": "决策树",
+  "risk-checks.h22": "手动交易风险检查",
+  "risk-checks.li1": "已识别市场状态（趋势 / 区间 / 新闻 / 流动性差）",
+  "risk-checks.li2": "信号仍然有效（没有在结构变化之后变旧）",
+  "risk-checks.li3": "入场区 / DIR 与 FollowDir 一致",
+  "risk-checks.li4": "失效位已定义（定仓止损与灾难 SL 分得清楚）",
+  "risk-checks.li5": "仓位已计算；杠杆没有与风险混淆",
+  "risk-checks.li6": "事件 / 新闻风险已检查（EventGate）",
+  "risk-checks.li7": "点差 / 流动性可接受（或有意 IGN 并缩小仓位）",
+  "risk-checks.li8": "相关敞口在 fleet 政策之内",
+  "risk-checks.li9": "退出条件已定义（Profit CASH / adverse / Loss CASH）",
+  "risk-checks.li10": "检测到情绪凌驾？如果是 — WAIT",
+  "risk-checks.h23": "数字提示（v1）",
+  "risk-checks.p1": "Trade Center 提示行 · Settings 影响条款 · Telegram OPEN <code>| tip:</code> · Practice 提示充实。规格：<code>docs/risk/RISK_GUIDANCE_SPEC.md</code>。",
+  "risk-checks.rb-tag1": "交易后复盘",
+  "risk-checks.li11": "理由是什么？退出之前变了吗？",
+  "risk-checks.li12": "平仓标签（BANK / CUT / adverse / ATR-TRAIL / 经纪商 SL）？",
+  "risk-checks.li13": "为下一次交易前记下类别 + 会话 + 相关性",
+  "risk-checks.li14": "只做一项流程改进"
+}

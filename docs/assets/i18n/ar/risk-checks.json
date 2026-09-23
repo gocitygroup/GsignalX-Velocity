@@ -1,0 +1,23 @@
+{
+  "risk-checks.kicker1": "شجرة القرار ومرجع سريع",
+  "risk-checks.h11": "قوائم فحص المخاطر وشجرة القرار",
+  "risk-checks.h21": "شجرة القرار",
+  "risk-checks.h22": "فحص مخاطر الصفقة اليدوي",
+  "risk-checks.li1": "حالة السوق محددة (اتجاه / نطاق / أخبار / ضعيف السيولة)",
+  "risk-checks.li2": "الإشارة ما زالت صالحة (لم تتقادم بعد تغيّر البنية)",
+  "risk-checks.li3": "منطقة الدخول / DIR متوافقة مع FollowDir",
+  "risk-checks.li4": "مستوى الإبطال محدد (وقف التحجيم مقابل SL الكارثة واضح)",
+  "risk-checks.li5": "حجم المركز محسوب؛ الرافعة غير مخلوطة بالمخاطر",
+  "risk-checks.li6": "مخاطر الحدث / الأخبار مفحوصة (EventGate)",
+  "risk-checks.li7": "السبريد / السيولة مقبولان (أو IGN مقصود بحجم أصغر)",
+  "risk-checks.li8": "التعرّض المرتبط ضمن سياسة fleet",
+  "risk-checks.li9": "شروط الخروج محددة (Profit CASH / adverse / Loss CASH)",
+  "risk-checks.li10": "هل رُصد تجاوز عاطفي؟ إذا نعم — WAIT",
+  "risk-checks.h23": "نصائح رقمية (v1)",
+  "risk-checks.p1": "صف نصائح Trade Center · بند أثر Settings · Telegram OPEN <code>| tip:</code> · إثراء نصائح Practice. المواصفة: <code>docs/risk/RISK_GUIDANCE_SPEC.md</code>.",
+  "risk-checks.rb-tag1": "مراجعة بعد الصفقة",
+  "risk-checks.li11": "ما كان السبب؟ هل تغيّر قبل الخروج؟",
+  "risk-checks.li12": "وسم الإغلاق (BANK / CUT / adverse / ATR-TRAIL / SL الوسيط)؟",
+  "risk-checks.li13": "ملاحظة الفئة + الجلسة + الارتباط للصفقة القبلية التالية",
+  "risk-checks.li14": "تحسين عملية واحد فقط"
+}

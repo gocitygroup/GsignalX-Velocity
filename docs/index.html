@@ -12,6 +12,15 @@
 <link rel="stylesheet" href="assets/css/gsx-docs.css"/>
 <script src="assets/js/gsx-theme.js"></script>
 <script>
+(function () {
+  try {
+    var lang = localStorage.getItem("gsx-velocity-lang");
+    if (lang && lang !== "en") document.documentElement.setAttribute("data-i18n-pending", "");
+  } catch (e) {}
+})();
+</script>
+<script src="assets/js/gsx-i18n.js"></script>
+<script>
 location.replace("Gsignalx_Velocity_Users_Manual.html" + (location.hash || ""));
 </script>
 <style>
@@ -51,10 +60,10 @@ img { margin: 0 auto 16px; display: block; max-width: min(160px, 40vw); height: 
 <body>
   <div class="splash">
     <img src="assets/icons/group-icon.svg" alt="Gocity Group" width="160" height="88"/>
-    <p>Opening <strong>Gsignalx Velocity 2.14</strong> trader manual…</p>
-    <p class="ver">Velocity 2.14 · bus schema v1</p>
-    <p><a href="Gsignalx_Velocity_Users_Manual.html">Continue if you are not redirected</a></p>
-    <p style="margin-top:1.25em;font-size:0.95em">
+    <p data-i18n-html="ui.splash.opening">Opening <strong>Gsignalx Velocity 2.14</strong> trader manual…</p>
+    <p class="ver" data-i18n="ui.splash.version">Velocity 2.14 · bus schema v1</p>
+    <p><a href="Gsignalx_Velocity_Users_Manual.html" data-i18n="ui.splash.continue">Continue if you are not redirected</a></p>
+    <p style="margin-top:1.25em;font-size:0.95em" data-i18n-html="ui.splash.more">
       <strong>Trading channel (main):</strong>
       <a href="https://t.me/+yURbcVkPi1kxNDg0" target="_blank" rel="noopener noreferrer">macro overview for day trading</a>
       — composite current driver breakdown + cited data sources.

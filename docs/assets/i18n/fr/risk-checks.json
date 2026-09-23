@@ -1,0 +1,23 @@
+{
+  "risk-checks.kicker1": "Arbre de décision et référence rapide",
+  "risk-checks.h11": "Listes de contrôle du risque et arbre de décision",
+  "risk-checks.h21": "Arbre de décision",
+  "risk-checks.h22": "Contrôle manuel du risque du trade",
+  "risk-checks.li1": "Condition de marché identifiée (tendance / range / news / illiquide)",
+  "risk-checks.li2": "Signal encore valide (pas vieilli au-delà du changement de structure)",
+  "risk-checks.li3": "Zone d'entrée / DIR alignés avec FollowDir",
+  "risk-checks.li4": "Niveau d'invalidation défini (stop de dimensionnement face au SL de catastrophe clair)",
+  "risk-checks.li5": "Taille de position calculée ; levier non confondu avec le risque",
+  "risk-checks.li6": "Risque événement / news vérifié (EventGate)",
+  "risk-checks.li7": "Spread / liquidité acceptables (ou IGN intentionnel avec une taille plus petite)",
+  "risk-checks.li8": "Exposition corrélée dans la politique du fleet",
+  "risk-checks.li9": "Conditions de sortie définies (Profit CASH / adverse / Loss CASH)",
+  "risk-checks.li10": "Dépassement émotionnel détecté ? Si oui — WAIT",
+  "risk-checks.h23": "Conseils numériques (v1)",
+  "risk-checks.p1": "Ligne de conseils Trade Center · clause d'impact des Settings · Telegram OPEN <code>| tip:</code> · enrichissement des conseils Practice. Spécification : <code>docs/risk/RISK_GUIDANCE_SPEC.md</code>.",
+  "risk-checks.rb-tag1": "Revue après le trade",
+  "risk-checks.li11": "Quelle était la raison ? A-t-elle changé avant la sortie ?",
+  "risk-checks.li12": "Tag de clôture (BANK / CUT / adverse / ATR-TRAIL / SL du broker) ?",
+  "risk-checks.li13": "Note de classe + session + corrélation pour le prochain avant-trade",
+  "risk-checks.li14": "Une seule amélioration de processus"
+}

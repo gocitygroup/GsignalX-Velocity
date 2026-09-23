@@ -1,8 +1,14 @@
-# Not part of the Vercel static site (docs/ is outputDirectory)
+# Upload only what the static docs site needs. Output is docs/.
 *.mq5
+*.mqh
+*.ex5
+*.ex4
+*.set
 Include/
 deploy/
 .git/
 .cursor/
 agent-tools/
 *.pdf
+*.log
+*.zip

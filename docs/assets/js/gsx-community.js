@@ -91,6 +91,20 @@
     }
   };
 
+  function tx(key, fallback) {
+    return window.GsxI18n ? GsxI18n.t(key, fallback) : fallback;
+  }
+
+  function resolveIntent(name) {
+    var base = INTENTS[name] || INTENTS.default;
+    var id = INTENTS[name] ? name : "default";
+    var out = {};
+    Object.keys(base).forEach(function (field) {
+      out[field] = tx("community." + id + "." + field, base[field]);
+    });
+    return out;
+  }
+
   function esc(s) {
     return String(s)
       .replace(/&/g, "&amp;")
@@ -104,7 +118,7 @@
   }
 
   function renderDualCtaHtml(intent) {
-    var cfg = INTENTS[intent] || INTENTS.default;
+    var cfg = resolveIntent(intent);
     var lead = cfg.lead
       ? '<p class="gsx-community-lead">' + esc(cfg.lead) + "</p>"
       : "";
@@ -128,7 +142,7 @@
         '" ' +
         linkAttrs() +
         ">" +
-        esc(cfg.tvLabel || "TradingView · chart study") +
+        esc(cfg.tvLabel || tx("community.foundation.tvLabel", "TradingView · chart study")) +
         tvHint +
         "</a>"
       : "";
@@ -159,7 +173,7 @@
       '" ' +
       linkAttrs() +
       ">" +
-      esc(cfg.whatsappLabel || "WhatsApp · meet-up") +
+      esc(cfg.whatsappLabel || tx("community.default.whatsappLabel", "WhatsApp · meet-up")) +
       waHint +
       "</a>" +
       tvBtn +
@@ -168,7 +182,7 @@
   }
 
   function renderBannerHtml() {
-    var cfg = INTENTS.banner;
+    var cfg = resolveIntent("banner");
     return (
       '<div class="gsx-community-strip-inner">' +
       '<span class="gsx-community-strip-label">' +
@@ -194,16 +208,18 @@
       '" ' +
       linkAttrs() +
       ">" +
-      esc(cfg.whatsappLabel || "WhatsApp") +
+      esc(cfg.whatsappLabel || tx("community.banner.whatsappLabel", "WhatsApp")) +
       "</a>" +
       '<a class="gsx-community-btn tv" href="' +
       esc(TV_URL) +
       '" ' +
       linkAttrs() +
       ">" +
-      esc(cfg.tvLabel || "Chart") +
+      esc(cfg.tvLabel || tx("community.banner.tvLabel", "Chart")) +
       "</a>" +
-      '<a class="gsx-community-btn more" href="#community" data-tab="community">More →</a>' +
+      '<a class="gsx-community-btn more" href="#community" data-tab="community">' +
+      esc(tx("community.banner.more", "More →")) +
+      "</a>" +
       "</div></div>"
     );
   }
@@ -232,7 +248,7 @@
     banner.className = "gsx-community-strip";
     banner.hidden = true;
     banner.setAttribute("role", "region");
-    banner.setAttribute("aria-label", "Macro day-trading channel");
+    banner.setAttribute("aria-label", tx("community.banner.aria", "Macro day-trading channel"));
     banner.innerHTML = renderBannerHtml();
     header.insertAdjacentElement("afterend", banner);
     return banner;
@@ -273,6 +289,20 @@
     syncBanner: syncBanner,
     boot: boot
   };
+
+  function rerender() {
+    fillMounts();
+    var banner = document.getElementById("gsxCommunityBanner");
+    if (!banner) return;
+    var hidden = banner.hidden;
+    var shown = banner.classList.contains("is-visible");
+    banner.innerHTML = renderBannerHtml();
+    banner.setAttribute("aria-label", tx("community.banner.aria", "Macro day-trading channel"));
+    banner.hidden = hidden;
+    banner.classList.toggle("is-visible", shown);
+  }
+
+  if (window.GsxI18n) GsxI18n.onChange(rerender);
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);

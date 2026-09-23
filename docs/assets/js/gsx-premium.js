@@ -75,6 +75,20 @@
     }
   };
 
+  function tx(key, fallback) {
+    return window.GsxI18n ? GsxI18n.t(key, fallback) : fallback;
+  }
+
+  function resolveIntent(name) {
+    var base = INTENTS[name] || INTENTS.default;
+    var id = INTENTS[name] ? name : "default";
+    var out = {};
+    Object.keys(base).forEach(function (field) {
+      out[field] = tx("premium." + id + "." + field, base[field]);
+    });
+    return out;
+  }
+
   function esc(s) {
     return String(s)
       .replace(/&/g, "&amp;")
@@ -103,7 +117,7 @@
   }
 
   function renderMountHtml(intent) {
-    var cfg = INTENTS[intent] || INTENTS.default;
+    var cfg = resolveIntent(intent);
     var lead = cfg.lead
       ? '<p class="gsx-premium-lead">' + esc(cfg.lead) + "</p>"
       : "";
@@ -143,25 +157,26 @@
       hint(cfg.mentorHint) +
       "</a>" +
       "</div>" +
-      '<p class="gsx-premium-fine">Register at <a href="' +
-      esc(SERVICE_HOME_URL) +
-      '" ' +
-      linkAttrs() +
-      ">gsignalx.cloud</a> → Profile → My Services to book Premium Velocity.</p>" +
+      '<p class="gsx-premium-fine">' +
+      esc(tx("premium.fine", "Register at {site} → Profile → My Services to book Premium Velocity.")).replace(
+        "{site}",
+        '<a href="' + esc(SERVICE_HOME_URL) + '" ' + linkAttrs() + ">gsignalx.cloud</a>"
+      ) +
+      "</p>" +
       "</div>"
     );
   }
 
   function renderRailHtml() {
-    var cfg = INTENTS.banner;
+    var cfg = resolveIntent("banner");
     return (
       '<div class="gsx-premium-rail-inner">' +
       '<div class="gsx-premium-rail-copy">' +
-      '<span class="gsx-premium-rail-kicker">Upgrade</span>' +
+      '<span class="gsx-premium-rail-kicker">' + esc(tx("premium.rail.kicker", "Upgrade")) + "</span>" +
       '<span class="gsx-premium-rail-label">' +
       esc(cfg.lead) +
       "</span>" +
-      '<span class="gsx-premium-rail-sub">Book install &amp; maintenance · optional mentorship</span>' +
+      '<span class="gsx-premium-rail-sub">' + esc(tx("premium.rail.sub", "Book install & maintenance · optional mentorship")) + "</span>" +
       "</div>" +
       '<div class="gsx-premium-actions compact">' +
       '<a class="gsx-premium-btn book primary" href="' +
@@ -185,7 +200,9 @@
       ">" +
       esc(cfg.mentorLabel) +
       "</a>" +
-      '<button type="button" class="gsx-premium-btn dismiss" id="gsxPremiumRailDismiss" title="Hide for this browser">Dismiss</button>' +
+      '<button type="button" class="gsx-premium-btn dismiss" id="gsxPremiumRailDismiss" title="' +
+      esc(tx("premium.rail.dismissTitle", "Hide for this browser")) +
+      '">' + esc(tx("premium.rail.dismiss", "Dismiss")) + "</button>" +
       "</div></div>"
     );
   }
@@ -233,7 +250,7 @@
     rail.id = "gsxPremiumRail";
     rail.className = "gsx-premium-rail";
     rail.setAttribute("role", "complementary");
-    rail.setAttribute("aria-label", "Managed Premium upgrade");
+    rail.setAttribute("aria-label", tx("premium.rail.aria", "Managed Premium upgrade"));
     rail.innerHTML = renderRailHtml();
     if (isDismissed()) {
       rail.hidden = true;
@@ -266,6 +283,21 @@
     setDismissed: setDismissed,
     boot: boot
   };
+
+  function rerender() {
+    fillMounts();
+    var rail = document.getElementById("gsxPremiumRail");
+    if (!rail) return;
+    var hidden = rail.hidden;
+    var shown = rail.classList.contains("is-visible");
+    rail.innerHTML = renderRailHtml();
+    rail.setAttribute("aria-label", tx("premium.rail.aria", "Managed Premium upgrade"));
+    rail.hidden = hidden;
+    rail.classList.toggle("is-visible", shown);
+    bindDismiss(rail);
+  }
+
+  if (window.GsxI18n) GsxI18n.onChange(rerender);
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
