@@ -4,7 +4,7 @@
   "installCommand": "",
   "buildCommand": "",
   "outputDirectory": "docs",
-  "ignoreCommand": "if [ -z \"$VERCEL_GIT_PREVIOUS_SHA\" ]; then exit 1; fi; git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" \"$VERCEL_GIT_COMMIT_SHA\" -- docs vercel.json .vercelignore || exit 1",
+  "ignoreCommand": "git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 1; if [ -z \"$VERCEL_GIT_PREVIOUS_SHA\" ]; then exit 1; fi; git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" \"$VERCEL_GIT_COMMIT_SHA\" -- docs vercel.json .vercelignore || exit 1",
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
