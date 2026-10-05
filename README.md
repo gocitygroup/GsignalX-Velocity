@@ -19,6 +19,7 @@ Default lot **FIXED 0.01**. Bus schema **v1**. Current cut **Velocity 2.14**.
 4. [Risk guidance blocks / digital tip spec](docs/risk/RISK_GUIDANCE_SPEC.md)
 
 Cloud conviction signals (optional): [gsignalx.cloud](https://www.gsignalx.cloud/)  
+**Cloud trading connector (optional):** with a registered [trade.gsignalx.cloud](https://trade.gsignalx.cloud) account, mint a token on **Connect PC → Use Velocity toolkit**, allow WebRequest for `https://trade-api.gsignalx.cloud`, then set Service inputs `InpCloudEmail` / `InpCloudBaseUrl` / `InpWorkerRegistrationToken`. No Go/Python connector download. See [docs/plans/CLOUD_CONNECTOR_PLAN.md](docs/plans/CLOUD_CONNECTOR_PLAN.md).  
 Chart publication (trend-following foundation): [GsignalX on TradingView](https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/) — visual thesis check; does not place MT5 orders.
 
 **Managed Premium** (hosted & maintained for clients): [Premium Users Manual](https://ccity.gsignalx.cloud/Gsignalx_Velocity_Premium_Users_Manual#welcome) · [Install & maintenance pricing](https://www.gsignalx.cloud/pricing) · Register on [gsignalx.cloud](https://www.gsignalx.cloud/) → **Profile → My Services** to book. Optional [mentorship](https://www.gsignalx.cloud/mentorship) for process and market understanding (educational — no profit guarantee).

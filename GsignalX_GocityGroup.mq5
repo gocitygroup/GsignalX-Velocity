@@ -49,6 +49,7 @@
 #include <GSignalX/TgDealWatch.mqh>
 #include <GSignalX/CloseTrigger.mqh>
 #include <GSignalX/SettingsNotify.mqh>
+#include <GSignalX/HostConfig.mqh>
 #include <GSignalX/StrategicStop.mqh>
 
 //+------------------------------------------------------------------+
@@ -383,7 +384,7 @@ void GsxPublishBusState(const string tradeState)
       return;
    gBusLastPub = TimeCurrent();
 
-   // v2.01 DRY: publish via shared SignalBus (same schema as Service)
+   // DRY: shared SignalBus schema + one gate/dir view for write + local grade
    GsxEngineState st;
    st.n = 0;
    st.ready = false;
@@ -404,58 +405,45 @@ void GsxPublishBusState(const string tradeState)
       st.ready = true;
      }
 
-   string owner = (ChartServiceOwnsFleet() ? "service" : "chart");
-   GsxSignalBusWriteSymbol(_Symbol, st, InpMagic, InpMinAgree,
-                           (InpMode == GSX_SIMPLE ? 0 : 1),
-                           EffectiveMaxSpreadPt(), InpStaleTickSec,
-                           gIgnoreSpread,
-                           InpSwingStartHour, InpSwingEndHour, InpCryptoExtraList,
-                           true, gClosedCount, gClosedWins, gClosedLosses,
-                           gClosedRealized, owner);
-   GsxSignalBusHeartbeat("gsignalx");
-
-   // Local grade line for chart strip (advisory)
-   string reason = "";
-   bool marketOpen = IsMarketOpen(reason);
-   bool cryptoExempt = CryptoWeekendExempt();
-   bool weekend = false;
-   bool fridayLate = false;
-   MqlDateTime dt;
-   TimeToStruct(TimeCurrent(), dt);
-   if((dt.day_of_week == SATURDAY || dt.day_of_week == SUNDAY) && !cryptoExempt)
-      weekend = true;
-   if(InpFridayStop && !cryptoExempt &&
-      dt.day_of_week == FRIDAY && dt.hour >= InpFridayStopHr)
-      fridayLate = true;
-
-   int bull = 0, bear = 0, direction = 0;
+   int joinDir = 0;
    if(st.ready)
      {
-      bull = (st.ppDir[0] == 1 ? 1 : 0) + (st.stDir[0] == 1 ? 1 : 0) + (st.sbtDir[0] == 1 ? 1 : 0);
-      bear = 3 - bull;
-      if(bull > bear) direction = 1;
-      else if(bear > bull) direction = -1;
-      if(st.lastSigDir != 0) direction = st.lastSigDir;
+      int bull = (st.ppDir[0] == 1 ? 1 : 0) + (st.stDir[0] == 1 ? 1 : 0) +
+                 (st.sbtDir[0] == 1 ? 1 : 0);
+      int bear = 3 - bull;
+      if(bull > bear) joinDir = 1;
+      else if(bear > bull) joinDir = -1;
+      if(st.lastSigDir != 0) joinDir = st.lastSigDir;
      }
-   long spread = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
-   bool stale = false;
-   datetime tickTime = (datetime)SymbolInfoInteger(_Symbol, SYMBOL_TIME);
-   if(InpStaleTickSec > 0 && tickTime > 0 && (TimeCurrent() - tickTime) > InpStaleTickSec)
-      stale = true;
 
+   string owner = (ChartServiceOwnsFleet() ? "service" : "chart");
+   GsxBusFleetSnap snap;
+   GsxBusFleetSnapBuild(InpMagic, snap);
+   GsxBusSymbolView view;
+   GsxBusBuildSymbolView(_Symbol, st, InpMinAgree, EffectiveMaxSpreadPt(),
+                         InpStaleTickSec, gIgnoreSpread,
+                         InpSwingStartHour, InpSwingEndHour, InpCryptoExtraList,
+                         InpFridayStop, InpFridayStopHr, joinDir, view);
+   GsxSignalBusWriteFromView(_Symbol, st, view, InpMagic,
+                             (InpMode == GSX_SIMPLE ? 0 : 1), InpCryptoExtraList,
+                             true, gClosedCount, gClosedWins, gClosedLosses,
+                             gClosedRealized, owner, snap, "", true);
+   GsxSignalBusHeartbeat("gsignalx");
+
+   // Local grade reuses the same view (no second gate/dir fork)
    GsxEntryInputs ein;
-   ein.direction = direction;
-   ein.bull = bull;
-   ein.bear = bear;
+   ein.direction = view.direction;
+   ein.bull = view.bull;
+   ein.bear = view.bear;
    ein.min_agree = InpMinAgree;
-   ein.in_session = marketOpen && !weekend;
-   ein.weekend = weekend;
-   ein.friday_late = fridayLate;
-   ein.swing_window = GsxInSwingWindow(TimeCurrent(), InpSwingStartHour, InpSwingEndHour);
-   ein.spread_pt = (int)spread;
-   ein.max_spread_pt = EffectiveMaxSpreadPt();
-   ein.stale_tick = stale;
-   ein.market_open = marketOpen;
+   ein.in_session = view.marketOpen && !view.weekend;
+   ein.weekend = view.weekend;
+   ein.friday_late = view.fridayLate;
+   ein.swing_window = view.swing;
+   ein.spread_pt = (int)view.spread;
+   ein.max_spread_pt = view.effMaxSpread;
+   ein.stale_tick = view.stale;
+   ein.market_open = view.marketOpen;
    GsxGradeResult local = GsxGradeEntry(ein);
 
    if(InpBusShowGrades)
@@ -3184,17 +3172,10 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
 //+------------------------------------------------------------------+
 GsxTgConfig ChartBuildTgConfig()
   {
-   GsxTgConfig c;
-   c.enable = InpTgEnable;
-   c.botToken = InpTgBotToken;
-   c.chatId1 = InpTgChatId1;
-   c.chatId2 = InpTgChatId2;
-   c.chatId3 = InpTgChatId3;
-   c.silentStartHourGmt = InpTgSilentStartHourGMT;
-   c.silentEndHourGmt = InpTgSilentEndHourGMT;
-   c.ratePerMin = InpTgRatePerMin;
-   c.maxRetries = InpTgMaxRetries;
-   return(c);
+   return(GsxHostMakeTgConfig(InpTgEnable, InpTgBotToken,
+                              InpTgChatId1, InpTgChatId2, InpTgChatId3,
+                              InpTgSilentStartHourGMT, InpTgSilentEndHourGMT,
+                              InpTgRatePerMin, InpTgMaxRetries));
   }
 
 void ChartTgTick()

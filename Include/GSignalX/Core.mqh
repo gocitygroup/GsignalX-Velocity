@@ -98,6 +98,7 @@ int            g_coreNewOnboard = 0; // symbols added this reload (ADD → refre
 ulong          g_coreCycleStartMs = 0;
 ulong          g_coreLastCycleMs  = 0;
 datetime       g_coreCycleLogAt   = 0;
+datetime       g_coreLastPendingHygiene = 0; // throttle stale/orphan order walks
 int            g_coreHostTag    = GSX_HOST_SERVICE; // desk vs service OWN claimer
 bool           g_coreClaimedOwn = false;
 // v2.14.1: one fleet scan per cycle — reused by PublishBus / PublishBusIndex / fills
@@ -108,6 +109,10 @@ GsxAccountBook  g_coreAccountBook;
 int             g_coreBookBuilds = 0;
 int             g_coreCompactTips = 0;
 int             g_coreBusWrites = 0;
+bool            g_coreInCycle = false;
+GsxPropState    g_corePropSt;
+bool            g_corePropLoaded = false;
+bool            g_corePropDirty = false;
 
 //+------------------------------------------------------------------+
 void GsxEngStateCopy(const GsxEngineState &src, GsxEngineState &dst)
@@ -853,8 +858,31 @@ void GsxCoreDeinit()
       GsxFleetHostClear(InpMagic);
      }
    g_coreClaimedOwn = false;
+   g_corePropLoaded = false;
+   g_corePropDirty = false;
    PrintFormat("GsignalX Core: deinit host=%s OWN=0 magic=%I64d recalcs=%d fills=%d",
                GsxFleetHostLabel(g_coreHostTag), InpMagic, g_engineRecalcs, g_fleetFills);
+  }
+
+void GsxCorePropNoteEntry()
+  {
+   if(!g_corePropLoaded)
+     {
+      GsxPropLoad(InpMagic, g_corePropSt);
+      g_corePropLoaded = true;
+     }
+   GsxPropOnNewEntry(g_corePropSt);
+   g_corePropDirty = true;
+   // Hot path: one GV so MAX_TRADES is visible mid-cycle; full save at cycle end
+   GsxPropGvSet(GsxPropGvTrades(InpMagic), (double)g_corePropSt.tradesToday);
+  }
+
+void GsxCorePropFlush()
+  {
+   if(!g_corePropDirty)
+      return;
+   GsxPropSave(InpMagic, g_corePropSt);
+   g_corePropDirty = false;
   }
 
 //+------------------------------------------------------------------+
@@ -995,13 +1023,8 @@ bool GsxCoreTryFillIndex(const int i, const GsxEntryParams &ep, const int target
       g_fleetActive = GsxFleetActivePairs(InpMagic);
       GsxCoreSetFillSkip(i, "");
       GsxRosterLastDirSet(InpMagic, sym, joinDir);
-      // v2.13: single source of truth for Prop MAX_TRADES counter
-      {
-         GsxPropState pst;
-         GsxPropLoad(InpMagic, pst);
-         GsxPropOnNewEntry(pst);
-         GsxPropSave(InpMagic, pst);
-      }
+      // v2.13: Prop MAX_TRADES — in-cycle RAM + flush once per Core cycle
+      GsxCorePropNoteEntry();
       if(onboard)
          GsxCoreMarkOnboardSettled(i);
       if(InpVerboseSignals)
@@ -1110,10 +1133,7 @@ void GsxCoreRefreshFleetSnap()
    // v2.15: one Positions+Orders walk fills book + bus fleet snap
    GsxAccountBookBuild(InpMagic, g_coreAccountBook);
    g_coreBookBuilds++;
-   g_coreFleetSnap.pl = g_coreAccountBook.pl;
-   g_coreFleetSnap.pos = g_coreAccountBook.posCount;
-   g_coreFleetSnap.active = GsxAccountBookActivePairs(g_coreAccountBook);
-   g_coreFleetSnap.valid = true;
+   GsxBusFleetSnapFromBook(g_coreAccountBook, g_coreFleetSnap);
    g_coreFleetSnapFresh = true;
    g_fleetActive = g_coreFleetSnap.active;
   }
@@ -1137,7 +1157,6 @@ bool GsxCorePublishBusIndex(const int i, const bool forceThrottleBypass)
          return(false);
      }
 
-   // Bus fingerprint/display uses class-aware ceiling so desk matches fill gate
    int maxSpBase = g_ignoreSpread ? 0 : InpMaxSpreadPt;
    int maxSp = (maxSpBase <= 0 ? 0 : GsxEffectiveMaxSpreadPt(g_roster[i], maxSpBase));
    GsxCoreEnsureFleetSnap();
@@ -1150,21 +1169,26 @@ bool GsxCorePublishBusIndex(const int i, const bool forceThrottleBypass)
    if(jd != 0)
       GsxRosterLastDirSet(InpMagic, g_roster[i], jd);
 
-   if(!GsxSignalBusWriteSymbolEx(g_roster[i], g_eng[i], InpMagic, InpMinAgree,
-                                 (int)InpMode, maxSp, InpStaleTickSec, g_ignoreSpread,
-                                 InpSwingStartHour, InpSwingEndHour, InpCryptoExtraList,
-                                 true, g_closedCount, g_closedWins, g_closedLosses,
-                                 g_closedRealized, "service", g_coreFleetSnap, skip, jd,
-                                 InpFridayStop, InpFridayStopHr, true))
+   // Gates once: fingerprint with majority/lastSig; write JSON uses joinDir
+   GsxBusSymbolView view;
+   GsxBusBuildSymbolView(g_roster[i], g_eng[i], InpMinAgree, maxSp, InpStaleTickSec,
+                         g_ignoreSpread, InpSwingStartHour, InpSwingEndHour,
+                         InpCryptoExtraList, InpFridayStop, InpFridayStopHr, 999, view);
+   string fp = GsxSignalBusFingerprintFromView(view) + "|" + skip + "|" + IntegerToString(jd);
+   if(g_busFp[i] == fp)
+      return(true); // already published — skip redundant onboard/force I/O
+
+   if(jd != 999)
+      view.direction = jd;
+
+   if(!GsxSignalBusWriteFromView(g_roster[i], g_eng[i], view, InpMagic, (int)InpMode,
+                                 InpCryptoExtraList, true, g_closedCount, g_closedWins,
+                                 g_closedLosses, g_closedRealized, "service",
+                                 g_coreFleetSnap, skip, true))
       return(false);
 
-   string fp = GsxSignalBusFingerprint(g_roster[i], g_eng[i], InpMinAgree, maxSp,
-                                       InpStaleTickSec, g_ignoreSpread,
-                                       InpSwingStartHour, InpSwingEndHour,
-                                       InpCryptoExtraList, InpFridayStop, InpFridayStopHr);
-   g_busFp[i] = fp + "|" + skip + "|" + IntegerToString(jd);
+   g_busFp[i] = fp;
    g_coreBusWrites++;
-   // Do not stamp throttle on forced onboard writes — cycle still needs full bus/heartbeat
    if(!forceThrottleBypass)
       g_busLastPub = TimeCurrent();
    return(true);
@@ -1174,7 +1198,6 @@ void GsxCorePublishBus()
   {
    if(!InpBusEnable)
       return;
-   // Fast cadence for live desk direction (was 2s — caused STALE / blank DIR)
    if(g_busLastPub != 0 && TimeCurrent() - g_busLastPub < 1)
       return;
    g_busLastPub = TimeCurrent();
@@ -1183,9 +1206,7 @@ void GsxCorePublishBus()
    bool fullSync = (g_busLastFullSync == 0 ||
                     TimeCurrent() - g_busLastFullSync >= GsxCoreBusFullSyncSec());
 
-   // Reuse cycle fleet snap (refresh only if nothing published yet this cycle)
    GsxCoreEnsureFleetSnap();
-
    GsxCoreEnsureSlotMeta(ArraySize(g_roster));
 
    int wrote = 0;
@@ -1197,11 +1218,12 @@ void GsxCorePublishBus()
       string whyJ = "";
       int jd = GsxCoreJoinDir(i, whyJ);
       int maxSp = (maxSpBase <= 0 ? 0 : GsxEffectiveMaxSpreadPt(g_roster[i], maxSpBase));
-      string fp = GsxSignalBusFingerprint(g_roster[i], g_eng[i], InpMinAgree, maxSp,
-                                          InpStaleTickSec, g_ignoreSpread,
-                                          InpSwingStartHour, InpSwingEndHour,
-                                          InpCryptoExtraList, InpFridayStop, InpFridayStopHr);
-      fp += "|" + skip + "|" + IntegerToString(jd);
+
+      GsxBusSymbolView view;
+      GsxBusBuildSymbolView(g_roster[i], g_eng[i], InpMinAgree, maxSp, InpStaleTickSec,
+                            g_ignoreSpread, InpSwingStartHour, InpSwingEndHour,
+                            InpCryptoExtraList, InpFridayStop, InpFridayStopHr, 999, view);
+      string fp = GsxSignalBusFingerprintFromView(view) + "|" + skip + "|" + IntegerToString(jd);
       bool dirty = fullSync || (g_busFp[i] != fp);
       if(!dirty)
          continue;
@@ -1209,14 +1231,14 @@ void GsxCorePublishBus()
       if(jd != 0)
          GsxRosterLastDirSet(InpMagic, g_roster[i], jd);
 
-      // v2.15: tid path on full sync or first register; mirror always
+      if(jd != 999)
+         view.direction = jd;
+
       bool writeTid = fullSync || (g_busFp[i] == "");
-      if(GsxSignalBusWriteSymbolEx(g_roster[i], g_eng[i], InpMagic, InpMinAgree,
-                                   (int)InpMode, maxSp, InpStaleTickSec, g_ignoreSpread,
-                                   InpSwingStartHour, InpSwingEndHour, InpCryptoExtraList,
-                                   true, g_closedCount, g_closedWins, g_closedLosses,
-                                   g_closedRealized, "service", g_coreFleetSnap, skip, jd,
-                                   InpFridayStop, InpFridayStopHr, writeTid))
+      if(GsxSignalBusWriteFromView(g_roster[i], g_eng[i], view, InpMagic, (int)InpMode,
+                                   InpCryptoExtraList, true, g_closedCount, g_closedWins,
+                                   g_closedLosses, g_closedRealized, "service",
+                                   g_coreFleetSnap, skip, writeTid))
         {
          g_busFp[i] = fp;
          wrote++;
@@ -1299,6 +1321,10 @@ void GsxCoreApplyOnboardKicks()
 
 void GsxCoreCycle()
   {
+   if(g_coreInCycle)
+      return;
+   g_coreInCycle = true;
+
    g_coreCycleStartMs = GetTickCount();
    g_coreFleetSnapFresh = false; // force one fleet scan this cycle (reuse thereafter)
    // 0) live roster hot-reload from Dashboard / chart strip
@@ -1365,30 +1391,45 @@ void GsxCoreCycle()
    int done = 0;
    int advanced = 0;
 
-   // 2a) v2.07/v2.08 onboard priority: force first calc + immediate bus (+ fill if RUN)
-   // Keep pending through gate skips (spread/claim/busy); settle on fill or terminal skip.
-   // Fill order prefers under-represented classes so FX seed does not starve CMD/CR.
+   // 2a) v2.07/v2.08 onboard priority: first calc + immediate bus (+ fill if RUN)
+   // Cap engine rebuilds by budget — keep pending across cycles (ADD burst safe).
+   // Ready slots publish/fill without burning calc budget. Class-diversity order.
    int onboardIdx[];
    ArrayResize(onboardIdx, 0);
+   int pendingOrder[];
+   ArrayResize(pendingOrder, 0);
    for(int i = 0; i < n; i++)
      {
       if(!g_onboardPending[i] || g_roster[i] == "")
          continue;
-      bool ok = GsxCoreCalcIndex(i, deskTf, ep);
-      done++;
-      if(ok || g_eng[i].ready)
+      int pk = ArraySize(pendingOrder);
+      ArrayResize(pendingOrder, pk + 1);
+      pendingOrder[pk] = i;
+     }
+   if(ArraySize(pendingOrder) > 1)
+      GsxCoreSortFillOrderByClassDiversity(pendingOrder);
+
+   for(int oi = 0; oi < ArraySize(pendingOrder); oi++)
+     {
+      int i = pendingOrder[oi];
+      bool needCalc = (!g_eng[i].ready || g_eng[i].symbol != g_roster[i]);
+      if(needCalc)
         {
-         GsxCorePublishBusIndex(i, true);
-         int k = ArraySize(onboardIdx);
-         ArrayResize(onboardIdx, k + 1);
-         onboardIdx[k] = i;
+         if(done >= budget)
+            continue; // defer remaining onboard calcs to next cycle
+         bool ok = GsxCoreCalcIndex(i, deskTf, ep);
+         done++;
+         if(!(ok || g_eng[i].ready))
+           {
+            GsxCoreSetFillSkip(i, (g_eng[i].status != "" ? g_eng[i].status : "waiting for history"));
+            GsxCorePublishBusIndex(i, true);
+            continue;
+           }
         }
-      else
-        {
-         // History / not ready: keep onboard pending; still publish so desk shows COMPUTE/skip
-         GsxCoreSetFillSkip(i, (g_eng[i].status != "" ? g_eng[i].status : "waiting for history"));
-         GsxCorePublishBusIndex(i, true);
-        }
+      GsxCorePublishBusIndex(i, true);
+      int k = ArraySize(onboardIdx);
+      ArrayResize(onboardIdx, k + 1);
+      onboardIdx[k] = i;
      }
    if(g_svcEnabled && InpFleetEnable && ArraySize(onboardIdx) > 0)
      {
@@ -1477,17 +1518,22 @@ void GsxCoreCycle()
       g_coreCycleLogAt = TimeCurrent();
      }
 
-   // Pending lifetime hygiene even while STOPPED (orphans from REM / old chart)
-   GsxCleanupStalePendings(g_gsxTrade, InpMagic, InpPendMaxAgeMin);
-   GsxCleanupOrphanPendings(g_gsxTrade, InpMagic, g_roster);
+   // Pending lifetime hygiene (throttled — STOP edge already cleans orphans)
+   if(g_coreLastPendingHygiene == 0 ||
+      TimeCurrent() - g_coreLastPendingHygiene >= 10)
+     {
+      GsxCleanupStalePendings(g_gsxTrade, InpMagic, InpPendMaxAgeMin);
+      GsxCleanupOrphanPendings(g_gsxTrade, InpMagic, g_roster);
+      g_coreLastPendingHygiene = TimeCurrent();
+     }
    // Re-anchor catastrophe SL after pending fills (one-shot per ticket)
    GsxStratStopRefreshFilled(g_gsxTrade, InpMagic, InpVerboseSignals);
 
-   if(!g_svcEnabled)
-      return;
+   if(g_svcEnabled)
+      GsxCoreFleetFillOnce(); // onboard + dir-change preferred
 
-   // 5) fleet fill — up to N attempts/cycle; onboard + dir-change preferred
-   GsxCoreFleetFillOnce();
+   GsxCorePropFlush();
+   g_coreInCycle = false;
   }
 
 #endif // GSX_CORE_MQH

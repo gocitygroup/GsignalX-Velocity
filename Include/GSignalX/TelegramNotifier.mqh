@@ -13,7 +13,7 @@
 #include <GSignalX/BrandLinks.mqh>
 
 #define GSX_TG_QUEUE_CAP   10
-#define GSX_TG_HTTP_TO_MS  5000
+#define GSX_TG_HTTP_TO_MS  3000
 #define GSX_TG_RATE_WIN_S  60
 #define GSX_TG_DEAL_STALE_SEC 45
 #define GSX_TG_REVERIFY_COOLDOWN_S 60
@@ -664,7 +664,8 @@ bool GsxTgOverflowPending()
   }
 
 //+------------------------------------------------------------------+
-//| maxMsgs: 0 = drain eligible; 1+ = hard cap (Service hot path).    |
+//| maxMsgs: 0 = drain eligible; 1+ = hard HTTP-post cap (hot path). |
+//| Fan-out to N chats is split across ticks when maxMsgs>0.         |
 //+------------------------------------------------------------------+
 void GsxTgProcessQueueEx(const GsxTgConfig &cfg, const int maxMsgs)
   {
@@ -677,10 +678,11 @@ void GsxTgProcessQueueEx(const GsxTgConfig &cfg, const int maxMsgs)
 
    int maxRetries = GsxTgEffectiveRetries(cfg);
    int safety = g_tgCount;
-   int processed = 0;
+   int httpUsed = 0;
+   int httpBudget = (maxMsgs > 0 ? maxMsgs : 100000);
    while(g_tgCount > 0 && safety-- > 0)
      {
-      if(maxMsgs > 0 && processed >= maxMsgs)
+      if(httpUsed >= httpBudget)
          break;
 
       GsxTgQueuedMsg msg = g_tgQueue[g_tgHead];
@@ -715,14 +717,26 @@ void GsxTgProcessQueueEx(const GsxTgConfig &cfg, const int maxMsgs)
          continue;
         }
 
+      // Hot path: one HTTP post; remaining chats re-enqueued as single-chat items
+      string deferChats[];
+      ArrayResize(deferChats, 0);
+      int sendN = nChats;
+      if(maxMsgs > 0 && nChats > 1)
+        {
+         sendN = 1;
+         ArrayResize(deferChats, nChats - 1);
+         for(int d = 1; d < nChats; d++)
+            deferChats[d - 1] = chats[d];
+        }
+
       bool allOk = true;
       string err;
       string keepSkip = "";
       if(StringFind(g_tgLastError, "skip ") == 0)
          keepSkip = g_tgLastError;
-      for(int c = 0; c < nChats; c++)
+      for(int c = 0; c < sendN; c++)
         {
-         if(!GsxTgRateAllow(cfg))
+         if(httpUsed >= httpBudget || !GsxTgRateAllow(cfg))
            {
             allOk = false;
             break;
@@ -736,17 +750,19 @@ void GsxTgProcessQueueEx(const GsxTgConfig &cfg, const int maxMsgs)
                g_tgStatus = GSX_TG_CONNECTED;
             break;
            }
+         httpUsed++;
          GsxTgRateMark();
          g_tgSentToday++;
          g_tgTotalSent++;
          g_tgLastError = keepSkip; // preserve skip-warn; clear transient send errors
         }
 
-      processed++;
       if(allOk)
         {
          g_tgHead = (g_tgHead + 1) % GSX_TG_QUEUE_CAP;
          g_tgCount--;
+         for(int d = 0; d < ArraySize(deferChats); d++)
+            GsxTgEnqueueChat(deferChats[d], msg.text);
         }
       else
         {

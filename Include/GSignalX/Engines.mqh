@@ -187,16 +187,27 @@ void GsxEngStdDevSeries(const double &src[], const int n, const int period, doub
    ArrayInitialize(out, 0.0);
    if(period <= 1 || n < period)
       return;
-   for(int i = period - 1; i < n; i++)
+   // Rolling sum / sumSq — O(n), bit-same population stdev as nested mean loop
+   double sum = 0.0;
+   double sumSq = 0.0;
+   for(int i = 0; i < n; i++)
      {
-      double mean = 0.0;
-      for(int k = i - period + 1; k <= i; k++)
-         mean += src[k];
-      mean /= period;
-      double acc = 0.0;
-      for(int k = i - period + 1; k <= i; k++)
-         acc += (src[k] - mean) * (src[k] - mean);
-      out[i] = MathSqrt(acc / period);   // population stdev, matches Pine ta.stdev
+      sum += src[i];
+      sumSq += src[i] * src[i];
+      if(i >= period)
+        {
+         double old = src[i - period];
+         sum -= old;
+         sumSq -= old * old;
+        }
+      if(i >= period - 1)
+        {
+         double mean = sum / period;
+         double var = sumSq / period - mean * mean;
+         if(var < 0.0)
+            var = 0.0; // float noise
+         out[i] = MathSqrt(var);
+        }
      }
   }
 

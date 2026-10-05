@@ -69,13 +69,20 @@ function Clean-Terminal([string] $dataPath) {
     return
   }
 
+  # Keep in sync with Deploy-GSignalX.ps1 $fileMap (+ compiled .ex5/.log)
   $files = @(
     "Experts\GsignalX_GocityGroup.mq5",
     "Experts\GsignalX_GocityGroup.ex5",
     "Experts\GsignalX_GocityGroup.log",
+    "Experts\GsignalX_Multisymbol_Dashboard.mq5",
+    "Experts\GsignalX_Multisymbol_Dashboard.ex5",
+    "Experts\GsignalX_Multisymbol_Dashboard.log",
     "Experts\ProfitScouter_DollarTarget.mq5",
     "Experts\ProfitScouter_DollarTarget.ex5",
     "Experts\ProfitScouter_DollarTarget.log",
+    "Services\GsignalX_Service.mq5",
+    "Services\GsignalX_Service.ex5",
+    "Services\GsignalX_Service.log",
     "Services\ProfitScouter_Service.mq5",
     "Services\ProfitScouter_Service.ex5",
     "Services\ProfitScouter_Service.log",

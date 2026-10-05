@@ -339,19 +339,7 @@ void GsxSettingsAuditAppend(const string kind, const string body)
    j += GsxJsonKV_S("kind", kind);
    j += GsxJsonKV_S("body", body, false);
    j += "}\n";
-   int h = FileOpen(rel, FILE_READ | FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON);
-   if(h == INVALID_HANDLE)
-     {
-      h = FileOpen(rel, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_REWRITE);
-      if(h == INVALID_HANDLE)
-         return;
-      FileWriteString(h, j);
-      FileClose(h);
-      return;
-     }
-   FileSeek(h, 0, SEEK_END);
-   FileWriteString(h, j);
-   FileClose(h);
+   GsxBusAppendLineAtomic(rel, j);
   }
 
 bool GsxSettingsShouldSend(const string fp, const bool force)

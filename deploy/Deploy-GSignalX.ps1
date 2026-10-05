@@ -57,10 +57,24 @@ function Deploy-ToTerminal([string] $dataPath) {
     @{ Src = "Include\ProfitScouter"; Dst = "Include\ProfitScouter" }
   )
   foreach ($pair in $includePairs) {
+    $srcDir = Join-Path $RepoRoot $pair.Src
     $dstDir = Join-Path $mql5 $pair.Dst
+    if (-not (Test-Path -LiteralPath $srcDir)) {
+      throw "Missing include tree: $srcDir"
+    }
     New-Item -ItemType Directory -Force -Path $dstDir | Out-Null
-    Copy-Item (Join-Path $RepoRoot ($pair.Src + "\*.mqh")) $dstDir -Force
-    Write-Host ("  + {0}\ (*.mqh)" -f $pair.Dst)
+    # Recursive: top-level *.mqh plus subtrees (e.g. Include\GSignalX\Cloud\*.mqh)
+    Get-ChildItem -LiteralPath $srcDir -Recurse -Filter *.mqh -File | ForEach-Object {
+      $rel = $_.FullName.Substring($srcDir.Length).TrimStart('\', '/')
+      $target = Join-Path $dstDir $rel
+      $targetParent = Split-Path -Parent $target
+      if (-not (Test-Path -LiteralPath $targetParent)) {
+        New-Item -ItemType Directory -Force -Path $targetParent | Out-Null
+      }
+      Copy-Item -LiteralPath $_.FullName -Destination $target -Force
+    }
+    $mqhCount = @(Get-ChildItem -LiteralPath $srcDir -Recurse -Filter *.mqh -File).Count
+    Write-Host ("  + {0}\ ({1} *.mqh, recursive)" -f $pair.Dst, $mqhCount)
   }
 
   $fileMap = @(

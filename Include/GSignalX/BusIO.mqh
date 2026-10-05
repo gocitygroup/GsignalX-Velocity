@@ -50,7 +50,19 @@ void GsxBusFreshestCachePut(const string symbolCanon, const string body, const d
          g_gsxFreshestMapN++;
         }
       else
-         idx = (int)(now % GSX_BUS_FRESHEST_CACHE_MAX); // overwrite round-robin slot
+        {
+         // LRU: overwrite oldest tick stamp (was round-robin thrash under large rosters)
+         idx = 0;
+         ulong oldest = g_gsxFreshestTicks[0];
+         for(int i = 1; i < GSX_BUS_FRESHEST_CACHE_MAX; i++)
+           {
+            if(g_gsxFreshestTicks[i] < oldest)
+              {
+               oldest = g_gsxFreshestTicks[i];
+               idx = i;
+              }
+           }
+        }
       g_gsxFreshestCanons[idx] = symbolCanon;
      }
    g_gsxFreshestBodies[idx] = body;
@@ -90,6 +102,8 @@ bool GsxEnsureFolderTree(const string relativeFilePath)
    return true;
   }
 
+string GsxBusReadAll(const string relativePath); // defined below (WriteAtomic fallback)
+
 //+------------------------------------------------------------------+
 //| Write tmp then FileMove with FILE_REWRITE — no delete gap.        |
 //+------------------------------------------------------------------+
@@ -108,22 +122,40 @@ bool GsxBusWriteAtomic(const string relativePath, const string body)
    if(FileMove(tmp, FILE_COMMON, relativePath, FILE_REWRITE))
       return true;
 
-   // Fallback: rewrite target in place (target never deleted first)
-   int h2 = FileOpen(tmp, FILE_READ | FILE_TXT | FILE_ANSI | FILE_COMMON);
-   if(h2 == INVALID_HANDLE)
+   // Fallback: rewrite target in place (no delete-gap; sized read — not line concat)
+   string data = GsxBusReadAll(tmp);
+   if(data == "" && FileIsExist(tmp, FILE_COMMON))
+     {
+      FileDelete(tmp, FILE_COMMON);
       return false;
-   string data = "";
-   while(!FileIsEnding(h2))
-      data += FileReadString(h2) + "\n";
-   FileClose(h2);
+     }
 
    int h3 = FileOpen(relativePath, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_REWRITE);
    if(h3 == INVALID_HANDLE)
+     {
+      FileDelete(tmp, FILE_COMMON);
       return false;
+     }
    FileWriteString(h3, data);
    FileClose(h3);
    FileDelete(tmp, FILE_COMMON);
    return true;
+  }
+
+// Append one line via read + atomic replace (safe under multi-writer FILE_COMMON).
+bool GsxBusAppendLineAtomic(const string relativePath, const string line)
+  {
+   if(line == "")
+      return(false);
+   string existing = GsxBusReadAll(relativePath);
+   if(existing != "" &&
+      StringGetCharacter(existing, StringLen(existing) - 1) != '\n')
+      existing += "\n";
+   string add = line;
+   if(StringLen(add) > 0 &&
+      StringGetCharacter(add, StringLen(add) - 1) != '\n')
+      add += "\n";
+   return(GsxBusWriteAtomic(relativePath, existing + add));
   }
 
 string GsxBusReadAll(const string relativePath)
@@ -227,8 +259,13 @@ void GsxBusRegisterTid(const string tid)
       body += tid + "\n";
       if(GsxBusWriteAtomic(indexPath, body))
         {
-         GsxBusCacheAdd(g_gsxBusCachedTids, g_gsxBusCachedTidN, tid);
-         return;
+         // Verify-after-write: concurrent terminals may have overwritten us
+         string check = GsxBusReadAllRetry(indexPath, 1);
+         if(GsxBusLinePresent(check, tid))
+           {
+            GsxBusCacheAdd(g_gsxBusCachedTids, g_gsxBusCachedTidN, tid);
+            return;
+           }
         }
       Sleep(5);
      }
@@ -258,8 +295,12 @@ void GsxBusRegisterSignal(const string tid, const string symbolCanon)
       body += fileName + "\n";
       if(GsxBusWriteAtomic(listPath, body))
         {
-         GsxBusCacheAdd(g_gsxBusCachedSigKeys, g_gsxBusCachedSigN, cacheKey);
-         return;
+         string check = GsxBusReadAllRetry(listPath, 1);
+         if(GsxBusLinePresent(check, fileName))
+           {
+            GsxBusCacheAdd(g_gsxBusCachedSigKeys, g_gsxBusCachedSigN, cacheKey);
+            return;
+           }
         }
       Sleep(5);
      }

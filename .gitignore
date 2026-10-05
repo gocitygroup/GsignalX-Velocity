@@ -1,1 +1,14 @@
 *.log
+*.ex5
+*.ex4
+*.set
+.env
+.env.*
+*.token
+
+# Runtime secrets / local Common Files dumps (not Cloud source modules)
+**/worker.json
+**/control_panel.json
+**/GSignalX/cloud/v1/
+**/gsignalx/bus/
+**/gsignalx/control_panel.json

@@ -220,6 +220,7 @@ input int    InpEvtPollSec            = 30;
 #include <GSignalX/TgDealWatch.mqh>
 #include <GSignalX/SettingsNotify.mqh>
 #include <GSignalX/PropRisk.mqh>
+#include <GSignalX/HostConfig.mqh>
 #include <GSignalX/EventGate.mqh>
 #include <GSignalX/SessionClock.mqh>
 #include <GSignalX/BusIO.mqh>
@@ -242,38 +243,25 @@ int           g_tgWeekWins = 0;
 bool          g_deskCoreActive = false;
 ulong         g_deskLastCoreMs = 0;
 ulong         g_deskLastUiMs   = 0;
+bool          g_deskCoreKick   = false; // click → timer Core (no nested cycles)
 
 //+------------------------------------------------------------------+
 GsxTgConfig DashBuildTgConfig()
   {
-   GsxTgConfig c;
-   c.enable = InpTgEnable;
-   c.botToken = InpTgBotToken;
-   c.chatId1 = InpTgChatId1;
-   c.chatId2 = InpTgChatId2;
-   c.chatId3 = InpTgChatId3;
-   c.silentStartHourGmt = InpTgSilentStartHourGMT;
-   c.silentEndHourGmt = InpTgSilentEndHourGMT;
-   c.ratePerMin = InpTgRatePerMin;
-   c.maxRetries = InpTgMaxRetries;
-   return(c);
+   return(GsxHostMakeTgConfig(InpTgEnable, InpTgBotToken,
+                              InpTgChatId1, InpTgChatId2, InpTgChatId3,
+                              InpTgSilentStartHourGMT, InpTgSilentEndHourGMT,
+                              InpTgRatePerMin, InpTgMaxRetries));
   }
 
 GsxPropConfig DashBuildPropConfig()
   {
-   GsxPropConfig c;
-   c.enable = InpPropEnable;
-   c.magic = InpMagic;
-   c.dailyLossMoney = InpPropDailyLossMoney;
-   c.dailyLossPct = InpPropDailyLossPct;
-   c.maxEquityDdPct = InpPropMaxEquityDdPct;
-   c.maxTradesDay = InpPropMaxTradesDay;
-   c.maxDaySharePct = InpPropMaxDaySharePct;
-   c.dailyProfitTarget = InpPropDailyProfitTarget;
-   c.blockFridayHour = InpPropBlockFridayHour;
-   c.newsBlackoutMin = InpPropNewsBlackoutMin;
-   c.newsTimesCsv = InpPropNewsTimes;
-   return(c);
+   return(GsxHostMakePropConfig(InpPropEnable, InpMagic,
+                                InpPropDailyLossMoney, InpPropDailyLossPct,
+                                InpPropMaxEquityDdPct, InpPropMaxTradesDay,
+                                InpPropMaxDaySharePct, InpPropDailyProfitTarget,
+                                InpPropBlockFridayHour, InpPropNewsBlackoutMin,
+                                InpPropNewsTimes));
   }
 
 GsxEventGateConfig DashBuildEvtConfig()
@@ -590,13 +578,17 @@ void OnTimer()
    else if(g_deskCoreActive)
       DashStopCore("DeskExecute off");
 
-   if(g_deskCoreActive && (now - g_deskLastCoreMs >= (ulong)cycle))
+   // Core phase: cadence or click-kick (never nest with in-cycle guard)
+   if(g_deskCoreActive &&
+      (g_deskCoreKick || (now - g_deskLastCoreMs >= (ulong)cycle)))
      {
+      g_deskCoreKick = false;
       g_deskLastCoreMs = now;
       DashPublishDeskTimeframe();
       GsxCoreCycle();
      }
 
+   // UI phase: independent budget from Core
    if(now - g_deskLastUiMs < (ulong)uiMs)
       return;
    g_deskLastUiMs = now;
@@ -658,11 +650,7 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                        " PROP CLEAR + PLAY armed";
       GsxSettingsAnnounce("PROP CLEAR");
       if(g_deskCoreActive)
-        {
-         DashPublishDeskTimeframe();
-         GsxCoreCycle();
-         g_deskLastCoreMs = GetTickCount();
-        }
+         g_deskCoreKick = true; // next timer tick runs Core (no nested cycle)
       DashRefreshPanel(true);
       return;
      }
@@ -705,13 +693,9 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
      {
       if(id == CHARTEVENT_OBJECT_CLICK && sparam == "GSXMS_BTN_EVT")
          DashPollEvents(true);
-      // Immediate Core pass after PLAY/ADD so fills are not UI-cadence delayed
+      // Immediate Core pass after PLAY/ADD — kick timer (guards nested cycles)
       if(g_deskCoreActive && id == CHARTEVENT_OBJECT_CLICK)
-        {
-         DashPublishDeskTimeframe();
-         GsxCoreCycle();
-         g_deskLastCoreMs = GetTickCount();
-        }
+         g_deskCoreKick = true;
       DashRefreshPanel(true);
      }
   }

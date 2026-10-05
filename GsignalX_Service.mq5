@@ -185,9 +185,20 @@ input int    InpPropBlockFridayHour   = -1;    // -1=OFF
 input int    InpPropNewsBlackoutMin   = 0;
 input string InpPropNewsTimes         = "";
 
+input group "16) GsignalX cloud connector (trade-api)"
+input bool   InpCloudEnable              = false;
+input string InpCloudEmail               = "";
+input string InpCloudBaseUrl             = "https://trade-api.gsignalx.cloud";
+input string InpWorkerRegistrationToken  = "";
+input int    InpCloudPollSec             = 2;
+input bool   InpCloudAllowRemoteOrders   = true;
+input bool   InpCloudAllowRemoteCloses   = false;
+
 #include <GSignalX/Core.mqh>
 #include <GSignalX/TelegramNotifier.mqh>
 #include <GSignalX/PropRisk.mqh>
+#include <GSignalX/HostConfig.mqh>
+#include <GSignalX/Cloud/CloudLoop.mqh>
 
 GsxTgConfig   g_svcTgCfg;
 GsxPropConfig g_svcPropCfg;
@@ -198,37 +209,24 @@ bool          g_svcTgLastOwn = false;
 int           g_svcYieldHits = 0;   // v2.13 hysteresis toward Desk yield
 int           g_svcReclaimHits = 0; // v2.13 hysteresis toward reclaim
 ulong         g_svcYieldAtMs = 0;
+GsxCloudRuntime g_cloudRt;
 
 GsxTgConfig SvcBuildTgConfig()
   {
-   GsxTgConfig c;
-   c.enable = InpTgEnable;
-   c.botToken = InpTgBotToken;
-   c.chatId1 = InpTgChatId1;
-   c.chatId2 = InpTgChatId2;
-   c.chatId3 = InpTgChatId3;
-   c.silentStartHourGmt = InpTgSilentStartHourGMT;
-   c.silentEndHourGmt = InpTgSilentEndHourGMT;
-   c.ratePerMin = InpTgRatePerMin;
-   c.maxRetries = InpTgMaxRetries;
-   return(c);
+   return(GsxHostMakeTgConfig(InpTgEnable, InpTgBotToken,
+                              InpTgChatId1, InpTgChatId2, InpTgChatId3,
+                              InpTgSilentStartHourGMT, InpTgSilentEndHourGMT,
+                              InpTgRatePerMin, InpTgMaxRetries));
   }
 
 GsxPropConfig SvcBuildPropConfig()
   {
-   GsxPropConfig c;
-   c.enable = InpPropEnable;
-   c.magic = InpMagic;
-   c.dailyLossMoney = InpPropDailyLossMoney;
-   c.dailyLossPct = InpPropDailyLossPct;
-   c.maxEquityDdPct = InpPropMaxEquityDdPct;
-   c.maxTradesDay = InpPropMaxTradesDay;
-   c.maxDaySharePct = InpPropMaxDaySharePct;
-   c.dailyProfitTarget = InpPropDailyProfitTarget;
-   c.blockFridayHour = InpPropBlockFridayHour;
-   c.newsBlackoutMin = InpPropNewsBlackoutMin;
-   c.newsTimesCsv = InpPropNewsTimes;
-   return(c);
+   return(GsxHostMakePropConfig(InpPropEnable, InpMagic,
+                                InpPropDailyLossMoney, InpPropDailyLossPct,
+                                InpPropMaxEquityDdPct, InpPropMaxTradesDay,
+                                InpPropMaxDaySharePct, InpPropDailyProfitTarget,
+                                InpPropBlockFridayHour, InpPropNewsBlackoutMin,
+                                InpPropNewsTimes));
   }
 
 void SvcTgWarnThrottled(const string body)
@@ -241,24 +239,27 @@ void SvcTgWarnThrottled(const string body)
    GsxTgNotifyWarn(g_svcTgCfg, body);
   }
 
+// v2.13: Desk OWN + desk-sourced heartbeat (not any-tid HB)
+bool SvcDeskAliveNow()
+  {
+   return(GsxFleetPeerHostOwns(InpMagic, GSX_HOST_DESK) &&
+          GsxBusHeartbeatFreshFromSource(5, "gsignalx-desk"));
+  }
+
 void SvcPropTick()
   {
    if(!InpPropEnable)
       return;
-   if(g_svcPropLast != 0 && TimeCurrent() - g_svcPropLast < 2)
+   // Desk owns Prop eval while DeskExecute is alive (avoid dual HistorySelect)
+   if(InpYieldToDesk && SvcDeskAliveNow())
+      return;
+   if(g_svcPropLast != 0 && TimeCurrent() - g_svcPropLast < 5)
       return;
    g_svcPropLast = TimeCurrent();
    g_svcPropCfg = SvcBuildPropConfig();
    bool became = false;
    if(GsxPropEvaluate(g_svcPropCfg, g_svcPropSt, became) && became)
       SvcTgWarnThrottled("PROP soft STOP — " + g_svcPropSt.reason);
-  }
-
-// v2.13: Desk OWN + desk-sourced heartbeat (not any-tid HB)
-bool SvcDeskAliveNow()
-  {
-   return(GsxFleetPeerHostOwns(InpMagic, GSX_HOST_DESK) &&
-          GsxBusHeartbeatFreshFromSource(5, "gsignalx-desk"));
   }
 
 void SvcTgTick()
@@ -287,10 +288,31 @@ void SvcTgTick()
   }
 
 //+------------------------------------------------------------------+
+void SvcCloudInit()
+  {
+   GsxCloudRuntimeClear(g_cloudRt);
+   g_cloudRt.cfg.enable = InpCloudEnable;
+   g_cloudRt.cfg.email = InpCloudEmail;
+   g_cloudRt.cfg.baseUrl = InpCloudBaseUrl;
+   g_cloudRt.cfg.registrationToken = InpWorkerRegistrationToken;
+   g_cloudRt.cfg.runtime = "velocity";
+   g_cloudRt.cfg.agentVersion = "velocity-2.15";
+   g_cloudRt.cfg.workerName = "velocity";
+   g_cloudRt.cfg.capacity = 1;
+   g_cloudRt.cfg.pollSec = InpCloudPollSec;
+   g_cloudRt.cfg.allowRemoteOrders = InpCloudAllowRemoteOrders;
+   g_cloudRt.cfg.allowRemoteCloses = InpCloudAllowRemoteCloses;
+   g_cloudRt.cfg.pushSignals = false;
+   if(InpCloudEnable)
+      PrintFormat("GsignalX cloud: enabled base=%s email=%s runtime=velocity",
+                  InpCloudBaseUrl, InpCloudEmail);
+  }
+
 void OnStart()
   {
    g_svcTgCfg = SvcBuildTgConfig();
    g_svcPropCfg = SvcBuildPropConfig();
+   SvcCloudInit();
    GsxPropLoad(InpMagic, g_svcPropSt);
    if(g_svcPropSt.locked &&
       (g_svcPropSt.reason == "EQUITY_DD" || InpPropMaxEquityDdPct <= 0.0))
@@ -346,6 +368,8 @@ void OnStart()
          continue;
         }
 
+      ulong loopStart = GetTickCount();
+
       // Yield immediately when Desk owns; reclaim only after hysteresis (v2.14)
       if(InpYieldToDesk)
         {
@@ -382,8 +406,28 @@ void OnStart()
       SvcPropTick();
       if(coreOn)
          GsxCoreCycle();
-      SvcTgTick();
-      Sleep(ms);
+
+      // Defer Cloud/TG HTTP when Core is heavy or onboard burst is active
+      bool heavy = (g_coreLastCycleMs >= 80) ||
+                   (g_coreBurstBudgetCycles > 0) ||
+                   GsxCoreAnyOnboardPending();
+      if(!heavy)
+        {
+         SvcTgTick();
+         if(InpCloudEnable)
+            GsxCloudTick(g_cloudRt, InpMagic);
+        }
+      else
+        {
+         // Still refresh TG status GV cheaply; skip WebRequest drain this tick
+         GsxTgPublishStatus(InpMagic);
+        }
+
+      ulong elapsed = GetTickCount() - loopStart;
+      int sleepMs = ms - (int)elapsed;
+      if(sleepMs < 1)
+         sleepMs = 1;
+      Sleep(sleepMs);
      }
 
    GsxTgDeinit(g_svcTgCfg, 0.0);

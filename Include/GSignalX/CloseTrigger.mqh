@@ -183,19 +183,7 @@ void GsxCtAuditAppend(const GsxCloseTriggerEvent &e)
    j += GsxJsonKV_I("deal_reason", e.dealReason, false);
    j += "}\n";
 
-   int h = FileOpen(rel, FILE_READ | FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON);
-   if(h == INVALID_HANDLE)
-     {
-      h = FileOpen(rel, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_REWRITE);
-      if(h == INVALID_HANDLE)
-         return;
-      FileWriteString(h, j);
-      FileClose(h);
-      return;
-     }
-   FileSeek(h, 0, SEEK_END);
-   FileWriteString(h, j);
-   FileClose(h);
+   GsxBusAppendLineAtomic(rel, j);
   }
 
 string GsxCtTagFromDealReason(const long reason)

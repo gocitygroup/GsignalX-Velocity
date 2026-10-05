@@ -619,6 +619,12 @@ function Confirm-Files {
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\TelegramNotifier.mqh") "Include GSignalX\TelegramNotifier.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\Engines.mqh") "Include GSignalX\Engines.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\Core.mqh") "Include GSignalX\Core.mqh" | Out-Null
+  Test-PathMark (Join-Path $mql5 "Include\GSignalX\Cloud\CloudLoop.mqh") "Include GSignalX\Cloud\CloudLoop.mqh" | Out-Null
+  Test-PathMark (Join-Path $mql5 "Include\GSignalX\Cloud\CloudHttp.mqh") "Include GSignalX\Cloud\CloudHttp.mqh" | Out-Null
+  Test-PathMark (Join-Path $mql5 "Include\GSignalX\Cloud\CloudAuth.mqh") "Include GSignalX\Cloud\CloudAuth.mqh" | Out-Null
+  Test-PathMark (Join-Path $RepoRoot "Include\GSignalX\Cloud\CloudLoop.mqh") "Repo Cloud\CloudLoop.mqh" | Out-Null
+  Test-PathMark (Join-Path $mql5 "Include\GSignalX\HostConfig.mqh") "Include GSignalX\HostConfig.mqh" | Out-Null
+  Test-PathMark (Join-Path $RepoRoot "Include\GSignalX\HostConfig.mqh") "Repo HostConfig.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\EntryExec.mqh") "Include GSignalX\EntryExec.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\RosterStore.mqh") "Include GSignalX\RosterStore.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\MultisymbolPanel.mqh") "Include GSignalX\MultisymbolPanel.mqh" | Out-Null

@@ -9,6 +9,12 @@
 
 #include <GSignalX/Fleet.mqh>
 
+#define GSX_PROP_HIST_REFRESH_SEC 20
+
+datetime g_gsxPropHistAt     = 0;
+long     g_gsxPropHistMagic  = 0;
+datetime g_gsxPropHistDayKey = 0;
+
 //+------------------------------------------------------------------+
 struct GsxPropConfig
   {
@@ -308,14 +314,20 @@ bool GsxPropEvaluate(const GsxPropConfig &cfg, GsxPropState &st, bool &becameLoc
 
    GsxPropEnsureDayWeek(st);
 
-   // refresh realized from history (UTC day/week keys mapped via TimeGMT epochs;
-   // HistorySelect uses server time — approximate with current day/week keys)
-   datetime dayFrom  = st.dayKey;
-   datetime weekFrom = st.weekKey;
-   // convert GMT epoch keys to a usable HistorySelect window: use TimeCurrent day/week
-   // when broker TZ differs, still approximate via keys stored as GMT midnights
-   st.dayRealized  = GsxPropMagicRealizedSince(cfg.magic, dayFrom);
-   st.weekRealized = GsxPropMagicRealizedSince(cfg.magic, weekFrom);
+   // Throttle HistorySelect walks (day+week) — equity/trade gates use cached realized
+   bool histDue = (g_gsxPropHistMagic != cfg.magic ||
+                   g_gsxPropHistDayKey != st.dayKey ||
+                   g_gsxPropHistAt == 0 ||
+                   TimeCurrent() - g_gsxPropHistAt >= GSX_PROP_HIST_REFRESH_SEC);
+   if(histDue)
+     {
+      // UTC day/week keys → HistorySelect window (broker TZ approximate)
+      st.dayRealized  = GsxPropMagicRealizedSince(cfg.magic, st.dayKey);
+      st.weekRealized = GsxPropMagicRealizedSince(cfg.magic, st.weekKey);
+      g_gsxPropHistAt = TimeCurrent();
+      g_gsxPropHistMagic = cfg.magic;
+      g_gsxPropHistDayKey = st.dayKey;
+     }
 
    double eq = AccountInfoDouble(ACCOUNT_EQUITY);
    if(eq > st.dayPeakEquity)
