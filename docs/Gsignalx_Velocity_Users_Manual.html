@@ -952,6 +952,14 @@ tr:nth-child(even) td { background: var(--row-stripe); }
             <strong data-i18n="ui.links.service.title">Executive / Service</strong>
             <span>gsignalx.cloud</span>
           </a>
+          <a role="menuitem" class="header-link-item" href="#cloud" data-tab="cloud">
+            <strong data-i18n="ui.links.cloud.title">Cloud trading</strong>
+            <span data-i18n="ui.links.cloud.hint">Service connector · remote book</span>
+          </a>
+          <a role="menuitem" class="header-link-item" href="https://trade.gsignalx.cloud" target="_blank" rel="noopener noreferrer">
+            <strong data-i18n="ui.links.trade.title">Trading dashboard</strong>
+            <span>trade.gsignalx.cloud</span>
+          </a>
           <a role="menuitem" class="header-link-item" href="https://www.gsignalx.cloud/mentorship" target="_blank" rel="noopener noreferrer">
             <strong data-i18n="ui.links.mentor.title">Mentorship</strong>
             <span data-i18n="ui.links.mentor.hint">Process &amp; market understanding</span>
@@ -1042,7 +1050,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
         <div class="card">
           <h3 data-i18n="welcome.h32">🔶 Velocity (this toolkit)</h3>
           <p data-i18n-html="welcome.p6">Local MT5 momentum engines + ProfitScouter <strong>cash floors</strong>. Use it to <em>execute the session</em> and bank closed P/L with process — then get the ping on Telegram.</p>
-          <p data-i18n="welcome.p7">Runs on your Windows terminal — no cloud order routing in this build. Self-serve City path.</p>
+          <p data-i18n-html="welcome.p7">Runs on your Windows terminal. Optional <strong>cloud connector</strong> via <code>GsignalX_Service</code> — see <a href="#cloud" data-tab="cloud">Cloud Trading</a>.</p>
         </div>
         <div class="card">
           <h3 data-i18n="welcome.h33">⭐ Velocity Premium (managed)</h3>
@@ -1077,7 +1085,12 @@ tr:nth-child(even) td { background: var(--row-stripe); }
 
       <div class="callout" data-i18n-html="welcome.div4">
         <strong class="label">Senior desk rule</strong>
-        Executive informs conviction. Velocity owns the book on MT5. Managed Premium is the hosted desk path. The TradingView publication is a chart-study companion — it does <strong>not</strong> place MT5 orders. Do not confuse cloud signal pages or the Pine script with the EA’s local PP / SuperTrend / SuperBollinger engines — they can agree; only Velocity places and harvests tickets in this toolkit.
+        <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">gsignalx.cloud</a> (Executive) informs <em>conviction signals</em> — it does not route MT5 orders. <a href="https://trade.gsignalx.cloud" target="_blank" rel="noopener noreferrer">trade.gsignalx.cloud</a> is the <em>trading dashboard</em> (Connect PC + manage book) when Service cloud inputs are enabled. Velocity owns execution and harvest on MT5. Managed Premium is the hosted desk path. TradingView is chart-study only — not MT5 orders. Do not confuse Pine or signal pages with the EA’s local PP / SuperTrend / SuperBollinger engines.
+      </div>
+
+      <div class="callout gold" data-i18n-html="welcome.div6">
+        <strong class="label">Optional: Cloud trading</strong>
+        Register on <a href="https://trade.gsignalx.cloud" target="_blank" rel="noopener noreferrer">trade.gsignalx.cloud</a>, mint a token under <strong>Connect PC → Use Velocity toolkit</strong>, allow WebRequest for <code>https://trade-api.gsignalx.cloud</code>, then enable group <strong>16</strong> on <strong>GsignalX_Service</strong>. Step-by-step: <a href="https://github.com/gocitygroup/GsignalX-Velocity/blob/main/docs/CLOUD_TRADING.md" target="_blank" rel="noopener noreferrer">CLOUD_TRADING.md</a> · <a href="#cloud" data-tab="cloud">this chapter</a>. Pair with <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">Executive signals</a> for bias — educational, no profit guarantee.
       </div>
 
       <h2 data-i18n="welcome.h22">Who this manual is for</h2>
@@ -2092,6 +2105,75 @@ cd GsignalX-Velocity</pre>
       <p data-i18n-html="telegram.p3">Full house rules and join links: <a href="#community" data-tab="community">Desk community</a>.</p>
     </section>
 
+    <!-- CLOUD -->
+    <section class="panel" id="cloud" data-title="Cloud Trading" data-short="Cloud">
+      <div class="kicker" data-i18n="cloud.kicker1">Trading dashboard · remote book</div>
+      <h1 data-i18n="cloud.h11">Connect Velocity to the cloud</h1>
+      <p class="lede" data-i18n-html="cloud.lede1">Keep Velocity running on your Windows PC and <strong>open or manage orders</strong> from a browser or phone on the GSignalX trading dashboard. No extra connector download — <code>GsignalX_Service</code> is the worker.</p>
+
+      <div class="callout gold" data-i18n-html="cloud.div1">
+        <strong class="label">Three sites — do not mix them up</strong>
+        <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">gsignalx.cloud</a> = Executive <strong>conviction signals</strong> (no MT5 orders) ·
+        <a href="https://trade.gsignalx.cloud" target="_blank" rel="noopener noreferrer">trade.gsignalx.cloud</a> = <strong>trading dashboard</strong> (register, Connect PC, manage book) ·
+        <code>https://trade-api.gsignalx.cloud</code> = control-plane API (MT5 WebRequest allowlist only).
+      </div>
+
+      <h2 data-i18n="cloud.h21">Connect in 4 steps</h2>
+      <ol>
+        <li data-i18n-html="cloud.li1"><strong>Register</strong> on <a href="https://trade.gsignalx.cloud" target="_blank" rel="noopener noreferrer">trade.gsignalx.cloud</a> with the email you will use in MT5.</li>
+        <li data-i18n-html="cloud.li2">Open <strong>Connect PC → Use Velocity toolkit</strong> and mint a <strong>worker registration token</strong>. Copy it once — treat it like a password.</li>
+        <li data-i18n-html="cloud.li3">MT5 → Tools → Options → Expert Advisors → allow WebRequest for <code>https://trade-api.gsignalx.cloud</code>.</li>
+        <li data-i18n-html="cloud.li4">Attach <strong>GsignalX_Service</strong>, open input group <strong>16) GsignalX cloud connector (trade-api)</strong>, fill the fields below, set <code>InpCloudEnable=true</code>, Algo Trading ON. The dashboard shows your toolkit <strong>online</strong>.</li>
+      </ol>
+
+      <h2 data-i18n="cloud.h22">Where to put your email, URL and token</h2>
+      <table>
+        <thead><tr><th data-i18n="cloud.th1">Dashboard name</th><th data-i18n="cloud.th2">MT5 input (Service)</th><th data-i18n="cloud.th3">What to enter</th></tr></thead>
+        <tbody>
+          <tr><td data-i18n="cloud.td1">Enable</td><td><code>InpCloudEnable</code></td><td data-i18n-html="cloud.td2"><strong>true</strong> to connect</td></tr>
+          <tr><td data-i18n="cloud.td3">Account email</td><td><code>InpCloudEmail</code></td><td data-i18n="cloud.td4">Same email as your trading dashboard account (the one that minted the token)</td></tr>
+          <tr><td data-i18n="cloud.td5">CONTROL_PLANE_URL</td><td><code>InpCloudBaseUrl</code></td><td data-i18n-html="cloud.td6">Default <code>https://trade-api.gsignalx.cloud</code> — leave as-is</td></tr>
+          <tr><td data-i18n="cloud.td7">WORKER_REGISTRATION_TOKEN</td><td><code>InpWorkerRegistrationToken</code></td><td data-i18n="cloud.td8">Paste the one-time token from Connect PC</td></tr>
+          <tr><td data-i18n="cloud.td9">Remote opens</td><td><code>InpCloudAllowRemoteOrders</code></td><td data-i18n-html="cloud.td10">Default <strong>true</strong> — market orders from the dashboard</td></tr>
+          <tr><td data-i18n="cloud.td11">Remote closes</td><td><code>InpCloudAllowRemoteCloses</code></td><td data-i18n-html="cloud.td12">Default <strong>false</strong> — ProfitScouter keeps owning exits</td></tr>
+          <tr><td data-i18n="cloud.td13">Poll seconds</td><td><code>InpCloudPollSec</code></td><td data-i18n="cloud.td14">Default 2 — usually leave as-is</td></tr>
+        </tbody>
+      </table>
+      <p data-i18n-html="cloud.p1">After the first successful connect, Service saves a worker token on this PC. Restarting MT5 <strong>resumes</strong> without a new registration token unless you revoke the worker on the dashboard.</p>
+
+      <h2 data-i18n="cloud.h23">What you can do from the dashboard</h2>
+      <ul>
+        <li data-i18n="cloud.li5">See toolkit online / offline and your claimed MT5 account (login + server).</li>
+        <li data-i18n-html="cloud.li6">Place <strong>market orders</strong> when remote opens are allowed — they use your Velocity magic so ProfitScouter can harvest them.</li>
+        <li data-i18n-html="cloud.li7">Modify SL/TP on a ticket. Close all / profitable / losing / single ticket only when <code>InpCloudAllowRemoteCloses=true</code>.</li>
+        <li data-i18n="cloud.li8">Drive run / stop from the dashboard control panel in cloud or hybrid mode.</li>
+      </ul>
+
+      <div class="callout" data-i18n-html="cloud.div2">
+        <strong class="label">Safe defaults</strong>
+        Keep remote closes <strong>OFF</strong> unless you have a deliberate reason — Scouter Profit CASH is the normal exit. Topology A still applies. Never share the registration token, bot tokens, or screenshots of inputs in community chats. Cloud trading does not guarantee fills, profit, or prop-rule compliance.
+      </div>
+
+      <h2 data-i18n="cloud.h24">Troubleshooting</h2>
+      <table>
+        <thead><tr><th data-i18n="cloud.th4">Symptom</th><th data-i18n="cloud.th5">Check</th></tr></thead>
+        <tbody>
+          <tr><td data-i18n="cloud.td15">Toolkit offline</td><td data-i18n-html="cloud.td16">Algo Trading ON · Service running · <code>InpCloudEnable=true</code></td></tr>
+          <tr><td data-i18n="cloud.td17">WebRequest error in Service log</td><td data-i18n-html="cloud.td18">Allowlist exactly <code>https://trade-api.gsignalx.cloud</code></td></tr>
+          <tr><td data-i18n="cloud.td19">Enroll rejected</td><td data-i18n="cloud.td20">Email must match the minting account; token not reused after revoke</td></tr>
+          <tr><td data-i18n="cloud.td21">Remote order ignored</td><td data-i18n="cloud.td22">Remote opens allowed? Prop soft lock? Desk/Service ownership?</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout gold" data-i18n-html="cloud.div3">
+        <strong class="label">Get started</strong>
+        <a href="https://trade.gsignalx.cloud" target="_blank" rel="noopener noreferrer">Open the trading dashboard →</a> ·
+        <a href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">Read Executive signals →</a> ·
+        <a href="https://github.com/gocitygroup/GsignalX-Velocity/blob/main/docs/CLOUD_TRADING.md" target="_blank" rel="noopener noreferrer">Full guide (CLOUD_TRADING.md)</a>.
+        Educational — no profit guarantee.
+      </div>
+    </section>
+
     <!-- PROP -->
     <section class="panel" id="prop" data-title="Prop Behaviour" data-short="Prop">
       <div class="kicker" data-i18n="prop.kicker1">Small &amp; medium prop firms</div>
@@ -2264,7 +2346,7 @@ cd GsignalX-Velocity</pre>
             (visual thesis — does not place MT5 orders)</li>
           <li data-i18n="samples.li16">Enter manually or with GSignalX on selective PLAY charts that match Executive bias</li>
           <li data-i18n="samples.li17">Keep ProfitScouter_Service running for dollar targets regardless</li>
-          <li data-i18n="samples.li18">Do not expect the MQ5 files to poll the cloud API in this release</li>
+          <li data-i18n-html="samples.li18">Optional: enable <strong>GsignalX_Service</strong> cloud inputs (<a href="#cloud" data-tab="cloud">Cloud Trading</a>) for remote opens from <a href="https://trade.gsignalx.cloud" target="_blank" rel="noopener noreferrer">trade.gsignalx.cloud</a> — Executive on gsignalx.cloud stays conviction-only</li>
         </ul>
       </div>
 

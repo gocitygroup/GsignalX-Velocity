@@ -26,6 +26,6 @@
   "samples.li15": "أكّد اختيارياً بنية الاتجاه في <a href=\"https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/\" target=\"_blank\" rel=\"noopener\">منشور TradingView</a> (أطروحة بصرية — لا يضع أوامر MT5)",
   "samples.li16": "ادخل يدوياً أو عبر GSignalX على مخططات PLAY انتقائية تطابق انحياز Executive",
   "samples.li17": "أبقِ ProfitScouter_Service قيد التشغيل لأهداف الدولار في كل الأحوال",
-  "samples.li18": "لا تتوقع أن تستعلم ملفات MQ5 من واجهة API السحابية في هذا الإصدار",
+  "samples.li18": "اختياري: فعّل مدخلات السحابة في <strong>GsignalX_Service</strong> (<a href=\"#cloud\" data-tab=\"cloud\">التداول السحابي</a>) لفتح صفقات عن بُعد من <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">trade.gsignalx.cloud</a> — يبقى Executive على gsignalx.cloud للقناعة فقط",
   "samples.div1": "<strong class=\"label\">أرسل إعدادك</strong> بعد النظرة الكلية لليوم في القناة، شارك وصفة محلولة (الأزواج، أرضية Profit CASH، fleet، نافذة الجلسة — بلا تسجيل دخول ولا رموز) في <strong>مجموعة التداول</strong> حتى تقارن المكاتب الأخرى."
 }

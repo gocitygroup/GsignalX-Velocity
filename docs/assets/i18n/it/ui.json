@@ -174,5 +174,11 @@
   "chapters.risk-checks.title": "Checklist di rischio",
   "chapters.risk-checks.short": "Checklist",
   "chapters.appendix.title": "Appendice",
-  "chapters.appendix.short": "Appendice"
+  "chapters.appendix.short": "Appendice",
+  "ui.links.cloud.title": "Trading in cloud",
+  "ui.links.cloud.hint": "Connettore Service · book remoto",
+  "ui.links.trade.title": "Dashboard di trading",
+  "chapters.cloud.title": "Trading in cloud",
+  "chapters.cloud.short": "Cloud",
+  "ui.splash.cloud": "<strong>Novità — Trading in cloud:</strong> gestisci il tuo book Velocity dalla <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">dashboard di trading</a> · <a href=\"Gsignalx_Velocity_Users_Manual.html#cloud\">come collegarsi</a> · segnali su <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>."
 }

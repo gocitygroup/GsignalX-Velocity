@@ -26,6 +26,6 @@
   "samples.li15": "Confirma opcionalmente la estructura de tendencia en la <a href=\"https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/\" target=\"_blank\" rel=\"noopener\">publicación de TradingView</a> (tesis visual — no coloca órdenes MT5)",
   "samples.li16": "Entra manualmente o con GSignalX en gráficos PLAY selectivos que coincidan con el sesgo Executive",
   "samples.li17": "Mantén ProfitScouter_Service en ejecución para los objetivos en dólares de todos modos",
-  "samples.li18": "No esperes que los archivos MQ5 consulten la API en la nube en esta versión",
+  "samples.li18": "Opcional: active las entradas cloud de <strong>GsignalX_Service</strong> (<a href=\"#cloud\" data-tab=\"cloud\">Trading en la nube</a>) para aperturas remotas desde <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">trade.gsignalx.cloud</a> — Executive en gsignalx.cloud sigue siendo solo convicción",
   "samples.div1": "<strong class=\"label\">Envía tu configuración</strong> Después del panorama macro del día en el canal, comparte una receta resuelta (pares, piso Profit CASH, fleet, ventana de sesión — sin login ni tokens) en el <strong>grupo de trading</strong> para que otras mesas puedan comparar."
 }

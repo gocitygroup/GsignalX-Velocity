@@ -174,5 +174,11 @@
   "chapters.risk-checks.title": "风险检查清单",
   "chapters.risk-checks.short": "清单",
   "chapters.appendix.title": "附录",
-  "chapters.appendix.short": "附录"
+  "chapters.appendix.short": "附录",
+  "ui.links.cloud.title": "云端交易",
+  "ui.links.cloud.hint": "Service 连接器 · 远程账簿",
+  "ui.links.trade.title": "交易仪表盘",
+  "chapters.cloud.title": "云端交易",
+  "chapters.cloud.short": "云端",
+  "ui.splash.cloud": "<strong>新功能 — 云端交易：</strong>通过<a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">交易仪表盘</a>管理你的 Velocity 账簿 · <a href=\"Gsignalx_Velocity_Users_Manual.html#cloud\">如何连接</a> · 信号见 <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>。"
 }

@@ -26,6 +26,6 @@
   "samples.li15": "При желании подтвердите структуру тренда в <a href=\"https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/\" target=\"_blank\" rel=\"noopener\">публикации TradingView</a> (визуальный тезис — не выставляет ордера MT5)",
   "samples.li16": "Входите вручную или через GSignalX на выборочных графиках PLAY, совпадающих со смещением Executive",
   "samples.li17": "Держите ProfitScouter_Service запущенным для долларовых целей в любом случае",
-  "samples.li18": "Не ожидайте, что файлы MQ5 будут опрашивать облачный API в этой версии",
+  "samples.li18": "Опционально: включите облачные параметры <strong>GsignalX_Service</strong> (<a href=\"#cloud\" data-tab=\"cloud\">Облачная торговля</a>) для удалённого открытия с <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">trade.gsignalx.cloud</a> — Executive на gsignalx.cloud остаётся только источником убеждённости",
   "samples.div1": "<strong class=\"label\">Отправьте свою настройку</strong> После макрообзора дня в канале поделитесь разобранным рецептом (пары, floor Profit CASH, fleet, окно сессии — без логина и токенов) в <strong>торговой группе</strong>, чтобы другие столы могли сравнить."
 }

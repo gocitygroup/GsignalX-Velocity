@@ -18,8 +18,8 @@ Default lot **FIXED 0.01**. Bus schema **v1**. Current cut **Velocity 2.14**.
 3. [Current RELEASE 2.14 — Best use](docs/RELEASE_v2.14_Input_Reliability.md)  
 4. [Risk guidance blocks / digital tip spec](docs/risk/RISK_GUIDANCE_SPEC.md)
 
-Cloud conviction signals (optional): [gsignalx.cloud](https://www.gsignalx.cloud/)  
-**Cloud trading connector (optional):** with a registered [trade.gsignalx.cloud](https://trade.gsignalx.cloud) account, mint a token on **Connect PC → Use Velocity toolkit**, allow WebRequest for `https://trade-api.gsignalx.cloud`, then set Service inputs `InpCloudEmail` / `InpCloudBaseUrl` / `InpWorkerRegistrationToken`. No Go/Python connector download. See [docs/plans/CLOUD_CONNECTOR_PLAN.md](docs/plans/CLOUD_CONNECTOR_PLAN.md).  
+**New — Cloud trading.** Keep Velocity running on your PC and open or manage orders from your phone on the [GSignalX trading dashboard](https://trade.gsignalx.cloud). Register, mint a token under **Connect PC → Use Velocity toolkit**, allow WebRequest for `https://trade-api.gsignalx.cloud`, then fill `GsignalX_Service` input group **16** (`InpCloudEmail`, `InpCloudBaseUrl`, `InpWorkerRegistrationToken`). No extra connector download. Guide: [CLOUD_TRADING.md](docs/CLOUD_TRADING.md) · Manual [Cloud Trading](docs/Gsignalx_Velocity_Users_Manual.html#cloud) (7 languages).  
+Conviction signals (separate — no MT5 orders): [gsignalx.cloud](https://www.gsignalx.cloud/) Executive.  
 Chart publication (trend-following foundation): [GsignalX on TradingView](https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/) — visual thesis check; does not place MT5 orders.
 
 **Managed Premium** (hosted & maintained for clients): [Premium Users Manual](https://ccity.gsignalx.cloud/Gsignalx_Velocity_Premium_Users_Manual#welcome) · [Install & maintenance pricing](https://www.gsignalx.cloud/pricing) · Register on [gsignalx.cloud](https://www.gsignalx.cloud/) → **Profile → My Services** to book. Optional [mentorship](https://www.gsignalx.cloud/mentorship) for process and market understanding (educational — no profit guarantee).
@@ -62,6 +62,7 @@ Practice packs: [PRACTICE $20/$50/$100](docs/PRACTICE_LIVE_SIM_20_50_100.md) · 
 
 - [Velocity manual (HTML)](docs/Gsignalx_Velocity_Users_Manual.html) — primary  
 - [WINDOWS_DEPLOY_SIMPLE.md](docs/WINDOWS_DEPLOY_SIMPLE.md) — ZIP → double-click → MT5  
+- [CLOUD_TRADING.md](docs/CLOUD_TRADING.md) — connect Service to the trading dashboard (email, URL, token)  
 - [RELEASE_v2.14](docs/RELEASE_v2.14_Input_Reliability.md) — current production cut  
 - [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md) — Confirm gates  
 - [DEPLOYMENT.md](DEPLOYMENT.md) — technical install  

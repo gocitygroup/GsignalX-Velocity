@@ -174,5 +174,11 @@
   "chapters.risk-checks.title": "Listas de control de riesgo",
   "chapters.risk-checks.short": "Listas",
   "chapters.appendix.title": "Apéndice",
-  "chapters.appendix.short": "Apéndice"
+  "chapters.appendix.short": "Apéndice",
+  "ui.links.cloud.title": "Trading en la nube",
+  "ui.links.cloud.hint": "Conector Service · libro remoto",
+  "ui.links.trade.title": "Panel de trading",
+  "chapters.cloud.title": "Trading en la nube",
+  "chapters.cloud.short": "Nube",
+  "ui.splash.cloud": "<strong>Nuevo — Trading en la nube:</strong> gestione su libro Velocity desde el <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">panel de trading</a> · <a href=\"Gsignalx_Velocity_Users_Manual.html#cloud\">cómo conectarse</a> · señales en <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>."
 }

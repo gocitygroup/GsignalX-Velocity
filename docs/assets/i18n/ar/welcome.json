@@ -23,7 +23,7 @@
   "welcome.p5": "<a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">افتح gsignalx.cloud →</a>",
   "welcome.h32": "🔶 Velocity (مجموعة الأدوات هذه)",
   "welcome.p6": "محركات زخم MT5 محلية + <strong>حدود CASH</strong> لدى ProfitScouter. استخدمها <em>لتنفيذ الجلسة</em> وتحصيل الربح/الخسارة المغلق بعملية واضحة — ثم يصل التنبيه على Telegram.",
-  "welcome.p7": "يعمل على طرفية Windows لديك — لا توجيه أوامر سحابي في هذا الإصدار. مسار City للخدمة الذاتية.",
+  "welcome.p7": "يعمل على منصتك في Windows. <strong>موصل سحابي</strong> اختياري عبر <code>GsignalX_Service</code> — راجع <a href=\"#cloud\" data-tab=\"cloud\">التداول السحابي</a>.",
   "welcome.h33": "⭐ Velocity Premium (مُدار)",
   "welcome.p8": "مكتب Premium مستضاف ومُصان للعملاء — دليل متداول Premium، والتثبيت والصيانة على GSignalX Service. سجّل → <strong>Profile → My Services</strong> للحجز.",
   "welcome.h34": "📈 منشور TradingView",
@@ -36,7 +36,7 @@
   "welcome.p13": "تدريب منظّم لانضباط الجلسة وعادات مخاطر أوضح — دعم تعليمي للعملية وفهم السوق. <strong>لا</strong> يضمن الربح.",
   "welcome.p14": "<a href=\"https://www.gsignalx.cloud/mentorship\" target=\"_blank\" rel=\"noopener noreferrer\">قدّم طلب الإرشاد →</a>",
   "welcome.div3": "<strong class=\"label\">Premium المُدار والخدمة الذاتية</strong> دليل City هذا هو مجموعة أدوات الخدمة الذاتية. تفضّل تثبيتًا وصيانة مستضافين؟ افتح <a href=\"https://ccity.gsignalx.cloud/Gsignalx_Velocity_Premium_Users_Manual#welcome\" target=\"_blank\" rel=\"noopener noreferrer\">دليل مستخدم Premium</a>، وراجع <a href=\"https://www.gsignalx.cloud/pricing\" target=\"_blank\" rel=\"noopener noreferrer\">الأسعار</a>، ثم سجّل على <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a> واحجز من <strong>Profile → My Services</strong>.",
-  "welcome.div4": "<strong class=\"label\">قاعدة المكتب الخبير</strong> Executive يشكّل القناعة. Velocity يملك الدفتر على MT5. Premium المُدار هو مسار المكتب المستضاف. منشور TradingView رفيق لدراسة الرسم — وهو <strong>لا</strong> يرسل أوامر MT5. لا تخلط بين صفحات الإشارات السحابية أو سكربت Pine ومحركات EA المحلية PP / SuperTrend / SuperBollinger — قد تتفق؛ وVelocity وحده يضع التذاكر ويحصدها في هذه الأدوات.",
+  "welcome.div4": "<strong class=\"label\">قاعدة المكتب الأول</strong> <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a> (Executive) يقدّم <em>إشارات القناعة</em> — ولا يوجّه أوامر MT5. <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">trade.gsignalx.cloud</a> هي <em>لوحة التداول</em> (Connect PC + إدارة المحفظة) عند تفعيل مدخلات Service السحابية. Velocity يملك التنفيذ وجني الأرباح على MT5. Premium المُدار هو مسار المكتب المُستضاف. TradingView لدراسة الرسم البياني فقط — بلا أوامر MT5. لا تخلط بين Pine أو صفحات الإشارات ومحركات EA المحلية PP / SuperTrend / SuperBollinger.",
   "welcome.h22": "لمن هذا الدليل",
   "welcome.th1": "المكتب",
   "welcome.th2": "كيفية استخدام Velocity",
@@ -52,5 +52,6 @@
   "welcome.td9": "المستثمر: Dashboard (أو التحويل إلى الرسم) · ملخصات + PROP · VERIFY أخضر (تحذير التخطي مقبول إلى أن ينفّذ ChatId2/3 الأمر <code>/start</code>) · <a href=\"#telegram\">الوصفة</a>",
   "welcome.h23": "كيفية التنقل",
   "welcome.p15": "استخدم <strong>علامات التبويب</strong> الذهبية في الرأس أو الشريط الأيسر. لوحة المفاتيح: <code>←</code> / <code>→</code> تنقل بين الأقسام. الروابط ذات التجزئة (مثل <code>#deploy</code>) تفتح الفصل الصحيح. الطباعة توسّع كل اللوحات.",
-  "welcome.div5": "<span class=\"node gold\">قناعة Executive</span> <span class=\"arrow\">→</span> <span class=\"node\">Velocity PLAY</span> <span class=\"arrow\">→</span> <span class=\"node\">المراكز</span> <span class=\"arrow\">→</span> <span class=\"node bull\">تحصيل Profit CASH</span> <span class=\"arrow\">→</span> <span class=\"node\">الربح/الخسارة المغلق</span>"
+  "welcome.div5": "<span class=\"node gold\">قناعة Executive</span> <span class=\"arrow\">→</span> <span class=\"node\">Velocity PLAY</span> <span class=\"arrow\">→</span> <span class=\"node\">المراكز</span> <span class=\"arrow\">→</span> <span class=\"node bull\">تحصيل Profit CASH</span> <span class=\"arrow\">→</span> <span class=\"node\">الربح/الخسارة المغلق</span>",
+  "welcome.div6": "<strong class=\"label\">اختياري: التداول السحابي</strong> سجّل في <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">trade.gsignalx.cloud</a>، وأنشئ رمزًا من <strong>Connect PC → Use Velocity toolkit</strong>، واسمح بـ WebRequest لـ <code>https://trade-api.gsignalx.cloud</code>، ثم فعّل المجموعة <strong>16</strong> في <strong>GsignalX_Service</strong>. خطوة بخطوة: <a href=\"https://github.com/gocitygroup/GsignalX-Velocity/blob/main/docs/CLOUD_TRADING.md\" target=\"_blank\" rel=\"noopener noreferrer\">CLOUD_TRADING.md</a> · <a href=\"#cloud\" data-tab=\"cloud\">هذا الفصل</a>. اقرنه مع <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">إشارات Executive</a> لتحديد الاتجاه — تعليمي، دون ضمان للربح."
 }

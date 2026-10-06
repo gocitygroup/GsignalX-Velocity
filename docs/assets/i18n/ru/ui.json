@@ -174,5 +174,11 @@
   "chapters.risk-checks.title": "Чек-листы риска",
   "chapters.risk-checks.short": "Чек-листы",
   "chapters.appendix.title": "Приложение",
-  "chapters.appendix.short": "Приложение"
+  "chapters.appendix.short": "Приложение",
+  "ui.links.cloud.title": "Облачная торговля",
+  "ui.links.cloud.hint": "Коннектор Service · удалённый портфель",
+  "ui.links.trade.title": "Торговая панель",
+  "chapters.cloud.title": "Облачная торговля",
+  "chapters.cloud.short": "Облако",
+  "ui.splash.cloud": "<strong>Новое — облачная торговля:</strong> управляйте портфелем Velocity из <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">торговой панели</a> · <a href=\"Gsignalx_Velocity_Users_Manual.html#cloud\">как подключиться</a> · сигналы на <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>."
 }

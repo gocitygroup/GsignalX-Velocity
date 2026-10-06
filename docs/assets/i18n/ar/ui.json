@@ -174,5 +174,11 @@
   "chapters.risk-checks.title": "قوائم فحص المخاطر",
   "chapters.risk-checks.short": "القوائم",
   "chapters.appendix.title": "ملحق",
-  "chapters.appendix.short": "ملحق"
+  "chapters.appendix.short": "ملحق",
+  "ui.links.cloud.title": "التداول السحابي",
+  "ui.links.cloud.hint": "موصل Service · محفظة عن بُعد",
+  "ui.links.trade.title": "لوحة التداول",
+  "chapters.cloud.title": "التداول السحابي",
+  "chapters.cloud.short": "السحابة",
+  "ui.splash.cloud": "<strong>جديد — التداول السحابي:</strong> أدر محفظة Velocity من <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">لوحة التداول</a> · <a href=\"Gsignalx_Velocity_Users_Manual.html#cloud\">طريقة الاتصال</a> · الإشارات على <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>."
 }

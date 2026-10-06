@@ -12,7 +12,7 @@
 (function () {
   var STORAGE_KEY = "gsx-velocity-lang";
   var HINT_KEY = "gsx-velocity-lang-hint";
-  var CACHE_VER = "2.14";
+  var CACHE_VER = "2.15";
   var PENDING_MS = 2500;
   var LOCALES = [
     { id: "en", code: "EN", name: "English", dir: "ltr" },

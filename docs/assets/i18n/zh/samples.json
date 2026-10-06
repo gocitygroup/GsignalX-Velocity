@@ -26,6 +26,6 @@
   "samples.li15": "可选地在 <a href=\"https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/\" target=\"_blank\" rel=\"noopener\">TradingView 发布</a>上确认趋势结构（可视化论点 — 不下 MT5 订单）",
   "samples.li16": "在与 Executive 偏差一致的选择性 PLAY 图表上，手动入场或使用 GSignalX",
   "samples.li17": "无论如何都让 ProfitScouter_Service 保持运行，以执行美元目标",
-  "samples.li18": "不要指望本版本中的 MQ5 文件会轮询云端 API",
+  "samples.li18": "可选：启用 <strong>GsignalX_Service</strong> 云端输入（<a href=\"#cloud\" data-tab=\"cloud\">云端交易</a>），即可从 <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">trade.gsignalx.cloud</a> 远程开仓 — gsignalx.cloud 上的 Executive 仍只提供信念信号",
   "samples.div1": "<strong class=\"label\">提交你的配置</strong> 在频道发布当日宏观概览之后，在<strong>交易群</strong>分享一份实操配方（货币对、Profit CASH 下限、fleet、会话窗口 — 不要登录信息或令牌），以便其他交易台对照。"
 }

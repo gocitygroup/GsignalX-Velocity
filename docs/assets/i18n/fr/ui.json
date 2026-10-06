@@ -174,5 +174,11 @@
   "chapters.risk-checks.title": "Listes de contrôle du risque",
   "chapters.risk-checks.short": "Listes",
   "chapters.appendix.title": "Annexe",
-  "chapters.appendix.short": "Annexe"
+  "chapters.appendix.short": "Annexe",
+  "ui.links.cloud.title": "Trading cloud",
+  "ui.links.cloud.hint": "Connecteur Service · carnet à distance",
+  "ui.links.trade.title": "Tableau de bord trading",
+  "chapters.cloud.title": "Trading cloud",
+  "chapters.cloud.short": "Cloud",
+  "ui.splash.cloud": "<strong>Nouveau — Trading cloud :</strong> gérez votre carnet Velocity depuis le <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">tableau de bord trading</a> · <a href=\"Gsignalx_Velocity_Users_Manual.html#cloud\">comment se connecter</a> · signaux sur <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>."
 }

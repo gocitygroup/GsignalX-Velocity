@@ -23,7 +23,7 @@
   "welcome.p5": "<a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">打开 gsignalx.cloud →</a>",
   "welcome.h32": "🔶 Velocity（本工具包）",
   "welcome.p6": "本地 MT5 动量引擎 + ProfitScouter 的 <strong>CASH 下限</strong>。用它<em>执行交易时段</em>，并按流程兑现已平仓盈亏 — 然后在 Telegram 收到提示。",
-  "welcome.p7": "运行在你的 Windows 终端上 — 此版本没有云端订单路由。City 自助路径。",
+  "welcome.p7": "在你的 Windows 终端上运行。可选通过 <code>GsignalX_Service</code> 启用<strong>云端连接器</strong> — 参见<a href=\"#cloud\" data-tab=\"cloud\">云端交易</a>。",
   "welcome.h33": "⭐ Velocity Premium（托管）",
   "welcome.p8": "为客户托管并维护的 Premium 交易台 — Premium 交易者手册，以及 GSignalX Service 上的安装与维护。注册 → 从 <strong>Profile → My Services</strong> 预约。",
   "welcome.h34": "📈 TradingView 发布",
@@ -36,7 +36,7 @@
   "welcome.p13": "围绕时段纪律和更清晰风险习惯的结构化辅导 — 为流程和市场理解提供教育支持。<strong>不</strong>保证盈利。",
   "welcome.p14": "<a href=\"https://www.gsignalx.cloud/mentorship\" target=\"_blank\" rel=\"noopener noreferrer\">申请导师辅导 →</a>",
   "welcome.div3": "<strong class=\"label\">托管 Premium 与自助</strong> 本 City 手册是自助工具包。想要托管安装和维护？请打开 <a href=\"https://ccity.gsignalx.cloud/Gsignalx_Velocity_Premium_Users_Manual#welcome\" target=\"_blank\" rel=\"noopener noreferrer\">Premium 用户手册</a>，查看 <a href=\"https://www.gsignalx.cloud/pricing\" target=\"_blank\" rel=\"noopener noreferrer\">价格</a>，然后在 <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a> 注册，并从 <strong>Profile → My Services</strong> 预约。",
-  "welcome.div4": "<strong class=\"label\">资深交易台规则</strong> Executive 提供确信。Velocity 在 MT5 上持有仓位。托管 Premium 是托管交易台路径。TradingView 发布是图表研究伴侣 — 它<strong>不</strong>下 MT5 订单。不要把云端信号页面或 Pine 脚本与 EA 本地的 PP / SuperTrend / SuperBollinger 引擎混为一谈 — 它们可以一致；在本工具包中，只有 Velocity 下单并收割票据。",
+  "welcome.div4": "<strong class=\"label\">资深交易台规则</strong> <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>（Executive）提供<em>信念信号</em> — 不路由 MT5 订单。<a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">trade.gsignalx.cloud</a> 是<em>交易仪表盘</em>（Connect PC + 管理账簿），需启用 Service 云端输入。Velocity 负责 MT5 上的执行与收割。托管 Premium 是托管交易台路径。TradingView 仅用于图表研究 — 不下 MT5 订单。不要把 Pine 或信号页面与 EA 本地的 PP / SuperTrend / SuperBollinger 引擎混淆。",
   "welcome.h22": "本手册适合谁",
   "welcome.th1": "交易台",
   "welcome.th2": "如何使用 Velocity",
@@ -52,5 +52,6 @@
   "welcome.td9": "投资者：Dashboard（或图表故障切换）· 摘要 + PROP · VERIFY 为绿（在 ChatId2/3 执行 <code>/start</code> 之前，跳过警告可以接受）· <a href=\"#telegram\">步骤</a>",
   "welcome.h23": "如何浏览",
   "welcome.p15": "使用页眉中的金色<strong>标签</strong>或左侧栏。键盘：<code>←</code> / <code>→</code> 切换章节。带哈希的链接（例如 <code>#deploy</code>）会打开对应章节。打印会展开全部面板。",
-  "welcome.div5": "<span class=\"node gold\">Executive 确信</span> <span class=\"arrow\">→</span> <span class=\"node\">Velocity PLAY</span> <span class=\"arrow\">→</span> <span class=\"node\">持仓</span> <span class=\"arrow\">→</span> <span class=\"node bull\">Profit CASH 兑现</span> <span class=\"arrow\">→</span> <span class=\"node\">已平仓盈亏</span>"
+  "welcome.div5": "<span class=\"node gold\">Executive 确信</span> <span class=\"arrow\">→</span> <span class=\"node\">Velocity PLAY</span> <span class=\"arrow\">→</span> <span class=\"node\">持仓</span> <span class=\"arrow\">→</span> <span class=\"node bull\">Profit CASH 兑现</span> <span class=\"arrow\">→</span> <span class=\"node\">已平仓盈亏</span>",
+  "welcome.div6": "<strong class=\"label\">可选：云端交易</strong> 在 <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">trade.gsignalx.cloud</a> 注册，于 <strong>Connect PC → Use Velocity toolkit</strong> 生成令牌，允许 <code>https://trade-api.gsignalx.cloud</code> 的 WebRequest，然后在 <strong>GsignalX_Service</strong> 上启用第 <strong>16</strong> 组输入。分步指南：<a href=\"https://github.com/gocitygroup/GsignalX-Velocity/blob/main/docs/CLOUD_TRADING.md\" target=\"_blank\" rel=\"noopener noreferrer\">CLOUD_TRADING.md</a> · <a href=\"#cloud\" data-tab=\"cloud\">本章</a>。搭配 <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">Executive 信号</a> 判断方向 — 仅供教育，不保证盈利。"
 }

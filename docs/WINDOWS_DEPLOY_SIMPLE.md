@@ -12,6 +12,22 @@ Manual: [Gsignalx_Velocity_Users_Manual.html](Gsignalx_Velocity_Users_Manual.htm
 2. **Telegram** — numeric chat IDs only, each user `/start`s the bot, allow `https://api.telegram.org`, press Trade Center **VERIFY** until **Verified** (soft: ≥1 chat OK). Recipe: [Manual · Telegram](Gsignalx_Velocity_Users_Manual.html#telegram).  
 3. Micro/practice books: load matching `deploy/presets/*Practice*` / `*100EUR*` sets so floors match balance — do not leave stock 100 on a €20 account.
 
+### Optional: Cloud trading (manage orders from your phone)
+
+1. Register on the [trading dashboard](https://trade.gsignalx.cloud) with the email you will use in MT5.
+2. **Connect PC → Use Velocity toolkit** → mint a **worker registration token** (copy once; never share it).
+3. MT5 → Tools → Options → Expert Advisors → allow WebRequest `https://trade-api.gsignalx.cloud`.
+4. On **GsignalX_Service**, input group **16) GsignalX cloud connector (trade-api)**:
+
+| What | MT5 input |
+|---|---|
+| Turn on | `InpCloudEnable` = true |
+| Your email | `InpCloudEmail` |
+| CONTROL_PLANE_URL | `InpCloudBaseUrl` (leave default `https://trade-api.gsignalx.cloud`) |
+| WORKER_REGISTRATION_TOKEN | `InpWorkerRegistrationToken` |
+
+Keep `InpCloudAllowRemoteCloses` = false so ProfitScouter still owns exits. Full guide: [CLOUD_TRADING.md](CLOUD_TRADING.md) · [Manual · Cloud Trading](Gsignalx_Velocity_Users_Manual.html#cloud).
+
 ---
 
 ## What you need first
