@@ -1,7 +1,7 @@
 {
   "desk200.kicker1": "Ricetta di sessione · Londra–NY",
   "desk200.h11": "Service multisimbolo + Trade Center",
-  "desk200.lede1": "Ricetta dell'elenco di sessione (FX START, Event SKIP, coach di pratica). <strong>Come gestire il desk dal vivo:</strong> <a href=\"#desk213\">Miglior uso dell'interfaccia di sistema (2.14)</a> · <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.",
+  "desk200.lede1": "Ricetta dell'elenco di sessione (FX START, Event SKIP, coach di pratica). <strong>Come gestire il desk dal vivo:</strong> <a href=\"#desk213\">Miglior uso dell'interfaccia di sistema (2.14)</a> · <code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code>.",
   "desk200.h21": "Miglior caso d'uso (prop / fondo piccolo)",
   "desk200.div1": "<strong class=\"label\">Ricetta del desk senior</strong> Gestisci un <strong>book FX Londra–NY</strong> con i metalli a lato; tieni le crypto nell'elenco ma in SUSPEND finché non decidi di tradarle. Un solo magic, flotta 4, Event SKIP per le news FX ad alto impatto, soft lock PropRisk allineati alla challenge. Per conti da <strong>$20 / $50 / $100</strong> (o €) — Standard o Raw — carica la coppia di <code>.set</code> Practice di Service+Scouter, poi usa in Trade Center <strong>20 · 50 · 100 · RAW · STD · SCALP · DAY · SWING</strong> per i suggerimenti su coppie/sessione (solo flotta/categoria soft; le manopole di denaro restano nei preset).",
   "desk200.li1": "<strong>Semina</strong> la lista multi-classe (4 FX + metalli/oli + crypto). Service + Dashboard + Scouter condividono un solo <code>InpMagic</code>. Pratica micro: semina l'elenco simboli del preset (spesso solo EURUSD oppure EURUSD+GBPUSD).",

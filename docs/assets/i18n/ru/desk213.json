@@ -1,7 +1,7 @@
 {
-  "desk213.kicker1": "Velocity 2.14 · текущий производственный релиз",
+  "desk213.kicker1": "Velocity 2.18 · текущий производственный релиз",
   "desk213.h11": "Лучшее использование интерфейса системы",
-  "desk213.lede1": "Каждый элемент на графике: Trade Center, панель сигналов графика, полоса списка графика, ProfitScouter. Схема шины <strong>v1</strong>. Заметка оператору: <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.",
+  "desk213.lede1": "Каждый элемент на графике: Trade Center, панель сигналов графика, полоса списка графика, ProfitScouter. Схема шины <strong>v1</strong>. Заметка оператору: <code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code>.",
   "desk213.div1": "<strong class=\"label\">Предпочтительный живой desk (Топология A)</strong> Один magic · <strong>DeskExecute ON</strong> · Service остановлен (или Yield ON) · EA графика <strong>не</strong> исполняет ордера · FIXED <strong>0.01</strong> · EQ <strong>OFF</strong>, если не нужен тормоз входа по плавающей просадке · Scouter ведёт BANK/CUT/FLAT.",
   "desk213.h21": "Поверхности интерфейса",
   "desk213.th1": "Поверхность",
@@ -180,5 +180,5 @@
   "desk213.li10": "Подтвердите, что Автоматизация показывает <strong>FIXED</strong> и лот <strong>0.01</strong>.",
   "desk213.li11": "Нажмите <strong>STOP</strong> один раз, затем <strong>REM</strong> для пар, которые не нужны.",
   "desk213.li12": "<strong>PLAY</strong> / START только на живом портфеле. Используйте <strong>PROP CLEAR</strong>, если старое правило equity оставило LOCK.",
-  "desk213.p4": "Рецепт списка сессии остаётся в <a href=\"#desk200\">Мультисимвольный Desk</a>. Проверка: <code>Confirm-GSignalX.ps1 -Gate All</code> — ожидайте маркеры V2.14."
+  "desk213.p4": "Рецепт списка сессии остаётся в <a href=\"#desk200\">Мультисимвольный Desk</a>. Проверка: <code>Confirm-GSignalX.ps1 -Gate All</code> — ожидайте маркеры V2.18."
 }

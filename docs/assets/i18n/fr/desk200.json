@@ -1,7 +1,7 @@
 {
   "desk200.kicker1": "Recette de session · Londres–NY",
   "desk200.h11": "Service multisymbole + Trade Center",
-  "desk200.lede1": "Recette de liste de session (FX START, Event SKIP, coach de pratique). <strong>Comment faire tourner le desk en direct :</strong> <a href=\"#desk213\">Meilleur usage de l'interface système (2.14)</a> · <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.",
+  "desk200.lede1": "Recette de liste de session (FX START, Event SKIP, coach de pratique). <strong>Comment faire tourner le desk en direct :</strong> <a href=\"#desk213\">Meilleur usage de l'interface système (2.14)</a> · <code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code>.",
   "desk200.h21": "Meilleur cas d'usage (prop / petit fonds)",
   "desk200.div1": "<strong class=\"label\">Recette de desk senior</strong> Tenez un <strong>book FX Londres–NY</strong> avec les métaux à côté ; gardez les crypto dans la liste mais en SUSPEND jusqu'à ce que vous décidiez de les trader. Un seul magic, flotte 4, Event SKIP pour les news FX à fort impact, verrous souples PropRisk calés sur le challenge. Pour les comptes de <strong>$20 / $50 / $100</strong> (ou €) — Standard ou Raw — chargez la paire de <code>.set</code> Practice de Service+Scouter, puis utilisez dans Trade Center <strong>20 · 50 · 100 · RAW · STD · SCALP · DAY · SWING</strong> pour les conseils paires/session (flotte/catégorie souples seulement ; les réglages d'argent restent dans les préréglages).",
   "desk200.li1": "<strong>Amorcez</strong> la liste multi-classe (4 FX + métaux/pétroles + crypto). Service + Dashboard + Scouter partagent un seul <code>InpMagic</code>. Pratique micro : amorcez la liste de symboles du préréglage (souvent EURUSD ou EURUSD+GBPUSD seulement).",
@@ -37,7 +37,7 @@
   "desk200.li10": "Démarrez <strong>GsignalX_Service</strong>, <strong>ProfitScouter_Service</strong>, <strong>ProfitOpportunity_Grader</strong>.",
   "desk200.li11": "Attachez <strong>GsignalX_Multisymbol_Dashboard</strong> avec la liste amorcée + magic partagé.",
   "desk200.li12": "Optionnel : graphique M5 GSignalX avec <code>InpChartEntriesWhenService=false</code> pour la bande/UI.",
-  "desk200.li13": "Lancez <code>Confirm-After-Start.bat</code> — attendez Trade Center / Service version <strong>2.14</strong> + schéma de bus <strong>1</strong>.",
+  "desk200.li13": "Lancez <code>Confirm-After-Start.bat</code> — attendez Trade Center / Service version <strong>2.18</strong> + schéma de bus <strong>1</strong>.",
   "desk200.h23": "Service multisymbole",
   "desk200.li14": "Balayage de liste sans graphique + remplissage de flotte ; publie le CSV de liste en direct sous <code>GSignalX/bus/v1/roster/{magic}.csv</code>.",
   "desk200.li15": "Définit <code>GSX_SVC_OWN_{magic}=1</code> pour que les EA de graphique reportent la flotte et les entrées automatiques.",

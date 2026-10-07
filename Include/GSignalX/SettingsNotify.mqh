@@ -245,7 +245,7 @@ string GsxSettingsImpact(const string action, const GsxSettingsSnapshot &s)
    else if(StringFind(a, "FDIR") >= 0 || StringFind(a, "FOLLOWDIR") >= 0)
       core = "desk FollowDir filter applied to new entries";
    else if(StringFind(a, "BIAS") >= 0)
-      core = "bias lane one-shot → FollowDir (entries only; not sticky)";
+      core = "bias lane live one-side → FollowDir (NEUT→WAIT; Signal clears; entries only)";
    else if(StringFind(a, "FLEET") >= 0)
       core = "fleet target pairs changed — fill cadence";
    else if(StringFind(a, "PAIR") >= 0 || StringFind(a, "STATE") >= 0)

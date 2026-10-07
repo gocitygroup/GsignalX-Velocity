@@ -1,12 +1,12 @@
 {
-  "ui.meta.title": "Gsignalx Velocity 2.14 — 交易者手册 | Gocity Group",
-  "ui.meta.description": "Gsignalx Velocity 2.14 自适应风险交易者手册。Profit CASH 兑现、Prop 温和 STOP、市场状态框架、RiskGuidance 提示。",
-  "ui.splash.title": "Gsignalx Velocity 2.14 — 交易者与投资者手册",
-  "ui.splash.description": "Gsignalx Velocity 2.14 交易者与投资者手册 — Profit CASH、温和 VERIFY、Prop 交易台",
-  "ui.splash.opening": "正在打开 <strong>Gsignalx Velocity 2.14</strong> 交易者手册…",
-  "ui.splash.version": "Velocity 2.14 · 总线架构 v1",
+  "ui.meta.title": "Gsignalx Velocity 2.18 — 交易者手册 | Gocity Group",
+  "ui.meta.description": "Gsignalx Velocity 2.18 自适应风险交易者手册。Profit CASH 兑现、Prop 温和 STOP、市场状态框架、RiskGuidance 提示。",
+  "ui.splash.title": "Gsignalx Velocity 2.18 — 交易者与投资者手册",
+  "ui.splash.description": "Gsignalx Velocity 2.18 交易者与投资者手册 — Profit CASH、温和 VERIFY、Prop 交易台",
+  "ui.splash.opening": "正在打开 <strong>Gsignalx Velocity 2.18</strong> 交易者手册…",
+  "ui.splash.version": "Velocity 2.18 · 总线架构 v1",
   "ui.splash.continue": "若未自动跳转，请继续",
-  "ui.brand.tagline": "由 Gocity Group 提供 · MT5 交易台手册 · v2.14",
+  "ui.brand.tagline": "由 Gocity Group 提供 · MT5 交易台手册 · v2.18",
   "ui.nav.sections": "手册章节",
   "ui.nav.chapters": "章节",
   "ui.nav.jump": "跳转到章节",
@@ -180,5 +180,7 @@
   "ui.links.trade.title": "交易仪表盘",
   "chapters.cloud.title": "云端交易",
   "chapters.cloud.short": "云端",
-  "ui.splash.cloud": "<strong>新功能 — 云端交易：</strong>通过<a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">交易仪表盘</a>管理你的 Velocity 账簿 · <a href=\"Gsignalx_Velocity_Users_Manual.html#cloud\">如何连接</a> · 信号见 <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>。"
+  "ui.splash.cloud": "<strong>新功能 — 云端交易：</strong>通过<a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">交易仪表盘</a>管理你的 Velocity 账簿 · <a href=\"Gsignalx_Velocity_Users_Manual.html#cloud\">如何连接</a> · 信号见 <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>。",
+  "chapters.bias-follow.title": "Daily Bias Follow",
+  "chapters.bias-follow.short": "偏向"
 }

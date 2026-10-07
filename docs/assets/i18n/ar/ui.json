@@ -1,12 +1,12 @@
 {
-  "ui.meta.title": "Gsignalx Velocity 2.14 — دليل المتداول | Gocity Group",
-  "ui.meta.description": "دليل المتداول Gsignalx Velocity 2.14 لإدارة المخاطر التكيفية. تحصيل Profit CASH، وإيقاف Prop اللطيف، وإطار ظروف السوق، ونصائح RiskGuidance.",
-  "ui.splash.title": "Gsignalx Velocity 2.14 — دليل المتداول والمستثمر",
-  "ui.splash.description": "دليل Gsignalx Velocity 2.14 للمتداول والمستثمر — Profit CASH، وVERIFY اللطيف، ومكتب Prop",
-  "ui.splash.opening": "جارٍ فتح دليل المتداول <strong>Gsignalx Velocity 2.14</strong>…",
-  "ui.splash.version": "Velocity 2.14 · مخطط الناقل v1",
+  "ui.meta.title": "Gsignalx Velocity 2.18 — دليل المتداول | Gocity Group",
+  "ui.meta.description": "دليل المتداول Gsignalx Velocity 2.18 لإدارة المخاطر التكيفية. تحصيل Profit CASH، وإيقاف Prop اللطيف، وإطار ظروف السوق، ونصائح RiskGuidance.",
+  "ui.splash.title": "Gsignalx Velocity 2.18 — دليل المتداول والمستثمر",
+  "ui.splash.description": "دليل Gsignalx Velocity 2.18 للمتداول والمستثمر — Profit CASH، وVERIFY اللطيف، ومكتب Prop",
+  "ui.splash.opening": "جارٍ فتح دليل المتداول <strong>Gsignalx Velocity 2.18</strong>…",
+  "ui.splash.version": "Velocity 2.18 · مخطط الناقل v1",
   "ui.splash.continue": "تابع إذا لم يتم التحويل",
-  "ui.brand.tagline": "من Gocity Group · دليل مكتب MT5 · v2.14",
+  "ui.brand.tagline": "من Gocity Group · دليل مكتب MT5 · v2.18",
   "ui.nav.sections": "أقسام الدليل",
   "ui.nav.chapters": "الفصول",
   "ui.nav.jump": "الانتقال إلى فصل",
@@ -180,5 +180,7 @@
   "ui.links.trade.title": "لوحة التداول",
   "chapters.cloud.title": "التداول السحابي",
   "chapters.cloud.short": "السحابة",
-  "ui.splash.cloud": "<strong>جديد — التداول السحابي:</strong> أدر محفظة Velocity من <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">لوحة التداول</a> · <a href=\"Gsignalx_Velocity_Users_Manual.html#cloud\">طريقة الاتصال</a> · الإشارات على <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>."
+  "ui.splash.cloud": "<strong>جديد — التداول السحابي:</strong> أدر محفظة Velocity من <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">لوحة التداول</a> · <a href=\"Gsignalx_Velocity_Users_Manual.html#cloud\">طريقة الاتصال</a> · الإشارات على <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>.",
+  "chapters.bias-follow.title": "Daily Bias Follow",
+  "chapters.bias-follow.short": "Bias"
 }

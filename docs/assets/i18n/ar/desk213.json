@@ -1,7 +1,7 @@
 {
-  "desk213.kicker1": "Velocity 2.14 · إصدار الإنتاج الحالي",
+  "desk213.kicker1": "Velocity 2.18 · إصدار الإنتاج الحالي",
   "desk213.h11": "أفضل استخدام لواجهة النظام",
-  "desk213.lede1": "كل عنصر تحكم على الرسم: Trade Center، لوحة إشارات الرسم، شريط قائمة الرسم، ProfitScouter. مخطط الناقل <strong>v1</strong>. ملاحظة المشغّل: <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.",
+  "desk213.lede1": "كل عنصر تحكم على الرسم: Trade Center، لوحة إشارات الرسم، شريط قائمة الرسم، ProfitScouter. مخطط الناقل <strong>v1</strong>. ملاحظة المشغّل: <code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code>.",
   "desk213.div1": "<strong class=\"label\">desk الحي المفضّل (الطوبولوجيا A)</strong> رقم magic واحد · <strong>DeskExecute ON</strong> · Service متوقف (أو Yield ON) · EA الرسم <strong>لا</strong> ينفّذ الأوامر · FIXED <strong>0.01</strong> · EQ <strong>OFF</strong> إلا إذا أردت فرملة دخول على التراجع العائم · Scouter يملك BANK/CUT/FLAT.",
   "desk213.h21": "أسطح الواجهة",
   "desk213.th1": "السطح",
@@ -180,5 +180,5 @@
   "desk213.li10": "تأكد أن الأتمتة تعرض <strong>FIXED</strong> واللوت <strong>0.01</strong>.",
   "desk213.li11": "اضغط <strong>STOP</strong> مرة واحدة، ثم <strong>REM</strong> للأزواج التي لا تريدها.",
   "desk213.li12": "<strong>PLAY</strong> / START للكتاب الحي فقط. استخدم <strong>PROP CLEAR</strong> إذا تركت قاعدة equity قديمة حالة LOCK.",
-  "desk213.p4": "تبقى وصفة قائمة الجلسة في <a href=\"#desk200\">Desk متعدد الرموز</a>. التأكيد: <code>Confirm-GSignalX.ps1 -Gate All</code> — توقّع علامات V2.14."
+  "desk213.p4": "تبقى وصفة قائمة الجلسة في <a href=\"#desk200\">Desk متعدد الرموز</a>. التأكيد: <code>Confirm-GSignalX.ps1 -Gate All</code> — توقّع علامات V2.18."
 }

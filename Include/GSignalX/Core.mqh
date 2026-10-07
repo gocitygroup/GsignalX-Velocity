@@ -320,6 +320,9 @@ void GsxCoreBiasRefreshBudgeted(const int maxSlots = 4)
    if(budget > n) budget = n;
    if(g_biasBudgetCursor < 0 || g_biasBudgetCursor >= n)
       g_biasBudgetCursor = 0;
+   // Cache desk lane once per pass (avoid repeated GV reads in the budget loop)
+   const int deskLane = GsxBiasDeskLaneGet(InpMagic, GSX_BIAS_LANE_NONE);
+   const bool laneArmed = (deskLane != GSX_BIAS_LANE_NONE);
    int advanced = 0;
    for(int step = 0; step < n && advanced < budget; step++)
      {
@@ -328,7 +331,7 @@ void GsxCoreBiasRefreshBudgeted(const int maxSlots = 4)
          continue;
       GsxCoreBiasUpdateSlot(i);
       // Event-sync FollowDir while desk lane armed (Mode column + gate stay aligned)
-      if(GsxBiasDeskLaneGet(InpMagic, GSX_BIAS_LANE_NONE) != GSX_BIAS_LANE_NONE)
+      if(laneArmed)
          GsxBiasEffectiveFollowDir(InpMagic, g_roster[i], false, true);
       advanced++;
      }

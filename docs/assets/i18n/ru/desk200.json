@@ -1,7 +1,7 @@
 {
   "desk200.kicker1": "Сценарий сессии · Лондон–NY",
   "desk200.h11": "Мультисимвольный Service + Trade Center",
-  "desk200.lede1": "Сценарий состава сессии (FX START, Event SKIP, тренер практики). <strong>Как вести живой стол:</strong> <a href=\"#desk213\">Лучшее использование интерфейса системы (2.14)</a> · <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.",
+  "desk200.lede1": "Сценарий состава сессии (FX START, Event SKIP, тренер практики). <strong>Как вести живой стол:</strong> <a href=\"#desk213\">Лучшее использование интерфейса системы (2.14)</a> · <code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code>.",
   "desk200.h21": "Лучший сценарий (prop / небольшой фонд)",
   "desk200.div1": "<strong class=\"label\">Сценарий старшего стола</strong> Ведите <strong>книгу FX Лондон–NY</strong> с металлами сбоку; держите crypto в составе, но в SUSPEND, пока сознательно не торгуете их. Один magic, флот 4, Event SKIP для FX-новостей высокого влияния, мягкие замки PropRisk под challenge. Для счетов <strong>$20 / $50 / $100</strong> (или €) — Standard или Raw — загрузите пару <code>.set</code> Practice для Service+Scouter, затем используйте в Trade Center <strong>20 · 50 · 100 · RAW · STD · SCALP · DAY · SWING</strong> для подсказок по парам/сессии (только мягкие флот/категория; денежные ручки остаются в пресетах).",
   "desk200.li1": "<strong>Засейте</strong> мультиклассовый список (4 FX + металлы/нефть + crypto). Service + Dashboard + Scouter делят один <code>InpMagic</code>. Микропрактика: засейте список символов пресета (часто только EURUSD или EURUSD+GBPUSD).",

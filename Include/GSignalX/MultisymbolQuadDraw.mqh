@@ -450,7 +450,7 @@ void GsxMsDrawQuadLL(GsxLayCtx &col, const GsxMsSnapshot &snap,
      }
    GsxLayAdvance(col, bh);
 
-   // v2.18 Bias follow lanes (desk-wide one-shot → FollowDir; no EMA)
+   // v2.18 Bias follow lanes (desk-wide live one-side → FollowDir; no EMA)
    GsxLayRowStart(col, bh);
    GsxMsQuadInsetBegin(col, inset);
    avail = MathMax(1, col.packRemain - inset);

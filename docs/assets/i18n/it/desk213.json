@@ -1,7 +1,7 @@
 {
-  "desk213.kicker1": "Velocity 2.14 · taglio di produzione corrente",
+  "desk213.kicker1": "Velocity 2.18 · taglio di produzione corrente",
   "desk213.h11": "Uso ottimale dell’interfaccia di sistema",
-  "desk213.lede1": "Ogni controllo sul grafico: Trade Center, pannello segnali del grafico, striscia elenco del grafico, ProfitScouter. Schema del bus <strong>v1</strong>. Nota per l’operatore: <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.",
+  "desk213.lede1": "Ogni controllo sul grafico: Trade Center, pannello segnali del grafico, striscia elenco del grafico, ProfitScouter. Schema del bus <strong>v1</strong>. Nota per l’operatore: <code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code>.",
   "desk213.div1": "<strong class=\"label\">Desk live preferito (Topologia A)</strong> Un solo magic · <strong>DeskExecute ON</strong> · Service arrestato (oppure Yield ON) · l’EA del grafico <strong>non</strong> esegue gli ordini · FIXED <strong>0.01</strong> · EQ <strong>OFF</strong> salvo un freno di ingresso sul drawdown flottante · Scouter gestisce BANK/CUT/FLAT.",
   "desk213.h21": "Superfici dell’interfaccia",
   "desk213.th1": "Superficie",
@@ -180,5 +180,5 @@
   "desk213.li10": "Conferma che Automazione mostra <strong>FIXED</strong> e lotto <strong>0.01</strong>.",
   "desk213.li11": "Premi <strong>STOP</strong> una volta, poi <strong>REM</strong> sulle coppie che non vuoi.",
   "desk213.li12": "<strong>PLAY</strong> / START solo sul book live. Usa <strong>PROP CLEAR</strong> se una vecchia regola di equity ha lasciato LOCK.",
-  "desk213.p4": "La ricetta dell’elenco di sessione resta in <a href=\"#desk200\">Desk multisimbolo</a>. Conferma: <code>Confirm-GSignalX.ps1 -Gate All</code> — attenditi i marcatori V2.14."
+  "desk213.p4": "La ricetta dell’elenco di sessione resta in <a href=\"#desk200\">Desk multisimbolo</a>. Conferma: <code>Confirm-GSignalX.ps1 -Gate All</code> — attenditi i marcatori V2.18."
 }

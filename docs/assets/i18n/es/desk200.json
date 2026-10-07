@@ -1,7 +1,7 @@
 {
   "desk200.kicker1": "Receta de sesión · Londres–NY",
   "desk200.h11": "Service multisímbolo + Trade Center",
-  "desk200.lede1": "Receta de la lista de sesión (FX START, Event SKIP, coach de práctica). <strong>Cómo operar el escritorio en vivo:</strong> <a href=\"#desk213\">Mejor uso de la interfaz del sistema (2.14)</a> · <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.",
+  "desk200.lede1": "Receta de la lista de sesión (FX START, Event SKIP, coach de práctica). <strong>Cómo operar el escritorio en vivo:</strong> <a href=\"#desk213\">Mejor uso de la interfaz del sistema (2.14)</a> · <code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code>.",
   "desk200.h21": "Mejor caso de uso (prop / fondo pequeño)",
   "desk200.div1": "<strong class=\"label\">Receta de escritorio sénior</strong> Opere un <strong>libro FX Londres–NY</strong> con metales al lado; deje las cripto en la lista pero en SUSPEND hasta que decida operarlas. Un solo magic, flota 4, Event SKIP para noticias FX de alto impacto, bloqueos suaves de PropRisk ajustados al challenge. Para cuentas de <strong>$20 / $50 / $100</strong> (o €) — Standard o Raw — cargue el par de <code>.set</code> Practice de Service+Scouter y luego use en Trade Center <strong>20 · 50 · 100 · RAW · STD · SCALP · DAY · SWING</strong> para consejos de pares/sesión (solo flota/categoría suaves; los controles de dinero quedan en los presets).",
   "desk200.li1": "<strong>Siembre</strong> la lista multiclase (4 FX + metales/petróleos + cripto). Service + Dashboard + Scouter comparten un solo <code>InpMagic</code>. Práctica micro: siembre la lista de símbolos del preset (a menudo solo EURUSD o EURUSD+GBPUSD).",

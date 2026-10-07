@@ -10,13 +10,13 @@ Structured entries · winners-only harvest · prop-safe soft STOP · one magic.
 
 **GSignalX** opens risk. **ProfitScouter** banks winners. Desk PLAY/STOP never closes tickets.  
 Default lot **FIXED 0.01**. Bus schema **v1**. Current cut **Velocity 2.18**.  
-**Daily Bias Follow:** chart-aligned D1 lanes (Daily / Pre-D / Third-D) one-shot → FollowDir (entries only; no EMA; never sticky).
+**Daily Bias Follow:** chart-aligned D1 lanes (Daily / Pre-D / Third-D) live one-side → FollowDir (BULL→BUY / BEAR→SELL / NEUT→WAIT; entries only; no EMA).
 
 **Start here**
 
-1. [Trader & investor manual](docs/Gsignalx_Velocity_Users_Manual.html) — includes [Risk Framework](docs/Gsignalx_Velocity_Users_Manual.html#risk-framework)  
+1. [Trader & investor manual](docs/Gsignalx_Velocity_Users_Manual.html) — includes [Risk Framework](docs/Gsignalx_Velocity_Users_Manual.html#risk-framework) · [Daily Bias Follow](docs/Gsignalx_Velocity_Users_Manual.html#bias-follow)  
 2. [Windows deploy (non-tech)](docs/WINDOWS_DEPLOY_SIMPLE.md)  
-3. [Current RELEASE 2.14 — Best use](docs/RELEASE_v2.14_Input_Reliability.md)  
+3. [Current RELEASE 2.18 — Daily Bias Follow](docs/RELEASE_v2.18_Daily_Bias_Follow.md)  
 4. [Risk guidance blocks / digital tip spec](docs/risk/RISK_GUIDANCE_SPEC.md)
 
 **New — Cloud trading.** Keep Velocity running on your PC and open or manage orders from your phone on the [GSignalX trading dashboard](https://trade.gsignalx.cloud). Register, mint a token under **Connect PC → Use Velocity toolkit**, allow WebRequest for `https://trade-api.gsignalx.cloud`, then fill `GsignalX_Service` input group **16** (`InpCloudEmail`, `InpCloudBaseUrl`, `InpWorkerRegistrationToken`). No extra connector download. Guide: [CLOUD_TRADING.md](docs/CLOUD_TRADING.md) · Manual [Cloud Trading](docs/Gsignalx_Velocity_Users_Manual.html#cloud) (7 languages).  
@@ -44,15 +44,15 @@ cd GsignalX-Velocity
 
 | Program | Type | Role |
 |---|---|---|
-| `GsignalX_Multisymbol_Dashboard.mq5` | Expert | Trade Center — DeskExecute fills, Prop, Telegram (**2.14**) |
-| `GsignalX_Service.mq5` | Service | Headless roster scan + fills; yields to Desk (**2.14**) |
+| `GsignalX_Multisymbol_Dashboard.mq5` | Expert | Trade Center — DeskExecute fills, Prop, Telegram (**2.18**) |
+| `GsignalX_Service.mq5` | Service | Headless roster scan + fills; yields to Desk (**2.18**) |
 | `GsignalX_GocityGroup.mq5` | Expert | Chart strip / optional entries (defer when Desk/Service owns magic) |
 | `ProfitScouter_Service.mq5` | Service | Exits — ASAP / BANK / CUT / FLAT |
 | `ProfitScouter_DollarTarget.mq5` | Expert | Same harvest on chart |
 | `ProfitOpportunity_Grader.mq5` | Service | Cross-terminal opportunity grades |
 | `ProfitHarvest_Now.mq5` | Script | One-shot close-at-target |
 
-**Best use:** Topology A — Trade Center DeskExecute ON, Service stopped (or Yield ON), FIXED 0.01, EQ OFF unless you want a floating-DD brake, STOP clears pendings, Scouter owns exits. Details: [RELEASE 2.14](docs/RELEASE_v2.14_Input_Reliability.md) · Manual [System UI Best Use](docs/Gsignalx_Velocity_Users_Manual.html#desk213).
+**Best use:** Topology A — Trade Center DeskExecute ON, Service stopped (or Yield ON), FIXED 0.01, EQ OFF unless you want a floating-DD brake, STOP clears pendings, Scouter owns exits. Details: [RELEASE 2.18](docs/RELEASE_v2.18_Daily_Bias_Follow.md) · Manual [System UI Best Use](docs/Gsignalx_Velocity_Users_Manual.html#desk213) · [Bias Follow](docs/Gsignalx_Velocity_Users_Manual.html#bias-follow).
 
 **Trader:** live DIR, FOLLOW pads, Telegram deals + PROP.  
 **Investor / monitor:** quieter TG (DAILY + PROP), Compact strip, Scouter harvest.
@@ -64,7 +64,8 @@ Practice packs: [PRACTICE $20/$50/$100](docs/PRACTICE_LIVE_SIM_20_50_100.md) · 
 - [Velocity manual (HTML)](docs/Gsignalx_Velocity_Users_Manual.html) — primary  
 - [WINDOWS_DEPLOY_SIMPLE.md](docs/WINDOWS_DEPLOY_SIMPLE.md) — ZIP → double-click → MT5  
 - [CLOUD_TRADING.md](docs/CLOUD_TRADING.md) — connect Service to the trading dashboard (email, URL, token)  
-- [RELEASE_v2.14](docs/RELEASE_v2.14_Input_Reliability.md) — current production cut  
+- [RELEASE_v2.18](docs/RELEASE_v2.18_Daily_Bias_Follow.md) — current production cut (Bias Follow)  
+- [RELEASE_v2.14](docs/RELEASE_v2.14_Input_Reliability.md) — historical Best Use / input reliability  
 - [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md) — Confirm gates  
 - [DEPLOYMENT.md](DEPLOYMENT.md) — technical install  
 - [ARCHITECTURE_CONNECTOR_BUS.md](ARCHITECTURE_CONNECTOR_BUS.md) · [README_ProfitScouter.md](README_ProfitScouter.md) — engineering

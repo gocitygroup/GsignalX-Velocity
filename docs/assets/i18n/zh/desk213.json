@@ -1,7 +1,7 @@
 {
-  "desk213.kicker1": "Velocity 2.14 · 当前生产版本",
+  "desk213.kicker1": "Velocity 2.18 · 当前生产版本",
   "desk213.h11": "系统界面的最佳用法",
-  "desk213.lede1": "图表上的每个控件：Trade Center、图表信号面板、图表名单条、ProfitScouter。总线模式 <strong>v1</strong>。操作者备注：<code>docs/RELEASE_v2.14_Input_Reliability.md</code>。",
+  "desk213.lede1": "图表上的每个控件：Trade Center、图表信号面板、图表名单条、ProfitScouter。总线模式 <strong>v1</strong>。操作者备注：<code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code>。",
   "desk213.div1": "<strong class=\"label\">首选实盘 desk（拓扑 A）</strong> 单一 magic · <strong>DeskExecute ON</strong> · Service 已停止（或 Yield ON）· 图表 EA <strong>不</strong>成交 · FIXED <strong>0.01</strong> · 除非你要浮动回撤进场刹车，否则 EQ <strong>OFF</strong> · Scouter 负责 BANK/CUT/FLAT。",
   "desk213.h21": "界面区域",
   "desk213.th1": "区域",
@@ -180,5 +180,5 @@
   "desk213.li10": "确认自动化显示 <strong>FIXED</strong> 且手数为 <strong>0.01</strong>。",
   "desk213.li11": "按一次 <strong>STOP</strong>，然后对不需要的货币对按 <strong>REM</strong>。",
   "desk213.li12": "只对实盘组合使用 <strong>PLAY</strong> / START。若旧的净值规则留下了 LOCK，请使用 <strong>PROP CLEAR</strong>。",
-  "desk213.p4": "时段名单配方仍在 <a href=\"#desk200\">多品种 Desk</a>。确认：<code>Confirm-GSignalX.ps1 -Gate All</code> — 应出现 V2.14 标记。"
+  "desk213.p4": "时段名单配方仍在 <a href=\"#desk200\">多品种 Desk</a>。确认：<code>Confirm-GSignalX.ps1 -Gate All</code> — 应出现 V2.18 标记。"
 }

@@ -1,12 +1,12 @@
 # Windows deploy — simple guide (non-technical)
 
-**Product:** Gsignalx Velocity **2.14**  
+**Product:** Gsignalx Velocity **2.18**  
 **Goal:** Toolkit on Windows → MetaTrader 5 **without coding**.
 
 Stuck? [Problems and fixes](#problems-and-fixes).  
-Manual: [Gsignalx_Velocity_Users_Manual.html](Gsignalx_Velocity_Users_Manual.html) · Current cut: [RELEASE_v2.14](RELEASE_v2.14_Input_Reliability.md) · Tech: [DEPLOYMENT.md](../DEPLOYMENT.md)
+Manual: [Gsignalx_Velocity_Users_Manual.html](Gsignalx_Velocity_Users_Manual.html) · Current cut: [RELEASE_v2.18](RELEASE_v2.18_Daily_Bias_Follow.md) · Tech: [DEPLOYMENT.md](../DEPLOYMENT.md)
 
-### Best use after deploy (commercial desk)
+### Best use after deploy (prop / practice desk)
 
 1. **Profit Scouter** — stock **Profit CASH +100**; leave **CASH** mode ON for scalps; keep **Loss CASH OFF** until you want −N auto cuts; optional chart **TRAIL** for ATR/% give-back between floors ([Manual · Profit CASH / TRAIL](Gsignalx_Velocity_Users_Manual.html#profit-cash)).  
 2. **Telegram** — numeric chat IDs only, each user `/start`s the bot, allow `https://api.telegram.org`, press Trade Center **VERIFY** until **Verified** (soft: ≥1 chat OK). Recipe: [Manual · Telegram](Gsignalx_Velocity_Users_Manual.html#telegram).  
@@ -135,7 +135,7 @@ Aim for **SUMMARY: PASS**. Yellow WARN about stale bus is normal if Services wer
 
 ---
 
-## Recommended first desk (Velocity 2.14)
+## Recommended first desk (Velocity 2.18)
 
 | Role | Program | Closes trades? |
 |---|---|---|
@@ -144,9 +144,9 @@ Aim for **SUMMARY: PASS**. Yellow WARN about stale bus is normal if Services wer
 | Exits | `ProfitScouter_Service` | **Yes** |
 | Grades | `ProfitOpportunity_Grader` | No |
 
-**After start:** FIXED **0.01** · EQ **OFF** (unless wanted) · STOP once (clear pendings) · PROP CLEAR if LOCK · Scouter ON · REM unused pairs.
+**After start:** FIXED **0.01** · EQ **OFF** (unless wanted) · STOP once (clear pendings) · PROP CLEAR if LOCK · Scouter ON · REM unused pairs. Optional: arm Daily Bias when you want one-side entries ([Manual § Bias](Gsignalx_Velocity_Users_Manual.html#bias-follow)).
 
-Full Best use: [RELEASE_v2.14](RELEASE_v2.14_Input_Reliability.md) · [Manual § System UI Best Use](Gsignalx_Velocity_Users_Manual.html#desk213)
+Full Best use: [RELEASE_v2.18](RELEASE_v2.18_Daily_Bias_Follow.md) · [Manual § System UI Best Use](Gsignalx_Velocity_Users_Manual.html#desk213)
 
 ---
 

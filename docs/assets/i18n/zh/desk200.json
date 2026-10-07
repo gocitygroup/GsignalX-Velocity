@@ -1,7 +1,7 @@
 {
   "desk200.kicker1": "时段方案 · 伦敦–NY",
   "desk200.h11": "多品种 Service + Trade Center",
-  "desk200.lede1": "时段名单方案（FX START、Event SKIP、练习教练）。<strong>如何运行实盘交易台：</strong> <a href=\"#desk213\">系统界面最佳用法（2.14）</a> · <code>docs/RELEASE_v2.14_Input_Reliability.md</code>。",
+  "desk200.lede1": "时段名单方案（FX START、Event SKIP、练习教练）。<strong>如何运行实盘交易台：</strong> <a href=\"#desk213\">系统界面最佳用法（2.14）</a> · <code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code>。",
   "desk200.h21": "最佳用法（prop / 小型资金）",
   "desk200.div1": "<strong class=\"label\">资深交易台方案</strong> 运行一本<strong>伦敦–NY 的 FX 账簿</strong>，金属放在一侧；crypto 留在名单里但保持 SUSPEND，直到您有意交易它。一个 magic，组合 4，高影响 FX 新闻用 Event SKIP，PropRisk 软锁与挑战规则对齐。对于 <strong>$20 / $50 / $100</strong>（或 €）账户——Standard 或 Raw——加载 Practice 的 Service+Scouter <code>.set</code> 配对，然后用 Trade Center 的 <strong>20 · 50 · 100 · RAW · STD · SCALP · DAY · SWING</strong> 查看货币对/时段提示（仅软性组合/类别；资金旋钮留在预设里）。",
   "desk200.li1": "<strong>播种</strong>多类别名单（4 个 FX + 金属/原油 + crypto）。Service + Dashboard + Scouter 共用一个 <code>InpMagic</code>。微型练习：播种预设品种列表（通常只有 EURUSD，或仅 EURUSD+GBPUSD）。",

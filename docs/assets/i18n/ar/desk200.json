@@ -1,7 +1,7 @@
 {
   "desk200.kicker1": "وصفة الجلسة · لندن–NY",
   "desk200.h11": "Service متعدد الرموز + Trade Center",
-  "desk200.lede1": "وصفة قائمة الجلسة (FX START، Event SKIP، مدرب التمرين). <strong>كيف تشغّل المكتب الحي:</strong> <a href=\"#desk213\">أفضل استخدام لواجهة النظام (2.14)</a> · <code>docs/RELEASE_v2.14_Input_Reliability.md</code>.",
+  "desk200.lede1": "وصفة قائمة الجلسة (FX START، Event SKIP، مدرب التمرين). <strong>كيف تشغّل المكتب الحي:</strong> <a href=\"#desk213\">أفضل استخدام لواجهة النظام (2.14)</a> · <code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code>.",
   "desk200.h21": "أفضل حالة استخدام (prop / صندوق صغير)",
   "desk200.div1": "<strong class=\"label\">وصفة المكتب المتقدم</strong> أدر <strong>دفتر FX لندن–NY</strong> مع المعادن على الجانب؛ أبقِ العملات المشفرة في القائمة لكن في SUSPEND إلى أن تتداولها عمدًا. magic واحد، أسطول 4، Event SKIP لأخبار FX عالية الأثر، وأقفال PropRisk اللينة مطابقة للتحدي. لحسابات <strong>$20 / $50 / $100</strong> (أو €) — Standard أو Raw — حمّل زوج ملفات <code>.set</code> الخاص بـ Practice لـ Service+Scouter، ثم استخدم في Trade Center <strong>20 · 50 · 100 · RAW · STD · SCALP · DAY · SWING</strong> لنصائح الأزواج/الجلسة (الأسطول/الفئة اللينة فقط؛ مقابض المال تبقى في الإعدادات المسبقة).",
   "desk200.li1": "<strong>ازرع</strong> قائمة متعددة الفئات (4 FX + معادن/زيوت + crypto). يتشارك Service + Dashboard + Scouter قيمة <code>InpMagic</code> واحدة. تمرين صغير: ازرع قائمة رموز الإعداد المسبق (غالبًا EURUSD أو EURUSD+GBPUSD فقط).",

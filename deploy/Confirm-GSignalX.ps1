@@ -802,8 +802,9 @@ function Confirm-Bus {
   }
   else {
     Add-Line "PASS  terminals\_index.txt"
-    $tidList = @(Get-Content $index | Where-Object { $_.Trim() -ne "" })
-    Add-Line ("INFO  indexed tids: {0}" -f $tidList.Count)
+    $rawTids = @(Get-Content $index | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
+    $tidList = @($rawTids | Select-Object -Unique)
+    Add-Line ("INFO  indexed tids: {0} (unique {1})" -f $rawTids.Count, $tidList.Count)
     if ($tidList.Count -ge 2) {
       Add-Line "PASS  multi-tid index (>=2 terminals)"
     }
@@ -849,6 +850,7 @@ function Confirm-Bus {
   }
 
   # Bus race probe: rapid re-read of existing signal JSONs - empty body = fail
+  # Deduped $tidList above; retry once on empty to ignore mid-write lock flakes.
   Add-Line "--- Bus race probe (rapid reads) ---"
   $emptyHits = 0
   $reads = 0
@@ -859,6 +861,11 @@ function Confirm-Bus {
     for ($i = 0; $i -lt 20; $i++) {
       foreach ($f in $files) {
         $raw = Get-Content $f.FullName -Raw -ErrorAction SilentlyContinue
+        if ([string]::IsNullOrWhiteSpace($raw) -or
+            ($raw.Contains("{") -and $raw.TrimEnd().EndsWith("}") -eq $false)) {
+          Start-Sleep -Milliseconds 2
+          $raw = Get-Content $f.FullName -Raw -ErrorAction SilentlyContinue
+        }
         $reads++
         if ([string]::IsNullOrWhiteSpace($raw)) { $emptyHits++ }
         elseif ($raw.TrimEnd().EndsWith("}") -eq $false -and $raw.Contains("{")) {

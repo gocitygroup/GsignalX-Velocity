@@ -1,12 +1,12 @@
 {
-  "ui.meta.title": "Gsignalx Velocity 2.14 — Manual del trader | Gocity Group",
-  "ui.meta.description": "Manual del trader Gsignalx Velocity 2.14 sobre riesgo adaptativo. Banco Profit CASH, STOP suave de Prop, marco de condiciones de mercado, avisos RiskGuidance.",
-  "ui.splash.title": "Gsignalx Velocity 2.14 — Manual del trader y del inversor",
-  "ui.splash.description": "Manual Gsignalx Velocity 2.14 para trader e inversor — Profit CASH, VERIFY suave, mesa Prop",
-  "ui.splash.opening": "Abriendo el manual del trader <strong>Gsignalx Velocity 2.14</strong>…",
-  "ui.splash.version": "Velocity 2.14 · esquema de bus v1",
+  "ui.meta.title": "Gsignalx Velocity 2.18 — Manual del trader | Gocity Group",
+  "ui.meta.description": "Manual del trader Gsignalx Velocity 2.18 sobre riesgo adaptativo. Banco Profit CASH, STOP suave de Prop, marco de condiciones de mercado, avisos RiskGuidance.",
+  "ui.splash.title": "Gsignalx Velocity 2.18 — Manual del trader y del inversor",
+  "ui.splash.description": "Manual Gsignalx Velocity 2.18 para trader e inversor — Profit CASH, VERIFY suave, mesa Prop",
+  "ui.splash.opening": "Abriendo el manual del trader <strong>Gsignalx Velocity 2.18</strong>…",
+  "ui.splash.version": "Velocity 2.18 · esquema de bus v1",
   "ui.splash.continue": "Continúa si no se redirige",
-  "ui.brand.tagline": "por Gocity Group · Manual de mesa MT5 · v2.14",
+  "ui.brand.tagline": "por Gocity Group · Manual de mesa MT5 · v2.18",
   "ui.nav.sections": "Secciones del manual",
   "ui.nav.chapters": "Capítulos",
   "ui.nav.jump": "Ir al capítulo",
@@ -149,7 +149,7 @@
   "chapters.advanced.short": "Avanzado",
   "chapters.desk200.title": "Mesa multisímbolo",
   "chapters.desk200.short": "Receta",
-  "chapters.desk213.title": "Mejor uso de la UI 2.14",
+  "chapters.desk213.title": "Mejor uso de la UI 2.18",
   "chapters.desk213.short": "Mejor uso",
   "chapters.telegram.title": "Alertas de Telegram",
   "chapters.telegram.short": "Telegram",
@@ -180,5 +180,7 @@
   "ui.links.trade.title": "Panel de trading",
   "chapters.cloud.title": "Trading en la nube",
   "chapters.cloud.short": "Nube",
-  "ui.splash.cloud": "<strong>Nuevo — Trading en la nube:</strong> gestione su libro Velocity desde el <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">panel de trading</a> · <a href=\"Gsignalx_Velocity_Users_Manual.html#cloud\">cómo conectarse</a> · señales en <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>."
+  "ui.splash.cloud": "<strong>Nuevo — Trading en la nube:</strong> gestione su libro Velocity desde el <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">panel de trading</a> · <a href=\"Gsignalx_Velocity_Users_Manual.html#cloud\">cómo conectarse</a> · señales en <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>.",
+  "chapters.bias-follow.title": "Seguimiento de sesgo diario",
+  "chapters.bias-follow.short": "Sesgo"
 }

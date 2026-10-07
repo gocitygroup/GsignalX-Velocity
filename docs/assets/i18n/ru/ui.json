@@ -1,12 +1,12 @@
 {
-  "ui.meta.title": "Gsignalx Velocity 2.14 — Руководство трейдера | Gocity Group",
-  "ui.meta.description": "Руководство трейдера Gsignalx Velocity 2.14 по адаптивному риску. Банк Profit CASH, мягкий STOP для Prop, рамка рыночных условий, подсказки RiskGuidance.",
-  "ui.splash.title": "Gsignalx Velocity 2.14 — Руководство трейдера и инвестора",
-  "ui.splash.description": "Руководство Gsignalx Velocity 2.14 для трейдера и инвестора — Profit CASH, мягкий VERIFY, desk Prop",
-  "ui.splash.opening": "Открывается руководство трейдера <strong>Gsignalx Velocity 2.14</strong>…",
-  "ui.splash.version": "Velocity 2.14 · схема шины v1",
+  "ui.meta.title": "Gsignalx Velocity 2.18 — Руководство трейдера | Gocity Group",
+  "ui.meta.description": "Руководство трейдера Gsignalx Velocity 2.18 по адаптивному риску. Банк Profit CASH, мягкий STOP для Prop, рамка рыночных условий, подсказки RiskGuidance.",
+  "ui.splash.title": "Gsignalx Velocity 2.18 — Руководство трейдера и инвестора",
+  "ui.splash.description": "Руководство Gsignalx Velocity 2.18 для трейдера и инвестора — Profit CASH, мягкий VERIFY, desk Prop",
+  "ui.splash.opening": "Открывается руководство трейдера <strong>Gsignalx Velocity 2.18</strong>…",
+  "ui.splash.version": "Velocity 2.18 · схема шины v1",
   "ui.splash.continue": "Продолжить, если перенаправление не сработало",
-  "ui.brand.tagline": "от Gocity Group · Руководство desk MT5 · v2.14",
+  "ui.brand.tagline": "от Gocity Group · Руководство desk MT5 · v2.18",
   "ui.nav.sections": "Разделы руководства",
   "ui.nav.chapters": "Главы",
   "ui.nav.jump": "Перейти к главе",
@@ -149,7 +149,7 @@
   "chapters.advanced.short": "Продвинутый",
   "chapters.desk200.title": "Мультисимвольный desk",
   "chapters.desk200.short": "Рецепт desk",
-  "chapters.desk213.title": "Лучшее использование UI 2.14",
+  "chapters.desk213.title": "Лучшее использование UI 2.18",
   "chapters.desk213.short": "Лучшее",
   "chapters.telegram.title": "Оповещения Telegram",
   "chapters.telegram.short": "Telegram",
@@ -180,5 +180,7 @@
   "ui.links.trade.title": "Торговая панель",
   "chapters.cloud.title": "Облачная торговля",
   "chapters.cloud.short": "Облако",
-  "ui.splash.cloud": "<strong>Новое — облачная торговля:</strong> управляйте портфелем Velocity из <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">торговой панели</a> · <a href=\"Gsignalx_Velocity_Users_Manual.html#cloud\">как подключиться</a> · сигналы на <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>."
+  "ui.splash.cloud": "<strong>Новое — облачная торговля:</strong> управляйте портфелем Velocity из <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">торговой панели</a> · <a href=\"Gsignalx_Velocity_Users_Manual.html#cloud\">как подключиться</a> · сигналы на <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>.",
+  "chapters.bias-follow.title": "Daily Bias Follow",
+  "chapters.bias-follow.short": "Bias"
 }
