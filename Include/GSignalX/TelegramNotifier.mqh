@@ -94,6 +94,14 @@ datetime         g_tgLastVerifyAt   = 0;
 // Chats that passed the last VERIFY probe (send/skip dead IDs)
 string           g_tgHealthy[3];
 int              g_tgHealthyN       = 0;
+// v2.19: multi-tick verify (one WebRequest per step)
+int              g_tgVerifyPhase    = 0; // 0 idle, 1 getMe, 2 probe, 3 done
+string           g_tgVerifyChats[3];
+int              g_tgVerifyChatN    = 0;
+int              g_tgVerifyIdx      = 0;
+int              g_tgVerifyOkN      = 0;
+string           g_tgVerifyFail     = "";
+bool             g_tgVerifyNotify   = false;
 
 void GsxTgHealthyClear()
   {
@@ -411,10 +419,21 @@ bool GsxTgHttpGetMe(const string token, string &err)
   }
 
 //+------------------------------------------------------------------+
-bool GsxTgVerifyConnection(const GsxTgConfig &cfg, string &err)
+bool GsxTgVerifyBusy()
+  {
+   return(g_tgVerifyPhase == 1 || g_tgVerifyPhase == 2);
+  }
+
+// Arm multi-tick verify (no WebRequest here).
+bool GsxTgVerifyBegin(const GsxTgConfig &cfg, string &err)
   {
    err = "";
    g_tgVerified = false;
+   g_tgVerifyPhase = 0;
+   g_tgVerifyChatN = 0;
+   g_tgVerifyIdx = 0;
+   g_tgVerifyOkN = 0;
+   g_tgVerifyFail = "";
    if(!cfg.enable || cfg.botToken == "")
      {
       g_tgStatus = GSX_TG_NOT_CFG;
@@ -422,19 +441,6 @@ bool GsxTgVerifyConnection(const GsxTgConfig &cfg, string &err)
       return(false);
      }
 
-   // Connected = token present while getMe + chat probes run
-   g_tgStatus = GSX_TG_CONNECTED;
-   if(!GsxTgHttpGetMe(cfg.botToken, err))
-     {
-      g_tgLastError = err;
-      g_tgStatus    = GSX_TG_ERROR;
-      g_tgVerified  = false;
-      g_tgLastVerifyAt = TimeCurrent();
-      return(false);
-     }
-
-   string chats[3];
-   int nChats = 0;
    string rawIds[3];
    int nRaw = 0;
    if(cfg.chatId1 != "") rawIds[nRaw++] = cfg.chatId1;
@@ -444,68 +450,135 @@ bool GsxTgVerifyConnection(const GsxTgConfig &cfg, string &err)
      {
       err = "no chatId configured (numeric IDs only; each user must /start the bot)";
       g_tgLastError = err;
-      g_tgStatus    = GSX_TG_ERROR;
-      g_tgVerified  = false;
+      g_tgStatus = GSX_TG_ERROR;
+      g_tgVerified = false;
       GsxTgHealthyClear();
       g_tgLastVerifyAt = TimeCurrent();
       return(false);
      }
 
    GsxTgHealthyClear();
-   string failDetail = "";
-   int okCount = 0;
-
    for(int r = 0; r < nRaw; r++)
      {
       string id = rawIds[r];
       string idErr;
       if(!GsxTgChatIdOk(id, idErr))
         {
-         if(failDetail != "")
-            failDetail += "; ";
-         failDetail += idErr;
+         if(g_tgVerifyFail != "")
+            g_tgVerifyFail += "; ";
+         g_tgVerifyFail += idErr;
          continue;
         }
-      chats[nChats++] = id;
+      g_tgVerifyChats[g_tgVerifyChatN++] = id;
      }
-
-   // Plain probe — Verified if ≥1 chat delivers (dead IDs skipped for sends)
-   for(int i = 0; i < nChats; i++)
+   if(g_tgVerifyChatN <= 0)
      {
-      string probeErr;
-      if(!GsxTgHttpPostEx(cfg.botToken, chats[i], "[TG] verify", false, probeErr))
-        {
-         if(failDetail != "")
-            failDetail += "; ";
-         failDetail += "chat " + chats[i] + ": " + probeErr;
-         continue;
-        }
-      GsxTgHealthyAdd(chats[i]);
-      okCount++;
-     }
-
-   g_tgLastVerifyAt = TimeCurrent();
-
-   if(okCount <= 0)
-     {
-      err = (failDetail != "" ? failDetail
-             : "no chatId delivered (numeric IDs only; each user must /start the bot)");
+      err = (g_tgVerifyFail != "" ? g_tgVerifyFail
+             : "no chatId configured (numeric IDs only; each user must /start the bot)");
       g_tgLastError = err;
-      g_tgStatus    = GSX_TG_ERROR;
-      g_tgVerified  = false;
-      GsxTgHealthyClear();
+      g_tgStatus = GSX_TG_ERROR;
+      g_tgLastVerifyAt = TimeCurrent();
       return(false);
      }
 
-   g_tgVerified = true;
-   g_tgStatus   = GSX_TG_VERIFIED;
-   // Keep skip warning visible on Trade Center when some chats are dead
-   if(failDetail != "")
-      g_tgLastError = "skip " + failDetail;
-   else
-      g_tgLastError = "";
-   err = g_tgLastError;
+   g_tgStatus = GSX_TG_CONNECTED;
+   g_tgVerifyPhase = 1; // next step: getMe
+   err = "";
    return(true);
+  }
+
+// One WebRequest per call. Returns true while still busy or completed OK.
+bool GsxTgVerifyStep(const GsxTgConfig &cfg, string &err)
+  {
+   err = "";
+   if(g_tgVerifyPhase == 1)
+     {
+      if(!GsxTgHttpGetMe(cfg.botToken, err))
+        {
+         g_tgLastError = err;
+         g_tgStatus = GSX_TG_ERROR;
+         g_tgVerified = false;
+         g_tgLastVerifyAt = TimeCurrent();
+         g_tgVerifyPhase = 0;
+         return(false);
+        }
+      g_tgVerifyPhase = 2;
+      g_tgVerifyIdx = 0;
+      return(true);
+     }
+
+   if(g_tgVerifyPhase == 2)
+     {
+      if(g_tgVerifyIdx >= g_tgVerifyChatN)
+        {
+         g_tgLastVerifyAt = TimeCurrent();
+         if(g_tgVerifyOkN <= 0)
+           {
+            err = (g_tgVerifyFail != "" ? g_tgVerifyFail
+                   : "no chatId delivered (numeric IDs only; each user must /start the bot)");
+            g_tgLastError = err;
+            g_tgStatus = GSX_TG_ERROR;
+            g_tgVerified = false;
+            GsxTgHealthyClear();
+            g_tgVerifyPhase = 0;
+            return(false);
+           }
+         g_tgVerified = true;
+         g_tgStatus = GSX_TG_VERIFIED;
+         if(g_tgVerifyFail != "")
+            g_tgLastError = "skip " + g_tgVerifyFail;
+         else
+            g_tgLastError = "";
+         err = g_tgLastError;
+         g_tgVerifyPhase = 0;
+         return(true);
+        }
+
+      string chat = g_tgVerifyChats[g_tgVerifyIdx++];
+      string probeErr;
+      if(!GsxTgHttpPostEx(cfg.botToken, chat, "[TG] verify", false, probeErr))
+        {
+         if(g_tgVerifyFail != "")
+            g_tgVerifyFail += "; ";
+         g_tgVerifyFail += "chat " + chat + ": " + probeErr;
+        }
+      else
+        {
+         GsxTgHealthyAdd(chat);
+         g_tgVerifyOkN++;
+        }
+      return(true);
+     }
+
+   return(g_tgVerified);
+  }
+
+// Pump while busy (call from OnTimer). At most one HTTP per call.
+bool GsxTgVerifyPump(const GsxTgConfig &cfg, string &err)
+  {
+   if(!GsxTgVerifyBusy())
+      return(g_tgVerified);
+   bool ok = GsxTgVerifyStep(cfg, err);
+   if(g_tgMagic > 0)
+      GsxTgPublishStatus(g_tgMagic);
+   if(!GsxTgVerifyBusy() && g_tgVerified && g_tgVerifyNotify)
+     {
+      g_tgVerifyNotify = false;
+      string who = (g_tgAccountTag != "" ? g_tgAccountTag : "GSignalX");
+      GsxTgEnqueueTagged(cfg, "TG",
+                         "Connection verified — " + who + "\n" +
+                         GsxTvPubFooterLine() + "\n" + GsxPremiumFooterLine());
+      GsxTgEnqueueTagged(cfg, "START", "EA started — " + who);
+     }
+   return(ok);
+  }
+
+// Compatibility: begin + first step (getMe). Remaining probes via GsxTgVerifyPump.
+bool GsxTgVerifyConnection(const GsxTgConfig &cfg, string &err)
+  {
+   if(!GsxTgVerifyBegin(cfg, err))
+      return(false);
+   return(GsxTgVerifyStep(cfg, err)); // getMe only; probes continue on timer
   }
 
 //+------------------------------------------------------------------+
@@ -827,7 +900,8 @@ void GsxTgSendNow(const GsxTgConfig &cfg, const string tag, const string body)
       g_tgOverflowWarnAt = TimeCurrent() - 120; // arm cooldown
      }
 
-   GsxTgProcessQueue(cfg);
+   // v2.19: never drain unlimited on chart/desk thread
+   GsxTgProcessQueueEx(cfg, 1);
   }
 
 // Enqueue tagged message without draining the queue (Settings / non-urgent).
@@ -998,12 +1072,13 @@ bool GsxTgMaybeReverify(const GsxTgConfig &cfg)
 
    g_tgCfgFp = fp;
    string err;
+   // v2.19: arm async verify (getMe this call; probes on timer pump)
    bool ok = GsxTgVerifyConnection(cfg, err);
-   if(!ok)
+   if(!ok && !GsxTgVerifyBusy())
       g_tgLastError = err;
    if(g_tgMagic > 0)
       GsxTgPublishStatus(g_tgMagic);
-   return(ok);
+   return(ok || GsxTgVerifyBusy());
   }
 
 void GsxTgInit(const GsxTgConfig &cfg, const string accountTag)
@@ -1024,21 +1099,18 @@ void GsxTgInit(const GsxTgConfig &cfg, const string accountTag)
       return;
      }
 
+   // v2.19: non-blocking init — getMe now; chat probes + START on timer pump
    string err;
-   if(!GsxTgVerifyConnection(cfg, err))
+   g_tgVerifyNotify = true;
+   if(!GsxTgVerifyBegin(cfg, err))
      {
       g_tgLastError = err;
-      g_tgStatus = GSX_TG_ERROR;
+      g_tgVerifyNotify = false;
       if(g_tgMagic > 0)
          GsxTgPublishStatus(g_tgMagic);
       return;
      }
-
-   string who = (accountTag != "" ? accountTag : "GSignalX");
-   GsxTgSendNow(cfg, "TG",
-                "Connection verified — " + who + "\n" +
-                GsxTvPubFooterLine() + "\n" + GsxPremiumFooterLine());
-   GsxTgSendNow(cfg, "START", "EA started — " + who);
+   GsxTgVerifyStep(cfg, err); // getMe only
    if(g_tgMagic > 0)
       GsxTgPublishStatus(g_tgMagic);
   }
@@ -1049,9 +1121,9 @@ void GsxTgDeinit(const GsxTgConfig &cfg, double sessionPl)
    if(cfg.enable)
      {
       string pl = DoubleToString(sessionPl, 2);
-      GsxTgSendNow(cfg, "STOP", "EA stopped — session P/L: " + pl);
+      GsxTgEnqueueTagged(cfg, "STOP", "EA stopped — session P/L: " + pl);
       for(int i = 0; i < GSX_TG_QUEUE_CAP && g_tgCount > 0; i++)
-         GsxTgProcessQueue(cfg);
+         GsxTgProcessQueueEx(cfg, 1);
      }
    if(g_tgMagic > 0)
       GsxTgPublishStatus(g_tgMagic);

@@ -1901,12 +1901,68 @@ function Confirm-Functional {
     $script:fail++
   }
 
-  if ($busIoText -match '<= 15' -and $busIoText -match 'GsxBusReadFreshestSignal' -and
+  # v2.19 widened desk fast-path TTL (GSX_BUS_DESK_FAST_TTL / 30s; was literal <= 15)
+  if (($busIoText -match 'GSX_BUS_DESK_FAST_TTL' -or $busIoText -match '<= 15' -or $busIoText -match '<= 30') -and
+      $busIoText -match 'GsxBusReadFreshestSignal' -and
       $busIoText -match 'skip peer tid scan') {
-    Add-Line "PASS  V2.14.1 desk-mirror fast path age <=15s"
+    Add-Line "PASS  V2.14.1/V2.19 desk-mirror fast path age guard"
   }
   else {
     Add-Line "FAIL  V2.14.1 desk-mirror age guard missing"
+    $script:fail++
+  }
+
+  # --- V2.19 Hang/Freeze perf ---
+  $rvm = Join-Path $RepoRoot "Include\GSignalX\RosterViewModel.mqh"
+  $rvmText = if (Test-Path $rvm) { Get-Content $rvm -Raw } else { "" }
+  $tgText2 = if (Test-Path (Join-Path $RepoRoot "Include\GSignalX\TelegramNotifier.mqh")) {
+    Get-Content (Join-Path $RepoRoot "Include\GSignalX\TelegramNotifier.mqh") -Raw } else { "" }
+  $cloudLoop = Join-Path $RepoRoot "Include\GSignalX\Cloud\CloudLoop.mqh"
+  $cloudText = if (Test-Path $cloudLoop) { Get-Content $cloudLoop -Raw } else { "" }
+
+  if ($rvmText -match 'GsxMsCheapDirtyGate' -and $rvmText -match 'GsxMsNeedLivePulse' -and
+      $dashText -match 'GsxMsCheapDirtyGate' -and $dashText -match 'g_sessionOutcomesAt') {
+    Add-Line "PASS  V2.19 Trade Center cheap dirty gate + session outcomes throttle"
+  }
+  else {
+    Add-Line "FAIL  V2.19 cheap dirty gate missing"
+    $script:fail++
+  }
+
+  if ($msText -match 'GsxMsPanelOffsetAll' -and $dashText -match 'g_msDragging' -and
+      $msText -match 'offset existing objects') {
+    Add-Line "PASS  V2.19 panel drag offset (no full redraw)"
+  }
+  else {
+    Add-Line "FAIL  V2.19 drag offset missing"
+    $script:fail++
+  }
+
+  if ($busIoText -match 'GsxBusSnapBegin' -and $busIoText -match 'GsxBusAppendLine' -and
+      $rvmText -match 'GsxBusSnapBegin') {
+    Add-Line "PASS  V2.19 bus snapshot cache + true append"
+  }
+  else {
+    Add-Line "FAIL  V2.19 bus snap/append helpers missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'GsxCorePrefetchEnqueue' -and $coreText -match 'GsxCorePrefetchDrain' -and
+      $coreText -match 'g_coreLastCycleMs >= 80') {
+    Add-Line "PASS  V2.19 Core prefetch queue + heavy-cycle budget cut"
+  }
+  else {
+    Add-Line "FAIL  V2.19 Core adaptive pacing missing"
+    $script:fail++
+  }
+
+  if ($tgText2 -match 'GsxTgVerifyBegin' -and $tgText2 -match 'GsxTgVerifyPump' -and
+      $tgText2 -match 'ProcessQueueEx\(cfg, 1\)' -and
+      $cloudText -match 'ackBudget' -and $cloudText -match 'snapHalf') {
+    Add-Line "PASS  V2.19 TG verify state machine + Cloud ACK/snap caps"
+  }
+  else {
+    Add-Line "FAIL  V2.19 TG/Cloud network caps missing"
     $script:fail++
   }
 

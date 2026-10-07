@@ -341,7 +341,7 @@ void GsxSettingsAuditAppend(const string kind, const string body)
    j += GsxJsonKV_S("kind", kind);
    j += GsxJsonKV_S("body", body, false);
    j += "}\n";
-   GsxBusAppendLineAtomic(rel, j);
+   GsxBusAppendLine(rel, j); // v2.19 true append
   }
 
 bool GsxSettingsShouldSend(const string fp, const bool force)
@@ -425,14 +425,7 @@ void GsxSettingsPendingSet(const long magic, const string action)
    if(magic > 0)
      {
       GlobalVariableSet(GsxSettingsPendingGvName(magic), (double)TimeCurrent());
-      string rel = GsxSettingsPendingRel(magic);
-      GsxEnsureFolderTree(rel);
-      int h = FileOpen(rel, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_REWRITE);
-      if(h != INVALID_HANDLE)
-        {
-         FileWriteString(h, action);
-         FileClose(h);
-        }
+      GsxBusWriteAtomic(GsxSettingsPendingRel(magic), action);
      }
   }
 
@@ -442,13 +435,7 @@ void GsxSettingsPendingSetScout(const int scoutId, const long magic, const strin
       return;
    GsxSettingsPendingSet(magic, action);
    GlobalVariableSet(GsxSettingsPendingScoutGvName(scoutId), (double)TimeCurrent());
-   string rel = GsxSettingsPendingScoutRel(scoutId);
-   GsxEnsureFolderTree(rel);
-   int h = FileOpen(rel, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_REWRITE);
-   if(h == INVALID_HANDLE)
-      return;
-   FileWriteString(h, action);
-   FileClose(h);
+   GsxBusWriteAtomic(GsxSettingsPendingScoutRel(scoutId), action);
   }
 
 bool GsxSettingsPendingConsume(const long magic, string &actionOut)

@@ -183,7 +183,7 @@ void GsxCtAuditAppend(const GsxCloseTriggerEvent &e)
    j += GsxJsonKV_I("deal_reason", e.dealReason, false);
    j += "}\n";
 
-   GsxBusAppendLineAtomic(rel, j);
+   GsxBusAppendLine(rel, j); // v2.19 true append (no full-file rewrite)
   }
 
 string GsxCtTagFromDealReason(const long reason)
@@ -271,16 +271,8 @@ void GsxCtEmitEx(const ulong ticket,
    if(hotPending)
      {
       GlobalVariableSet(GsxCtGvName(e.magic, e.ticket), (double)e.ts);
-
       string pending = GsxCtPendingRel(e.magic, e.ticket);
-      GsxEnsureFolderTree(pending);
-      string body = GsxCtEncodePayload(e);
-      int h = FileOpen(pending, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_REWRITE);
-      if(h != INVALID_HANDLE)
-        {
-         FileWriteString(h, body);
-         FileClose(h);
-        }
+      GsxBusWriteAtomic(pending, GsxCtEncodePayload(e));
      }
 
    GsxCtAuditAppend(e);

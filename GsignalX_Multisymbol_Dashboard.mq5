@@ -235,6 +235,10 @@ datetime      g_lastEvtPoll = 0;
 datetime      g_lastPropEval = 0;
 datetime      g_lastForcedRedraw = 0;
 string        g_lastSnapFp = "";
+datetime      g_sessionOutcomesAt = 0;
+int           g_sessionWinsCache = 0;
+int           g_sessionLossesCache = 0;
+double        g_sessionNetPlCache = 0.0;
 string        g_evtLine = "";
 int           g_evtMode = GSX_EVT_MODE_TRADE;
 int           g_tgWeekTrades = 0;
@@ -404,12 +408,24 @@ void DashPublishDeskTimeframe()
 
 void DashRefreshPanel(const bool forceRedraw = false)
   {
+   // v2.19: never rebuild while dragging — lightweight offset owns the move
+   if(g_msDragging && !forceRedraw)
+      return;
+
    DashPublishDeskTimeframe();
    DashApplySessionCfg();
    GsxMsPanelSetUiScale(InpUiScale);
    GsxMsPanelSetVision((int)InpUiVision);
    GsxMsPanelSetShowPractice(InpShowPractice);
    GsxMsPanelApplyAdaptive();
+
+   bool heartbeat = (g_lastForcedRedraw == 0 || TimeCurrent() - g_lastForcedRedraw >= 8);
+   string cheapKey = "";
+   bool cheapDirty = GsxMsCheapDirtyGate(InpMagic, g_msPage, forceRedraw, cheapKey);
+   bool livePulse  = GsxMsNeedLivePulse(forceRedraw);
+   if(!forceRedraw && !heartbeat && !cheapDirty && !livePulse)
+      return;
+
    GsxMsSnapshot snap;
    GsxMsBuildSnapshot(InpMagic, InpFleetTargetPairs, g_msPageSize, snap);
    GsxMsSnapshotApplyScout(snap, InpScoutLinkEnable, InpScoutInstanceID);
@@ -421,15 +437,25 @@ void DashRefreshPanel(const bool forceRedraw = false)
    snap.propTradesToday  = g_propSt.tradesToday;
    snap.propMaxTrades    = InpPropMaxTradesDay;
    snap.continuousFleet  = InpContinuousFleet;
-   datetime dayFrom = g_propSt.dayKey;
-   if(dayFrom <= 0)
+
+   // v2.19: HistorySelect at most every 5s (display-only W/L)
+   if(forceRedraw || g_sessionOutcomesAt == 0 ||
+      TimeCurrent() - g_sessionOutcomesAt >= 5)
      {
-      MqlDateTime dt;
-      TimeToStruct(TimeGMT(), dt);
-      dayFrom = StringToTime(StringFormat("%04d.%02d.%02d", dt.year, dt.mon, dt.day));
+      datetime dayFrom = g_propSt.dayKey;
+      if(dayFrom <= 0)
+        {
+         MqlDateTime dt;
+         TimeToStruct(TimeGMT(), dt);
+         dayFrom = StringToTime(StringFormat("%04d.%02d.%02d", dt.year, dt.mon, dt.day));
+        }
+      GsxPropSessionOutcomes(InpMagic, dayFrom,
+                             g_sessionWinsCache, g_sessionLossesCache, g_sessionNetPlCache);
+      g_sessionOutcomesAt = TimeCurrent();
      }
-   GsxPropSessionOutcomes(InpMagic, dayFrom,
-                          snap.sessionWins, snap.sessionLosses, snap.sessionNetPl);
+   snap.sessionWins   = g_sessionWinsCache;
+   snap.sessionLosses = g_sessionLossesCache;
+   snap.sessionNetPl  = g_sessionNetPlCache;
 
    GsxTgPublished pub;
    GsxTgReadPublishedStatus(InpMagic, pub);
@@ -447,14 +473,16 @@ void DashRefreshPanel(const bool forceRedraw = false)
    g_msPage = snap.page;
 
    string fp = GsxMsSnapshotFingerprint(snap);
-   // v2.13: forced heartbeat redraw 8s (was 2s) — fingerprint still drives dirty path
-   bool heartbeat = (g_lastForcedRedraw == 0 || TimeCurrent() - g_lastForcedRedraw >= 8);
    if(!forceRedraw && !heartbeat && fp == g_lastSnapFp)
+     {
+      GsxMsCheapDirtyCommit(cheapKey);
       return;
+     }
 
    g_lastSnapFp = fp;
    g_lastForcedRedraw = TimeCurrent();
-   GsxMsPanelDrawFull(snap);
+   GsxMsCheapDirtyCommit(cheapKey);
+   GsxMsPanelDrawFull(snap, true); // defer ChartRedraw to caller
    ChartRedraw(0);
   }
 
@@ -579,6 +607,7 @@ void OnTimer()
       DashStopCore("DeskExecute off");
 
    // Core phase: cadence or click-kick (never nest with in-cycle guard)
+   bool coreHeavyThisTick = false;
    if(g_deskCoreActive &&
       (g_deskCoreKick || (now - g_deskLastCoreMs >= (ulong)cycle)))
      {
@@ -586,16 +615,31 @@ void OnTimer()
       g_deskLastCoreMs = now;
       DashPublishDeskTimeframe();
       GsxCoreCycle();
+      // v2.19: defer UI when Core was heavy this tick
+      coreHeavyThisTick = (g_coreLastCycleMs >= 80);
      }
 
    // UI phase: independent budget from Core
+   if(coreHeavyThisTick)
+      return;
    if(now - g_deskLastUiMs < (ulong)uiMs)
       return;
    g_deskLastUiMs = now;
 
    g_tgCfg = DashBuildTgConfig();
    g_propCfg = DashBuildPropConfig();
-   GsxTgMaybeReverify(g_tgCfg);
+   if(GsxTgVerifyBusy())
+     {
+      string verr;
+      GsxTgVerifyPump(g_tgCfg, verr);
+      if(!GsxTgVerifyBusy() && g_tgVerified)
+         g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " TG VERIFY ok";
+      else if(!GsxTgVerifyBusy() && !g_tgVerified)
+         g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                          " TG VERIFY fail · " + GsxTgLastError();
+     }
+   else
+      GsxTgMaybeReverify(g_tgCfg);
    GsxTgDeskHeartbeat(InpMagic);
 
    if(g_lastPropEval == 0 || TimeCurrent() - g_lastPropEval >= 2)
@@ -658,31 +702,24 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
      {
       g_tgCfg = DashBuildTgConfig();
       string err;
-      // Soft VERIFY: Verified if ≥1 chat delivers; dead chats skipped for sends
-      if(GsxTgVerifyConnection(g_tgCfg, err))
-        {
-         GsxTgSendNow(g_tgCfg, "TG",
-                      "Connection verified — Trade Center\n" + GsxTvPubFooterLine() +
-                      "\n" + GsxPremiumFooterLine());
-         if(err != "")
-           {
-            string warn = err;
-            if(StringLen(warn) > 56)
-               warn = StringSubstr(warn, 0, 56);
-            g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
-                             " TG VERIFY ok · " + warn;
-           }
-         else
-            g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) + " TG VERIFY ok";
-        }
-      else
+      // v2.19: arm async VERIFY (getMe now; chat probes on timer — no freeze)
+      g_tgVerifyNotify = true;
+      g_tgAccountTag = "Trade Center";
+      if(!GsxTgVerifyBegin(g_tgCfg, err))
         {
          g_tgLastError = err;
+         g_tgVerifyNotify = false;
          string detail = err;
          if(StringLen(detail) > 72)
             detail = StringSubstr(detail, 0, 72);
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                           " TG VERIFY fail · " + detail;
+        }
+      else
+        {
+         GsxTgVerifyStep(g_tgCfg, err); // getMe only this click
+         g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                          " TG VERIFY…";
         }
       GsxTgPublishStatus(InpMagic);
       DashRefreshPanel(true);
@@ -691,6 +728,9 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
 
    if(GsxMsPanelOnChartEvent(id, lparam, dparam, sparam))
      {
+      // Drag moves objects in-panel; full rebuild only on mouse-up / clicks
+      if(g_msDragging && id == CHARTEVENT_MOUSE_MOVE)
+         return;
       if(id == CHARTEVENT_OBJECT_CLICK && sparam == "GSXMS_BTN_EVT")
          DashPollEvents(true);
       // Immediate Core pass after PLAY/ADD — kick timer (guards nested cycles)

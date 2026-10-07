@@ -447,6 +447,25 @@ void GsxMsPanelSavePos()
    GlobalVariableSet(GsxMsPosYVar(), (double)g_msPanelY);
   }
 
+// v2.19: drag without full redraw — nudge every GSXMS_ object by dx/dy
+void GsxMsPanelOffsetAll(const int dx, const int dy)
+  {
+   if(dx == 0 && dy == 0)
+      return;
+   int total = ObjectsTotal(0, -1, -1);
+   for(int i = 0; i < total; i++)
+     {
+      string name = ObjectName(0, i, -1, -1);
+      if(StringFind(name, GSXMS_PFX) != 0)
+         continue;
+      long x = ObjectGetInteger(0, name, OBJPROP_XDISTANCE);
+      long y = ObjectGetInteger(0, name, OBJPROP_YDISTANCE);
+      ObjectSetInteger(0, name, OBJPROP_XDISTANCE, x + dx);
+      ObjectSetInteger(0, name, OBJPROP_YDISTANCE, y + dy);
+     }
+   ChartRedraw(0);
+  }
+
 void GsxMsPanelLoadFlip()
   {
    string n = GsxMsFlipVar();
@@ -1874,7 +1893,7 @@ bool GsxMsPanelOnChartEvent(const int id,
             g_msDragging = false;
             g_msDragOffSet = false;
             GsxMsPanelSavePos();
-            return(true);
+            return(true); // mouse-up → caller may full refresh once
            }
          if(!g_msDragOffSet)
            {
@@ -1882,10 +1901,17 @@ bool GsxMsPanelOnChartEvent(const int id,
             g_msDragDY = my - g_msPanelY;
             g_msDragOffSet = true;
            }
+         int prevX = g_msPanelX;
+         int prevY = g_msPanelY;
          g_msPanelX = MathMax(0, mx - g_msDragDX);
          g_msPanelY = MathMax(0, my - g_msDragDY);
          int dragH = (g_msLastTotalH > GsxSx(120) ? g_msLastTotalH : GsxSx(480));
          GsxPanelClampPos(g_msPanelX, g_msPanelY, g_msPanelWidth, dragH);
+         // v2.19: offset existing objects only — no snapshot/full redraw during drag
+         int dx = g_msPanelX - prevX;
+         int dy = g_msPanelY - prevY;
+         if(dx != 0 || dy != 0)
+            GsxMsPanelOffsetAll(dx, dy);
          return(true);
         }
 

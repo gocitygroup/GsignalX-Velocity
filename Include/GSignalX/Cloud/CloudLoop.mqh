@@ -24,6 +24,7 @@ struct GsxCloudRuntime
    datetime lastControl;
    string lastError;
    bool   online;
+   bool   snapHalf; // v2.19: alternate snapshot vs trades across ticks
   };
 
 void GsxCloudRuntimeClear(GsxCloudRuntime &rt)
@@ -39,6 +40,7 @@ void GsxCloudRuntimeClear(GsxCloudRuntime &rt)
    rt.lastControl = 0;
    rt.lastError = "";
    rt.online = false;
+   rt.snapHalf = false;
   }
 
 bool GsxCloudHeartbeat(GsxCloudRuntime &rt)
@@ -160,10 +162,12 @@ bool GsxCloudPollCommands(GsxCloudRuntime &rt, const long magic)
      }
    rt.lastCommands = TimeCurrent();
    // Walk simple array of command objects by scanning "id" / "type" pairs.
+   // v2.19: cap ACKs per tick (each ACK is a blocking WebRequest)
    string body = res.body;
    int pos = 0;
    int guard = 0;
-   while(guard < 20)
+   int ackBudget = 3;
+   while(guard < 20 && ackBudget > 0)
      {
       int idKey = StringFind(body, "\"id\"", pos);
       if(idKey < 0)
@@ -183,9 +187,13 @@ bool GsxCloudPollCommands(GsxCloudRuntime &rt, const long magic)
       GsxCloudExecResult er;
       GsxCloudExecCommand(rt.cfg, magic, type, payload, er);
       GsxCloudAckCommand(rt.id, rt.accountId, cmdId, er.body);
+      ackBudget--;
       pos = idKey + 4;
       guard++;
      }
+   // More commands remain → allow next tick to poll again soon
+   if(ackBudget <= 0)
+      rt.lastCommands = TimeCurrent() - MathMax(1, rt.cfg.pollSec);
    return(true);
   }
 
@@ -252,9 +260,16 @@ void GsxCloudTick(GsxCloudRuntime &rt, const long magic)
 
    if(rt.accountId != "" && now - rt.lastSnapshot >= poll)
      {
-      // Snapshot + trades share one budgeted tick (two short POSTs, no command latency)
-      GsxCloudPushSnapshot(rt);
+      // v2.19: one POST family per tick (snapshot then trades)
+      if(!rt.snapHalf)
+        {
+         GsxCloudPushSnapshot(rt);
+         rt.snapHalf = true;
+         return;
+        }
       GsxCloudPushTrades(rt);
+      rt.snapHalf = false;
+      rt.lastSnapshot = now;
      }
   }
 

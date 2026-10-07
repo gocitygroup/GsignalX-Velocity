@@ -312,6 +312,10 @@ int      gLastSigIdx     = -1;    // its index in the calculation arrays
 double   gSignalOpenPx   = 0.0;   // bar open at the active signal (pending anchor)
 string   gBusGradeLine   = "grades: -";
 datetime gBusLastPub     = 0;
+string   gBusLastFp      = "";
+string   gStripLastFp    = "";
+string   gStripCheapKey  = "";
+ulong    gStripLastMs    = 0;
 datetime gDrillStart     = 0;     // PLAY time that opened the drill window (0 = inactive)
 int      gDrillWanted    = 0;     // direction locked for the current drill window
 bool     gHadPosition    = false; // last tick had our magic position (flat-edge detect)
@@ -384,9 +388,11 @@ void GsxPublishBusState(const string tradeState)
   {
    if(!InpBusEnable)
       return;
+   // When Service owns fleet, chart is a consumer — skip publish storms
+   if(ChartServiceOwnsFleet())
+      return;
    if(gBusLastPub != 0 && TimeCurrent() - gBusLastPub < 2)
       return;
-   gBusLastPub = TimeCurrent();
 
    // DRY: shared SignalBus schema + one gate/dir view for write + local grade
    GsxEngineState st;
@@ -428,10 +434,18 @@ void GsxPublishBusState(const string tradeState)
                          InpStaleTickSec, gIgnoreSpread,
                          InpSwingStartHour, InpSwingEndHour, InpCryptoExtraList,
                          InpFridayStop, InpFridayStopHr, joinDir, view);
+   // v2.19: publish only when fingerprint dirty or heartbeat (≥10s)
+   string fp = GsxSignalBusFingerprintFromView(view);
+   bool hb = (gBusLastPub == 0 || TimeCurrent() - gBusLastPub >= 10);
+   if(!hb && fp == gBusLastFp)
+      return;
+   gBusLastPub = TimeCurrent();
+   gBusLastFp = fp;
+   // Desk mirror only from chart (tid path left to Service/full-sync)
    GsxSignalBusWriteFromView(_Symbol, st, view, InpMagic,
                              (InpMode == GSX_SIMPLE ? 0 : 1), InpCryptoExtraList,
                              true, gClosedCount, gClosedWins, gClosedLosses,
-                             gClosedRealized, owner, snap, "", true);
+                             gClosedRealized, owner, snap, "", false);
    GsxSignalBusHeartbeat("gsignalx");
 
    // Local grade reuses the same view (no second gate/dir fork)
@@ -2817,14 +2831,38 @@ void GsxChartDrawRosterStrip()
       return;
      }
 
+   // v2.19: throttle strip (500ms bus-owned / 250ms otherwise) + cheap dirty gate
+   ulong nowMs = GetTickCount();
+   ulong minGap = (ChartServiceOwnsFleet() ? 500 : 250);
+   string cheapKey = "";
+   bool force = (gStripLastFp == "");
+   bool cheapDirty = GsxMsCheapDirtyGate(InpMagic, g_msPage, force, cheapKey);
+   bool livePulse = GsxMsNeedLivePulse(force);
+   if(!force && gStripLastMs != 0 && (nowMs - gStripLastMs) < minGap &&
+      !cheapDirty && !livePulse && cheapKey == gStripCheapKey)
+      return;
+
    GsxMsSnapshot snap;
    GsxMsBuildSnapshot(InpMagic, InpFleetTargetPairs, InpRosterStripPageSize, snap);
    GsxMsSnapshotApplyScout(snap, InpScoutLinkEnable, InpScoutInstanceID);
+   string fp = GsxMsSnapshotFingerprint(snap);
+   if(!force && fp == gStripLastFp && !cheapDirty)
+     {
+      GsxMsCheapDirtyCommit(cheapKey);
+      gStripCheapKey = cheapKey;
+      gStripLastMs = nowMs;
+      return;
+     }
+
    g_msPage = snap.page;
    g_msDefaultFleet = InpFleetTargetPairs;
    g_msShowButtons = true;
    int ay = g_panelY + g_panelLastH + GsxSx(14);
    GsxMsPanelDrawCompact(snap, g_panelX, ay);
+   gStripLastFp = fp;
+   gStripCheapKey = cheapKey;
+   gStripLastMs = nowMs;
+   GsxMsCheapDirtyCommit(cheapKey);
 
    // restore ChartPanel prefix for next signal panel paint
    GsxPanelConfigure(gPfx, InpCorner, InpFont, InpFontSize, InpColPanelEdge);
@@ -3091,6 +3129,9 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
      {
       if(GsxMsPanelOnChartEvent(id, lparam, dparam, sparam))
         {
+         // v2.19: drag offsets objects in-panel; skip full UpdatePanel until mouse-up
+         if(g_msDragging && id == CHARTEVENT_MOUSE_MOVE)
+            return;
          GsxUiMarkDirty();
          UpdatePanel(g_lastPanelState);
          return;

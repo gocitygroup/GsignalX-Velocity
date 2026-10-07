@@ -105,6 +105,9 @@ int            g_coreNewOnboard = 0; // symbols added this reload (ADD → refre
 ulong          g_coreCycleStartMs = 0;
 ulong          g_coreLastCycleMs  = 0;
 datetime       g_coreCycleLogAt   = 0;
+// v2.19: queue history prefetch across cycles (avoid ADD burst freeze)
+string         g_corePrefetchQ[];
+int            g_corePrefetchBudget = 2;
 datetime       g_coreLastPendingHygiene = 0; // throttle stale/orphan order walks
 int            g_coreHostTag    = GSX_HOST_SERVICE; // desk vs service OWN claimer
 bool           g_coreClaimedOwn = false;
@@ -191,7 +194,10 @@ int GsxCoreEngineBudget()
    if(b <= 0)
       b = 4;
    if(g_coreBurstBudgetCycles > 0)
-      return(MathMax(b, MathMin(ArraySize(g_roster), b * 2)));
+      b = MathMax(b, MathMin(ArraySize(g_roster), b * 2));
+   // v2.19: cut recalcs when previous cycle was heavy (≥80 ms SLA warn)
+   if(g_coreLastCycleMs >= 80)
+      b = MathMax(1, b / 2);
    return(b);
   }
 
@@ -541,6 +547,40 @@ string GsxCoreScaleLabel()
    return("Manual");
   }
 
+void GsxCorePrefetchEnqueue(const string symbol)
+  {
+   if(symbol == "")
+      return;
+   for(int i = 0; i < ArraySize(g_corePrefetchQ); i++)
+      if(g_corePrefetchQ[i] == symbol)
+         return;
+   int n = ArraySize(g_corePrefetchQ);
+   ArrayResize(g_corePrefetchQ, n + 1);
+   g_corePrefetchQ[n] = symbol;
+  }
+
+void GsxCorePrefetchDrain()
+  {
+   int budget = MathMax(1, g_corePrefetchBudget);
+   if(g_coreLastCycleMs >= 80)
+      budget = 1;
+   ENUM_TIMEFRAMES tfWarm = GsxRosterTimeframeGet(InpMagic, InpTimeframe);
+   if(!GsxRosterTimeframeValid(tfWarm))
+      tfWarm = PERIOD_M5;
+   int lookback = GsxCoreScaleLookback();
+   int done = 0;
+   while(done < budget && ArraySize(g_corePrefetchQ) > 0)
+     {
+      string sym = g_corePrefetchQ[0];
+      int n = ArraySize(g_corePrefetchQ);
+      for(int i = 1; i < n; i++)
+         g_corePrefetchQ[i - 1] = g_corePrefetchQ[i];
+      ArrayResize(g_corePrefetchQ, n - 1);
+      GsxEngPrefetchHistory(sym, tfWarm, lookback);
+      done++;
+     }
+  }
+
 int GsxCoreEngineBytesEstAll()
   {
    int sum = 0;
@@ -844,11 +884,8 @@ void GsxCoreApplyRoster(const string &newRoster[])
       if(g_onboardPending[i] && newRoster[i] != "")
         {
          newCount++;
-         // v2.13: prefetch history so onboard is not stuck waiting
-         ENUM_TIMEFRAMES tfWarm = GsxRosterTimeframeGet(InpMagic, InpTimeframe);
-         if(!GsxRosterTimeframeValid(tfWarm))
-            tfWarm = PERIOD_M5;
-         GsxEngPrefetchHistory(newRoster[i], tfWarm, GsxCoreScaleLookback());
+         // v2.19: queue prefetch across cycles (no sync CopyRates burst on ADD)
+         GsxCorePrefetchEnqueue(newRoster[i]);
         }
      }
 
@@ -919,10 +956,7 @@ void GsxCoreInitEx(const int hostTag, const bool claimOwn)
       // stale pairs after restart. Only ADD/ActivatePair onboard kicks arm fills.
       g_onboardPending[i] = false;
       if(g_roster[i] != "")
-        {
-         ENUM_TIMEFRAMES tfWarm = GsxRosterTimeframeValid(InpTimeframe) ? InpTimeframe : PERIOD_M5;
-         GsxEngPrefetchHistory(g_roster[i], tfWarm, InpLookback);
-        }
+         GsxCorePrefetchEnqueue(g_roster[i]);
      }
 
    g_svcEnabled   = true;
@@ -1464,6 +1498,8 @@ void GsxCoreCycle()
    GsxCoreMaybeReloadRoster();
    // 0a) ADD/re-ARM kicks (even when symbol already on roster)
    GsxCoreApplyOnboardKicks();
+   // 0a2) v2.19: drain queued history prefetch (budgeted; no ADD burst freeze)
+   GsxCorePrefetchDrain();
 
    // 0b) Trade Center FOLLOW/WAIT — live GV (fallback: Service input default)
    g_flipWait = GsxRosterFlipWaitGet(InpMagic, InpFlipWaitDefault);

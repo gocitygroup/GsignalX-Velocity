@@ -387,14 +387,7 @@ void GsxStratStopPersist(const ulong ticket, const long magic, const GsxStratSto
    if(ticket == 0 || !d.ok)
       return;
    GlobalVariableSet(GsxStratStopGvName(magic, ticket), d.finalDist);
-
-   string rel = GsxStratStopMetaRel(magic, ticket);
-   GsxEnsureFolderTree(rel);
-   int h = FileOpen(rel, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_REWRITE);
-   if(h == INVALID_HANDLE)
-      return;
-   FileWriteString(h, GsxStratStopEncode(d));
-   FileClose(h);
+   GsxBusWriteAtomic(GsxStratStopMetaRel(magic, ticket), GsxStratStopEncode(d));
   }
 
 bool GsxStratStopLoad(const ulong ticket, const long magic, GsxStratStopDecision &out)
@@ -456,13 +449,7 @@ void GsxStratStopPersistPending(const long magic, const string symbol, const Gsx
    if(!d.ok || symbol == "")
       return;
    GlobalVariableSet(GsxStratStopPendGvName(magic, symbol), d.finalDist);
-   string rel = GsxStratStopPendMetaRel(magic, symbol);
-   GsxEnsureFolderTree(rel);
-   int h = FileOpen(rel, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_REWRITE);
-   if(h == INVALID_HANDLE)
-      return;
-   FileWriteString(h, GsxStratStopEncode(d));
-   FileClose(h);
+   GsxBusWriteAtomic(GsxStratStopPendMetaRel(magic, symbol), GsxStratStopEncode(d));
   }
 
 bool GsxStratStopLoadPending(const long magic, const string symbol, GsxStratStopDecision &out)

@@ -11,11 +11,31 @@
 
 #define GSX_BUS_REG_CACHE_MAX  64
 #define GSX_BUS_REG_RETRY      3
+#define GSX_BUS_DESK_FAST_TTL  30   // v2.19 UI: desk mirror fast-path (was 15s)
 
 string g_gsxBusCachedTids[GSX_BUS_REG_CACHE_MAX];
 int    g_gsxBusCachedTidN = 0;
 string g_gsxBusCachedSigKeys[GSX_BUS_REG_CACHE_MAX];
 int    g_gsxBusCachedSigN = 0;
+
+// v2.19: one _index.txt read per snapshot / UI pass
+bool   g_gsxBusSnapActive = false;
+string g_gsxBusSnapTids[];
+bool   g_gsxBusSnapTidsReady = false;
+
+void GsxBusSnapBegin()
+  {
+   g_gsxBusSnapActive = true;
+   g_gsxBusSnapTidsReady = false;
+   ArrayResize(g_gsxBusSnapTids, 0);
+  }
+
+void GsxBusSnapEnd()
+  {
+   g_gsxBusSnapActive = false;
+   g_gsxBusSnapTidsReady = false;
+   ArrayResize(g_gsxBusSnapTids, 0);
+  }
 
 // v2.07: short-lived freshest-signal cache (reduce STALE flicker / I/O)
 // v2.13: per-canon map cache (was single-slot thrash across roster rows)
@@ -142,7 +162,35 @@ bool GsxBusWriteAtomic(const string relativePath, const string body)
    return true;
   }
 
-// Append one line via read + atomic replace (safe under multi-writer FILE_COMMON).
+// True append (seek end) — preferred for audit logs (no full-file rewrite).
+bool GsxBusAppendLine(const string relativePath, const string line)
+  {
+   if(line == "")
+      return(false);
+   GsxEnsureFolderTree(relativePath);
+   string add = line;
+   if(StringLen(add) > 0 &&
+      StringGetCharacter(add, StringLen(add) - 1) != '\n')
+      add += "\n";
+   int h = FileOpen(relativePath, FILE_READ | FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON);
+   if(h == INVALID_HANDLE)
+     {
+      // Create new file
+      h = FileOpen(relativePath, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_REWRITE);
+      if(h == INVALID_HANDLE)
+         return(false);
+      FileWriteString(h, add);
+      FileClose(h);
+      return(true);
+     }
+   FileSeek(h, 0, SEEK_END);
+   FileWriteString(h, add);
+   FileClose(h);
+   return(true);
+  }
+
+// Append via read + atomic replace (safe under multi-writer contention).
+// Prefer GsxBusAppendLine for single-writer audit logs.
 bool GsxBusAppendLineAtomic(const string relativePath, const string line)
   {
    if(line == "")
@@ -186,6 +234,7 @@ string GsxBusReadAll(const string relativePath)
 //+------------------------------------------------------------------+
 //| Retry short/empty reads once under concurrent publish.            |
 //+------------------------------------------------------------------+
+// retries=0 → no Sleep (UI / snapshot). Service writers may pass >0.
 string GsxBusReadAllRetry(const string relativePath, const int retries = 2)
   {
    string data = GsxBusReadAll(relativePath);
@@ -309,8 +358,21 @@ void GsxBusRegisterSignal(const string tid, const string symbolCanon)
 int GsxBusListTerminalIds(string &tids[])
   {
    ArrayResize(tids, 0);
+   // v2.19: reuse snapshot-scoped tid list (one _index read per UI pass)
+   if(g_gsxBusSnapActive && g_gsxBusSnapTidsReady)
+     {
+      int nCached = ArraySize(g_gsxBusSnapTids);
+      ArrayResize(tids, nCached);
+      for(int i = 0; i < nCached; i++)
+         tids[i] = g_gsxBusSnapTids[i];
+      return(nCached);
+     }
+
    string indexPath = GSX_BUS_TERMINALS + "\\_index.txt";
-   string existing = GsxBusReadAllRetry(indexPath);
+   // UI snapshot: no Sleep retries; Service writers still use Retry elsewhere
+   string existing = (g_gsxBusSnapActive
+                      ? GsxBusReadAllNoSleep(indexPath)
+                      : GsxBusReadAllRetry(indexPath));
    if(existing == "")
       return 0;
 
@@ -335,6 +397,14 @@ int GsxBusListTerminalIds(string &tids[])
       int m = ArraySize(tids);
       ArrayResize(tids, m + 1);
       tids[m] = t;
+     }
+   if(g_gsxBusSnapActive)
+     {
+      int nOut = ArraySize(tids);
+      ArrayResize(g_gsxBusSnapTids, nOut);
+      for(int i = 0; i < nOut; i++)
+         g_gsxBusSnapTids[i] = tids[i];
+      g_gsxBusSnapTidsReady = true;
      }
    return ArraySize(tids);
   }
@@ -369,8 +439,8 @@ string GsxBusReadFreshestSignal(const string symbolCanon, datetime &bestTs)
         {
          deskTs = (datetime)ts;
          // Fast path: fresh desk mirror — skip peer tid scan
-         // v2.14.1: ≤15s (was 2s) matches default signal max-age; Service/Desk write mirror every publish
-         if((TimeCurrent() - deskTs) <= 15)
+         // v2.19: ≤30s for UI (was 15s) — Core still publishes often
+         if((TimeCurrent() - deskTs) <= GSX_BUS_DESK_FAST_TTL)
            {
             bestTs = deskTs;
             GsxBusFreshestCachePut(symbolCanon, deskBody, bestTs);

@@ -662,7 +662,7 @@ void GsxMsDrawQuadLR(GsxLayCtx &col, const GsxMsSnapshot &snap,
   }
 
 //+------------------------------------------------------------------+
-void GsxMsPanelDrawFull(const GsxMsSnapshot &snap)
+void GsxMsPanelDrawFull(const GsxMsSnapshot &snap, const bool deferRedraw = false)
   {
    GsxMsPanelApplyAdaptive();
    GsxPanelConfigure(GSXMS_PFX, CORNER_LEFT_UPPER, "Segoe UI", 8, g_msColEdge);
@@ -1011,7 +1011,8 @@ void GsxMsPanelDrawFull(const GsxMsSnapshot &snap)
       ObjectSetInteger(0, bgName, OBJPROP_XDISTANCE, g_msPanelX - inset);
       ObjectSetInteger(0, bgName, OBJPROP_YDISTANCE, g_msPanelY - inset);
      }
-   ChartRedraw();
+   if(!deferRedraw)
+      ChartRedraw();
   }
 
 #endif // GSX_MULTISYMBOL_QUAD_DRAW_MQH

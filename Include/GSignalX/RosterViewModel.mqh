@@ -364,9 +364,74 @@ void GsxMsFillRow(const long magic,
   }
 
 //+------------------------------------------------------------------+
+//| v2.19 Hang/Freeze: cheap pre-snapshot dirty key (no bus/History). |
+//| Live open exposure still pulses via GsxMsNeedLivePulse.           |
+//+------------------------------------------------------------------+
+string g_gsxMsCheapDirtyKey = "";
+ulong  g_gsxMsLivePulseAt   = 0;
+
+string GsxMsCheapDirtyKey(const long magic, const int page)
+  {
+   int drill = GsxRosterDrillSecGet(magic);
+   int drillBucket = (drill > 0 ? drill / 5 : 0);
+   // TG status from published GV (avoid TelegramNotifier include cycle)
+   int tgSt = 0;
+   string tgVar = "GSX_TG_STATUS_" + IntegerToString((int)magic);
+   if(GlobalVariableCheck(tgVar))
+      tgSt = (int)GlobalVariableGet(tgVar);
+   return(StringFormat("%I64d|%.0f|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%.0f|%d",
+                       magic,
+                       GsxRosterSeqGet(magic),
+                       (GsxFleetServiceOwns(magic) ? 1 : 0),
+                       (GsxFleetServiceRunGet(magic) ? 1 : 0),
+                       page,
+                       GsxBiasDeskLaneGet(magic, GSX_BIAS_LANE_NONE),
+                       drillBucket,
+                       GsxRosterCatGet(magic),
+                       tgSt,
+                       GsxEventModeGet(magic),
+                       PositionsTotal(),
+                       OrdersTotal(),
+                       (GsxRosterSpreadIgnGet(magic, false) ? 1 : 0),
+                       (GsxRosterAutoLotGet(magic, false) ? 1 : 0),
+                       GsxRosterEqGuardGet(magic, 0.0),
+                       (GsxRosterFlipWaitGet(magic, false) ? 1 : 0)));
+  }
+
+// True when snapshot work should run (force / key change / open-book pulse).
+bool GsxMsCheapDirtyGate(const long magic, const int page, const bool force, string &outKey)
+  {
+   outKey = GsxMsCheapDirtyKey(magic, page);
+   if(force)
+      return(true);
+   if(outKey != g_gsxMsCheapDirtyKey)
+      return(true);
+   return(false);
+  }
+
+void GsxMsCheapDirtyCommit(const string key)
+  {
+   g_gsxMsCheapDirtyKey = key;
+  }
+
+// When positions/orders exist, allow a rebuild every 500ms even if GV key stable.
+bool GsxMsNeedLivePulse(const bool force)
+  {
+   if(force)
+      return(true);
+   if(PositionsTotal() <= 0 && OrdersTotal() <= 0)
+      return(false);
+   ulong now = GetTickCount();
+   if(g_gsxMsLivePulseAt != 0 && (now - g_gsxMsLivePulseAt) < 500)
+      return(false);
+   g_gsxMsLivePulseAt = now;
+   return(true);
+  }
+
 string GsxMsSnapshotFingerprint(const GsxMsSnapshot &snap)
   {
-   string f = StringFormat("%I64d|%d|%d|%d|%d|%d|%d|%.0f|%d|%d|%.2f|%d|%.0f|%d|%s|%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%.2f|%.2f|%.1f|%s|%.1f|%.2f|%d|%d|%d|%.2f|%d|",
+   // Round money fields so micro equity/PL noise does not force 10Hz paints
+   string f = StringFormat("%I64d|%d|%d|%d|%d|%d|%d|%.0f|%d|%d|%.1f|%d|%.0f|%d|%s|%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%.1f|%.1f|%.1f|%s|%.1f|%.1f|%d|%d|%d|%.1f|%d|",
                            snap.magic, snap.own ? 1 : 0, snap.run ? 1 : 0,
                            snap.svcAlive ? 1 : 0,
                            snap.hbFresh ? 1 : 0,
@@ -398,6 +463,10 @@ string GsxMsSnapshotFingerprint(const GsxMsSnapshot &snap)
    int lim = MathMin(n, 40);
    for(int i = 0; i < lim; i++)
      {
+      // v2.19: age in 5s bands so fingerprint is not 1Hz dirty when idle
+      int ageBand = (snap.rows[i].signalAgeSec < 0
+                     ? -1
+                     : snap.rows[i].signalAgeSec / 5);
       f += StringFormat("%s:%d:%s:%d:%.1f:%d:%d:%d:%s:%d:%d:%d|",
                         snap.rows[i].symbol,
                         snap.rows[i].direction,
@@ -406,13 +475,14 @@ string GsxMsSnapshotFingerprint(const GsxMsSnapshot &snap)
                         snap.rows[i].floatingPl,
                         snap.rows[i].signalStale ? 1 : 0,
                         snap.rows[i].followDir,
-                        snap.rows[i].signalAgeSec,
+                        ageBand,
                         snap.rows[i].fillSkip,
                         snap.rows[i].biasDaily,
                         snap.rows[i].biasPre,
                         snap.rows[i].biasThird);
      }
-   f += IntegerToString(snap.drillSecLeft) + "|" + IntegerToString(snap.biasLane);
+   int drillBand = (snap.drillSecLeft > 0 ? snap.drillSecLeft / 5 : 0);
+   f += IntegerToString(drillBand) + "|" + IntegerToString(snap.biasLane);
    return f;
   }
 
@@ -422,6 +492,9 @@ void GsxMsBuildSnapshot(const long magic,
                         const int pageSize,
                         GsxMsSnapshot &out)
   {
+   // v2.19: one bus index / tid-list pass for the whole snapshot
+   GsxBusSnapBegin();
+
    out.magic        = magic;
    out.own          = GsxFleetServiceOwns(magic);
    out.run          = GsxFleetServiceRunGet(magic);
@@ -538,6 +611,8 @@ void GsxMsBuildSnapshot(const long magic,
    GsxPracticeBuild(out.pracBand, out.pracCost, out.pracStyle, prac);
    out.coachLine = GsxPracticeFormatCoachLine(prac);
    out.tipLine   = GsxPracticeFormatTipLine(prac);
+
+   GsxBusSnapEnd();
   }
 
 // Panel/Dashboard call after build to stamp live scout link chrome.

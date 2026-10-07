@@ -265,7 +265,14 @@ void SvcPropTick()
 void SvcTgTick()
   {
    g_svcTgCfg = SvcBuildTgConfig();
-   GsxTgMaybeReverify(g_svcTgCfg);
+   // v2.19: finish async VERIFY (one HTTP/step) before reverify logic
+   if(GsxTgVerifyBusy())
+     {
+      string verr;
+      GsxTgVerifyPump(g_svcTgCfg, verr);
+     }
+   else
+      GsxTgMaybeReverify(g_svcTgCfg);
    // v2.01: at most one HTTP attempt per Service cycle (keep fills responsive)
    GsxTgProcessQueueEx(g_svcTgCfg, 1);
    GsxTgPublishStatus(InpMagic);
@@ -427,6 +434,11 @@ void OnStart()
       int sleepMs = ms - (int)elapsed;
       if(sleepMs < 1)
          sleepMs = 1;
+      // v2.19: when Core overran the cycle budget, backoff (never busy-loop Sleep(1))
+      if(g_coreLastCycleMs >= (ulong)ms)
+         sleepMs = MathMax(sleepMs, ms);
+      else if(g_coreLastCycleMs >= 80)
+         sleepMs = MathMax(sleepMs, ms / 2);
       Sleep(sleepMs);
      }
 
