@@ -162,6 +162,14 @@ void GsxRosterFollowDirSet(const long magic, const string symbol, const int mode
                      (double)GsxRosterFollowDirNormalize(mode));
   }
 
+void GsxRosterFollowDirSetIfChanged(const long magic, const string symbol, const int mode)
+  {
+   int want = GsxRosterFollowDirNormalize(mode);
+   if(GsxRosterFollowDirGet(magic, symbol, GSX_FOLLOW_AUTO) == want)
+      return;
+   GsxRosterFollowDirSet(magic, symbol, want);
+  }
+
 void GsxRosterFollowDirClear(const long magic, const string symbol)
   {
    string canon = GsxSymbolCanon(symbol);

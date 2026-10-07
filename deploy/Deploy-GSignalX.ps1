@@ -84,7 +84,8 @@ function Deploy-ToTerminal([string] $dataPath) {
     @{ Rel = "Services"; Name = "GsignalX_Service.mq5" },
     @{ Rel = "Services"; Name = "ProfitScouter_Service.mq5" },
     @{ Rel = "Services"; Name = "ProfitOpportunity_Grader.mq5" },
-    @{ Rel = "Scripts";  Name = "ProfitHarvest_Now.mq5" }
+    @{ Rel = "Scripts";  Name = "ProfitHarvest_Now.mq5" },
+    @{ Rel = "Scripts";  Name = "GSX_Bias_Test.mq5" }
   )
   foreach ($item in $fileMap) {
     $dstDir = Join-Path $mql5 $item.Rel
@@ -111,7 +112,8 @@ function Compile-Toolkit([string] $mql5, [string] $editor) {
     "Services\GsignalX_Service.mq5",
     "Experts\GsignalX_Multisymbol_Dashboard.mq5",
     "Experts\GsignalX_GocityGroup.mq5",
-    "Scripts\ProfitHarvest_Now.mq5"
+    "Scripts\ProfitHarvest_Now.mq5",
+    "Scripts\GSX_Bias_Test.mq5"
   )
 
   foreach ($rel in $order) {

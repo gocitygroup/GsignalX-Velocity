@@ -16,6 +16,7 @@
 #include <GSignalX/SessionClock.mqh>
 #include <GSignalX/PracticeSim.mqh>
 #include <GSignalX/LotSizing.mqh>
+#include <GSignalX/Bias/BiasFollow.mqh>
 
 //+------------------------------------------------------------------+
 struct GsxMsRow
@@ -40,6 +41,13 @@ struct GsxMsRow
    string dirState;      // COMPUTE|LIVE|STALE|FLAT|HIST
    string fillSkip;      // Service fill_skip from bus
    bool   histDir;       // direction from lastDir GV
+   // v2.18 Daily Bias Follow (display; no EMA)
+   int    biasDaily;
+   int    biasPre;
+   int    biasThird;
+   int    biasStrDaily;
+   int    biasStrPre;
+   int    biasStrThird;
   };
 
 struct GsxMsSnapshot
@@ -103,6 +111,7 @@ struct GsxMsSnapshot
    int    sessionLosses;
    double sessionNetPl;
    bool   continuousFleet;   // host InpContinuousFleet mirrored
+   int    biasLane;      // GSX_BIAS_LANE_* desk armed lane (v2.18)
    GsxMsRow rows[];      // filtered roster for active category; panel pages it
    GsxMsRow allRows[];   // full roster (capacity counts)
   };
@@ -239,6 +248,19 @@ void GsxMsFillRow(const long magic,
    row.dirState = "COMPUTE";
    row.fillSkip = "";
    row.histDir = false;
+   row.biasDaily = 0;
+   row.biasPre = 0;
+   row.biasThird = 0;
+   row.biasStrDaily = 0;
+   row.biasStrPre = 0;
+   row.biasStrThird = 0;
+#ifdef GSX_DESK_CORE_LIVE
+   if(!GsxCoreLiveBiasForSymbol(sym, row.biasDaily, row.biasStrDaily,
+                                row.biasPre, row.biasStrPre,
+                                row.biasThird, row.biasStrThird))
+#endif
+      GsxBiasSnapRead(magic, sym, row.biasDaily, row.biasStrDaily,
+                      row.biasPre, row.biasStrPre, row.biasThird, row.biasStrThird);
 
    if(canon == "")
       return;
@@ -287,6 +309,12 @@ void GsxMsFillRow(const long magic,
       if(row.direction == 0)
          row.direction = (int)GsxJsonGetLong(sig, "last_sig_dir", 0);
       row.fillSkip = GsxJsonGetString(sig, "fill_skip", "");
+      row.biasDaily = (int)GsxJsonGetLong(sig, "bias_daily", row.biasDaily);
+      row.biasPre = (int)GsxJsonGetLong(sig, "bias_pre", row.biasPre);
+      row.biasThird = (int)GsxJsonGetLong(sig, "bias_third", row.biasThird);
+      row.biasStrDaily = (int)GsxJsonGetLong(sig, "bias_str_daily", row.biasStrDaily);
+      row.biasStrPre = (int)GsxJsonGetLong(sig, "bias_str_pre", row.biasStrPre);
+      row.biasStrThird = (int)GsxJsonGetLong(sig, "bias_str_third", row.biasStrThird);
       row.signalTs = bestTs;
       if(bestTs <= 0)
         {
@@ -370,7 +398,7 @@ string GsxMsSnapshotFingerprint(const GsxMsSnapshot &snap)
    int lim = MathMin(n, 40);
    for(int i = 0; i < lim; i++)
      {
-      f += StringFormat("%s:%d:%s:%d:%.1f:%d:%d:%d:%s|",
+      f += StringFormat("%s:%d:%s:%d:%.1f:%d:%d:%d:%s:%d:%d:%d|",
                         snap.rows[i].symbol,
                         snap.rows[i].direction,
                         snap.rows[i].dirState,
@@ -379,9 +407,12 @@ string GsxMsSnapshotFingerprint(const GsxMsSnapshot &snap)
                         snap.rows[i].signalStale ? 1 : 0,
                         snap.rows[i].followDir,
                         snap.rows[i].signalAgeSec,
-                        snap.rows[i].fillSkip);
+                        snap.rows[i].fillSkip,
+                        snap.rows[i].biasDaily,
+                        snap.rows[i].biasPre,
+                        snap.rows[i].biasThird);
      }
-   f += IntegerToString(snap.drillSecLeft);
+   f += IntegerToString(snap.drillSecLeft) + "|" + IntegerToString(snap.biasLane);
    return f;
   }
 
@@ -423,6 +454,7 @@ void GsxMsBuildSnapshot(const long magic,
    out.sessionLosses    = 0;
    out.sessionNetPl     = 0.0;
    out.continuousFleet  = false;
+   out.biasLane         = GsxBiasDeskLaneGet(magic, GSX_BIAS_LANE_NONE);
 
    GsxSessionClockConfig scfg;
    GsxSessionClockDefaults(scfg);

@@ -18,8 +18,8 @@
 //|  (c) Gocity Group - GsignalX. Research / educational use.        |
 //+------------------------------------------------------------------+
 #property copyright "Gocity Group"
-#property version   "2.00"
-#property description "Gsignalx Velocity 2.00 - PP SuperTrend + ATR SuperTrend + SuperBollingerTrend"
+#property version   "2.18"
+#property description "Gsignalx Velocity 2.18 - PP/ATR/SBT engines + Daily Bias Follow (no EMA)."
 #property description "AutoLot/FIXED + EQ equity guide + Compact/Full outcome panel."
 #property description "Entry engine: limit/stop bracket, scalping drill, fleet fill."
 #property description "Fleet: 4 pairs complete = open position OR working pending."
@@ -43,6 +43,7 @@
 #include <GSignalX/Engines.mqh>
 #include <GSignalX/MarketGates.mqh>
 #include <GSignalX/FollowGate.mqh>
+#include <GSignalX/Bias/BiasFollow.mqh>
 #include <GSignalX/MultisymbolPanel.mqh>
 #include <GSignalX/RosterStore.mqh>
 #include <GSignalX/TelegramNotifier.mqh>
@@ -294,6 +295,9 @@ bool     gFirstEntryDone = false;
 bool     gDataReady    = false;
 string   gStatus       = "initialising";
 string   gLastAction   = "-";
+GsxBiasSnapshot g_chartBias;      // v2.18 Daily / Pre / Third display (no EMA)
+GsxBiasD1Cache  g_chartBiasCache;
+datetime        g_chartBiasLastAt = 0;
 int      gPendDir      = 0;   // direction of the pending bracket currently working
 double   gIntendedLot  = 0.0; // size one leg was supposed to fill for
 bool     gOcoRequest   = false; // event handler asked for a cleanup pass
@@ -734,8 +738,39 @@ bool MagicHasOppositeDir(const int wanted)
 // are never closed by a mode switch.
 bool AllowNewDirEntry(const int wanted)
   {
-   int followDir = GsxRosterFollowDirGet(InpMagic, _Symbol, GSX_FOLLOW_AUTO);
+   // Chart bias arm → live one-sided FollowDir (NEUT→WAIT); Signal → manual FDIR
+   int followDir = GsxBiasEffectiveFollowDir(InpMagic, _Symbol, true, true);
    return(GsxAllowEntry(wanted, gFlipWaitMode, InpMagic, followDir));
+  }
+
+// Refresh chart bias for display (throttled; apply is click-only / one-shot).
+void ChartBiasRefresh(const bool force = false)
+  {
+   datetime now = TimeCurrent();
+   if(!force && g_chartBiasLastAt != 0 &&
+      (now - g_chartBiasLastAt) < GSX_BIAS_INTRADAY_THROTTLE_SEC &&
+      g_chartBias.valid)
+      return;
+   GsxBiasCompute(_Symbol, g_chartBiasCache, g_chartBias, force);
+   g_chartBiasLastAt = now;
+   if(g_chartBias.valid)
+      GsxBiasSnapWrite(InpMagic, _Symbol, g_chartBias);
+  }
+
+void ChartBiasApplyLane(const int lane)
+  {
+   ChartBiasRefresh(true);
+   // Snap already written by ChartBiasRefresh — avoid double SnapWrite
+   GsxBiasApplyLaneChart(InpMagic, _Symbol, lane, g_chartBias, true);
+   int fd = GsxBiasEffectiveFollowDir(InpMagic, _Symbol, true, true);
+   gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                 " Bias " + GsxBiasLaneLabel(lane) +
+                 " → " + GsxRosterFollowDirLabel(fd) + " (chart live one-side)";
+   Notify("Bias " + GsxBiasLaneLabel(lane) + ": FollowDir " +
+          GsxRosterFollowDirLabel(fd) + " — new entries only");
+   GsxUiMarkDirty();
+   UpdatePanel(g_lastPanelState);
+   GsxSettingsAnnounce("BIAS " + GsxBiasLaneLabel(lane));
   }
 
 double NormalizeLot(double lot)
@@ -2596,6 +2631,27 @@ void UpdatePanel(string tradeState)
                   gFlipWaitMode ? "WAIT (clear opposite)" : "FOLLOW (fill new dir)",
                   InpColNeutral,
                   gFlipWaitMode ? InpColAccent : InpColBull, true);
+      // Single ChartBiasRefresh per paint (shared with bias chips below)
+      ChartBiasRefresh(false);
+      {
+       int lane = GsxBiasChartLaneGet(InpMagic, _Symbol, GSX_BIAS_LANE_NONE);
+       string biasLine = StringFormat("D:%s P:%s T:%s | arm %s",
+                                      GsxBiasDirLabel(g_chartBias.daily.dir),
+                                      GsxBiasDirLabel(g_chartBias.preDay.dir),
+                                      GsxBiasDirLabel(g_chartBias.thirdDay.dir),
+                                      GsxBiasLaneLabel(lane));
+       color biasCol = InpColNeutral;
+       if(lane == GSX_BIAS_LANE_DAILY)
+          biasCol = (g_chartBias.daily.dir > 0 ? InpColBull :
+                     (g_chartBias.daily.dir < 0 ? InpColBear : InpColAccent));
+       else if(lane == GSX_BIAS_LANE_PRE)
+          biasCol = (g_chartBias.preDay.dir > 0 ? InpColBull :
+                     (g_chartBias.preDay.dir < 0 ? InpColBear : InpColAccent));
+       else if(lane == GSX_BIAS_LANE_THIRD)
+          biasCol = (g_chartBias.thirdDay.dir > 0 ? InpColBull :
+                     (g_chartBias.thirdDay.dir < 0 ? InpColBear : InpColAccent));
+       GsxPanelRow("Bias follow", biasLine, InpColNeutral, biasCol, true);
+      }
       GsxPanelRow("Exit owner",
                   (InpExitMode == GSX_EXIT_SCOUTER ? "scout" : "signal"),
                   InpColNeutral, InpColText, false);
@@ -2642,7 +2698,8 @@ void UpdatePanel(string tradeState)
         }
       GsxLayAdvance(blay, bh);
 
-      int followDir = GsxRosterFollowDirGet(InpMagic, _Symbol, GSX_FOLLOW_AUTO);
+      // Prefer live effective FollowDir when chart bias lane is armed
+      int followDir = GsxBiasEffectiveFollowDir(InpMagic, _Symbol, true, false);
       GsxLayRowStart(blay, bh);
       GsxLayEqual(blay, 4, bslots);
       if(ArraySize(bslots) >= 4)
@@ -2659,6 +2716,32 @@ void UpdatePanel(string tradeState)
          GsxPanelSlotButtonPad("BTN_FDIR_WAIT", bslots[3], "WAIT",
                                followDir == GSX_FOLLOW_WAIT ? InpColNeutral : chipIdle,
                                followDir == GSX_FOLLOW_WAIT ? InpColPanelBg : InpColText, bpad);
+        }
+      GsxLayAdvance(blay, bh);
+
+      // v2.18 Bias lanes — reuse g_chartBias from status refresh (or refresh if compact)
+      if(!g_chartBias.valid)
+         ChartBiasRefresh(false);
+      int biasLane = GsxBiasChartLaneGet(InpMagic, _Symbol, GSX_BIAS_LANE_NONE);
+      GsxLayRowStart(blay, bh);
+      GsxLayEqual(blay, 4, bslots);
+      if(ArraySize(bslots) >= 4)
+        {
+         string dLbl = "D " + GsxBiasDirLabel(g_chartBias.daily.dir);
+         string pLbl = "P " + GsxBiasDirLabel(g_chartBias.preDay.dir);
+         string tLbl = "T " + GsxBiasDirLabel(g_chartBias.thirdDay.dir);
+         GsxPanelSlotButtonPad("BTN_BIAS_DAILY", bslots[0], GsxPanelClip(dLbl, 10),
+                               biasLane == GSX_BIAS_LANE_DAILY ? InpColBull : chipIdle,
+                               biasLane == GSX_BIAS_LANE_DAILY ? InpColPanelBg : InpColText, bpad);
+         GsxPanelSlotButtonPad("BTN_BIAS_PRE", bslots[1], GsxPanelClip(pLbl, 10),
+                               biasLane == GSX_BIAS_LANE_PRE ? InpColBull : chipIdle,
+                               biasLane == GSX_BIAS_LANE_PRE ? InpColPanelBg : InpColText, bpad);
+         GsxPanelSlotButtonPad("BTN_BIAS_THIRD", bslots[2], GsxPanelClip(tLbl, 10),
+                               biasLane == GSX_BIAS_LANE_THIRD ? InpColBear : chipIdle,
+                               biasLane == GSX_BIAS_LANE_THIRD ? InpColPanelBg : InpColText, bpad);
+         GsxPanelSlotButtonPad("BTN_BIAS_SIGNAL", bslots[3], "Signal",
+                               biasLane == GSX_BIAS_LANE_NONE ? InpColAccent : chipIdle,
+                               biasLane == GSX_BIAS_LANE_NONE ? InpColPanelBg : InpColText, bpad);
         }
       GsxLayAdvance(blay, bh);
 
@@ -3064,6 +3147,7 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                      if(click == gPfx + "BTN_FDIR_SELL") mode = GSX_FOLLOW_SELL;
                      if(click == gPfx + "BTN_FDIR_WAIT") mode = GSX_FOLLOW_WAIT;
                      GsxRosterFollowDirSet(InpMagic, _Symbol, mode);
+                     GsxBiasChartLaneSet(InpMagic, _Symbol, GSX_BIAS_LANE_NONE);
                      gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                                    " Follow " + GsxRosterFollowDirLabel(mode) +
                                    " (new entries only)";
@@ -3072,6 +3156,18 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                      GsxUiMarkDirty();
                      UpdatePanel(g_lastPanelState);
                      GsxSettingsAnnounce("FDIR " + GsxRosterFollowDirLabel(mode));
+                    }
+                  else
+                  if(click == gPfx + "BTN_BIAS_DAILY" ||
+                     click == gPfx + "BTN_BIAS_PRE" ||
+                     click == gPfx + "BTN_BIAS_THIRD" ||
+                     click == gPfx + "BTN_BIAS_SIGNAL")
+                    {
+                     int lane = GSX_BIAS_LANE_NONE;
+                     if(click == gPfx + "BTN_BIAS_DAILY") lane = GSX_BIAS_LANE_DAILY;
+                     if(click == gPfx + "BTN_BIAS_PRE")   lane = GSX_BIAS_LANE_PRE;
+                     if(click == gPfx + "BTN_BIAS_THIRD") lane = GSX_BIAS_LANE_THIRD;
+                     ChartBiasApplyLane(lane);
                     }
                   else
                   if(click == gPfx + "BTN_SPREAD")
@@ -3363,6 +3459,7 @@ int OnInit()
                          ? DoubleToString(InpStrategicStopMult, 1) + "xATR" : "off"),
          " | flip: ", (gFlipWaitMode ? "WAIT" : "FOLLOW"),
          " | follow: ", GsxRosterFollowDirLabel(GsxRosterFollowDirGet(InpMagic, _Symbol, GSX_FOLLOW_AUTO)),
+         " | bias: ", GsxBiasLaneLabel(GsxBiasChartLaneGet(InpMagic, _Symbol, GSX_BIAS_LANE_NONE)),
          " | fleet: ", (InpFleetEnable ? IntegerToString(InpFleetTargetPairs) + " pairs" : "off"),
          " | svcOwn: ", (ChartServiceOwnsFleet() ? "YES" : "no"),
          " | chartEntries@svc: ", (InpChartEntriesWhenService ? "ON" : "OFF"));

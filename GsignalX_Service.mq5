@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property service
 #property copyright "Gocity Group"
-#property version   "2.15"
+#property version   "2.18"
 #property description "Gsignalx Velocity 2.13 Service - multi-symbol roster scan + fleet fill"
 #property description "Entry only (Scouter exits). Yields to DeskExecute OWN when InpYieldToDesk."
 #property description "OWN/HOST GV prevents chart+desk+service double-fill. V2.13 host-scoped HB."

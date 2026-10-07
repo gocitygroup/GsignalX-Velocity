@@ -450,6 +450,34 @@ void GsxMsDrawQuadLL(GsxLayCtx &col, const GsxMsSnapshot &snap,
      }
    GsxLayAdvance(col, bh);
 
+   // v2.18 Bias follow lanes (desk-wide one-shot → FollowDir; no EMA)
+   GsxLayRowStart(col, bh);
+   GsxMsQuadInsetBegin(col, inset);
+   avail = MathMax(1, col.packRemain - inset);
+   col.packRemain = avail;
+   GsxLayEqual(col, 4, slots);
+   if(ArraySize(slots) >= 4)
+     {
+      int lane = snap.biasLane;
+      bool dOn = (lane == GSX_BIAS_LANE_DAILY);
+      bool pOn = (lane == GSX_BIAS_LANE_PRE);
+      bool tOn = (lane == GSX_BIAS_LANE_THIRD);
+      bool sOnBias = (lane == GSX_BIAS_LANE_NONE);
+      GsxPanelSlotButtonPad("BTN_BIAS_DAILY", slots[0], "Daily",
+                            dOn ? g_msColBull : chipIdle,
+                            dOn ? g_msColBg : g_msColText, pad);
+      GsxPanelSlotButtonPad("BTN_BIAS_PRE", slots[1], "Pre-D",
+                            pOn ? g_msColBull : chipIdle,
+                            pOn ? g_msColBg : g_msColText, pad);
+      GsxPanelSlotButtonPad("BTN_BIAS_THIRD", slots[2], "Third-D",
+                            tOn ? g_msColBear : chipIdle,
+                            tOn ? g_msColBg : g_msColText, pad);
+      GsxPanelSlotButtonPad("BTN_BIAS_SIGNAL", slots[3], "Signal",
+                            sOnBias ? g_msColAccent : chipIdle,
+                            sOnBias ? g_msColBg : g_msColText, pad);
+     }
+   GsxLayAdvance(col, bh);
+
    GsxLayRowStart(col, bh);
    GsxMsQuadInsetBegin(col, inset);
    avail = MathMax(1, col.packRemain - inset);
@@ -791,22 +819,26 @@ void GsxMsPanelDrawFull(const GsxMsSnapshot &snap)
    GsxMsDrawSectionBand("SEC_TBL", x, tblTop, w, tblH);
 
    int weights[];
-   ArrayResize(weights, 9);
-   weights[0] = 20; weights[1] = 10; weights[2] = 9; weights[3] = 9;
-   weights[4] = 9; weights[5] = 9; weights[6] = 12; weights[7] = 12; weights[8] = 10;
+   ArrayResize(weights, 12);
+   weights[0] = 14; weights[1] = 8; weights[2] = 7; weights[3] = 7; weights[4] = 7;
+   weights[5] = 8; weights[6] = 7; weights[7] = 7; weights[8] = 7;
+   weights[9] = 10; weights[10] = 10; weights[11] = 8;
    GsxLaySlot cols[];
-   GsxLayCols(x, lay.cursorY, w, rh, weights, 9, cols);
-   if(ArraySize(cols) >= 9)
+   GsxLayCols(x, lay.cursorY, w, rh, weights, 12, cols);
+   if(ArraySize(cols) >= 12)
      {
       GsxPanelSlotLabel("CH_SYM", cols[0], "Symbol", g_msColMuted, fs, true);
       GsxPanelSlotLabel("CH_DIR", cols[1], "Signal", g_msColMuted, fs, true);
-      GsxPanelSlotLabel("CH_MODE", cols[2], "Mode", g_msColMuted, fs, true);
-      GsxPanelSlotLabel("CH_SPR", cols[3], "Spread", g_msColMuted, fs, true);
-      GsxPanelSlotLabel("CH_PL",  cols[4], "P/L", g_msColMuted, fs, true);
-      GsxPanelSlotLabel("CH_GR",  cols[5], "Grade", g_msColMuted, fs, true);
-      GsxPanelSlotLabel("CH_FLG", cols[6], "Status", g_msColMuted, fs, true);
-      GsxPanelSlotLabel("CH_ST",  cols[7], "State", g_msColMuted, fs, true);
-      GsxPanelSlotLabel("CH_REM", cols[8], "Rem", g_msColMuted, fs, true);
+      GsxPanelSlotLabel("CH_BD", cols[2], "Daily", g_msColMuted, fs, true);
+      GsxPanelSlotLabel("CH_BP", cols[3], "Pre-D", g_msColMuted, fs, true);
+      GsxPanelSlotLabel("CH_BT", cols[4], "Third", g_msColMuted, fs, true);
+      GsxPanelSlotLabel("CH_MODE", cols[5], "Mode", g_msColMuted, fs, true);
+      GsxPanelSlotLabel("CH_SPR", cols[6], "Spread", g_msColMuted, fs, true);
+      GsxPanelSlotLabel("CH_PL",  cols[7], "P/L", g_msColMuted, fs, true);
+      GsxPanelSlotLabel("CH_GR",  cols[8], "Grade", g_msColMuted, fs, true);
+      GsxPanelSlotLabel("CH_FLG", cols[9], "Status", g_msColMuted, fs, true);
+      GsxPanelSlotLabel("CH_ST",  cols[10], "State", g_msColMuted, fs, true);
+      GsxPanelSlotLabel("CH_REM", cols[11], "Rem", g_msColMuted, fs, true);
      }
    GsxLayAdvanceTight(lay, rowPitch);
 
@@ -824,8 +856,8 @@ void GsxMsPanelDrawFull(const GsxMsSnapshot &snap)
       else
          ObjectDelete(0, GSXMS_PFX + StringFormat("ROW%d_BG", i));
 
-      GsxLayCols(x, ry, w, rh, weights, 9, cols);
-      if(ArraySize(cols) < 9)
+      GsxLayCols(x, ry, w, rh, weights, 12, cols);
+      if(ArraySize(cols) < 12)
          break;
 
       color symClr = snap.rows[ri].marketOpen ? g_msColText : g_msColMuted;
@@ -842,62 +874,73 @@ void GsxMsPanelDrawFull(const GsxMsSnapshot &snap)
                         GsxMsDirCellClr(snap.rows[ri]),
                         fr, true);
 
+      // Bias cells: click = desk-wide arm that lane (same as chrome chips)
+      GsxPanelSlotButtonPad("BTN_BIAS_D_" + IntegerToString(i), cols[2],
+                            GsxMsBiasCellTxt(snap.rows[ri].biasDaily, snap.rows[ri].biasStrDaily),
+                            GsxMsBiasCellClr(snap.rows[ri].biasDaily), g_msColBg, pad);
+      GsxPanelSlotButtonPad("BTN_BIAS_P_" + IntegerToString(i), cols[3],
+                            GsxMsBiasCellTxt(snap.rows[ri].biasPre, snap.rows[ri].biasStrPre),
+                            GsxMsBiasCellClr(snap.rows[ri].biasPre), g_msColBg, pad);
+      GsxPanelSlotButtonPad("BTN_BIAS_T_" + IntegerToString(i), cols[4],
+                            GsxMsBiasCellTxt(snap.rows[ri].biasThird, snap.rows[ri].biasStrThird),
+                            GsxMsBiasCellClr(snap.rows[ri].biasThird), g_msColBg, pad);
+
       int fd = snap.rows[ri].followDir;
       GsxLaySlot modeSlot;
-      modeSlot.x = cols[2].x;
-      modeSlot.y = cols[2].y;
-      modeSlot.w = cols[2].w;
-      modeSlot.h = cols[2].h;
+      modeSlot.x = cols[5].x;
+      modeSlot.y = cols[5].y;
+      modeSlot.w = cols[5].w;
+      modeSlot.h = cols[5].h;
       int wantMode = MathMax(GsxSx(36), MathMin(GsxSx(GSXMS_MODE_W), modeSlot.w));
       if(modeSlot.w > wantMode)
         {
-         modeSlot.x = cols[2].x + (cols[2].w - wantMode) / 2;
+         modeSlot.x = cols[5].x + (cols[5].w - wantMode) / 2;
          modeSlot.w = wantMode;
         }
       GsxPanelSlotButtonPad("BTN_MODE_" + IntegerToString(i), modeSlot,
                             GsxRosterFollowDirLabel(fd),
                             GsxMsFollowDirClr(fd), g_msColBg, pad);
 
-      GsxPanelSlotLabel(StringFormat("ROW%d_SPR", i), cols[3],
+      GsxPanelSlotLabel(StringFormat("ROW%d_SPR", i), cols[6],
                         IntegerToString(snap.rows[ri].spreadPt) + " pt",
                         g_msColText, fr, false);
 
       color plClr = (snap.rows[ri].floatingPl > 0.0 ? g_msColBull :
                      (snap.rows[ri].floatingPl < 0.0 ? g_msColBear : g_msColMuted));
-      GsxPanelSlotLabel(StringFormat("ROW%d_PL", i), cols[4],
+      GsxPanelSlotLabel(StringFormat("ROW%d_PL", i), cols[7],
                         StringFormat("%+.2f", snap.rows[ri].floatingPl), plClr, fr, true);
 
       string gr = (snap.rows[ri].gradeScore < 0.0
                    ? "—"
                    : DoubleToString(snap.rows[ri].gradeScore, 1));
-      GsxPanelSlotLabel(StringFormat("ROW%d_GR", i), cols[5], gr, g_msColAccent, fr, true);
-      GsxPanelSlotLabel(StringFormat("ROW%d_FLG", i), cols[6],
+      GsxPanelSlotLabel(StringFormat("ROW%d_GR", i), cols[8], gr, g_msColAccent, fr, true);
+      GsxPanelSlotLabel(StringFormat("ROW%d_FLG", i), cols[9],
                         GsxMsFriendlyFlags(snap.rows[ri]), g_msColMuted, fr, false);
 
       int st = snap.rows[ri].pairState;
       GsxLaySlot stSlot;
-      stSlot.x = cols[7].x;
-      stSlot.y = cols[7].y;
-      stSlot.w = cols[7].w;
-      stSlot.h = cols[7].h;
+      stSlot.x = cols[10].x;
+      stSlot.y = cols[10].y;
+      stSlot.w = cols[10].w;
+      stSlot.h = cols[10].h;
       int wantSt = MathMax(GsxSx(48), MathMin(g_msLay.stateW, stSlot.w));
       if(stSlot.w > wantSt)
         {
-         stSlot.x = cols[7].x + cols[7].w - wantSt;
+         stSlot.x = cols[10].x + cols[10].w - wantSt;
          stSlot.w = wantSt;
         }
       GsxPanelSlotButtonPad("BTN_STATE_" + IntegerToString(i), stSlot,
                             GsxMsStateBtn(st), GsxMsStateClr(st), g_msColBg, pad);
 
       GsxLaySlot remSlot;
-      remSlot.x = cols[8].x;
-      remSlot.y = cols[8].y;
-      remSlot.w = cols[8].w;
-      remSlot.h = cols[8].h;
+      remSlot.x = cols[11].x;
+      remSlot.y = cols[11].y;
+      remSlot.w = cols[11].w;
+      remSlot.h = cols[11].h;
       int wantRem = MathMax(GsxSx(36), MathMin(GsxSx(52), remSlot.w));
       if(remSlot.w > wantRem)
         {
-         remSlot.x = cols[8].x + (cols[8].w - wantRem) / 2;
+         remSlot.x = cols[11].x + (cols[11].w - wantRem) / 2;
          remSlot.w = wantRem;
         }
       GsxPanelSlotButtonPad("BTN_REM_" + IntegerToString(i), remSlot,

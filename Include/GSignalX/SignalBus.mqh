@@ -55,6 +55,14 @@ struct GsxBusSymbolView
    bool   stale;
    int    lastSigDir;
    string reason;
+   // v2.18 Daily Bias Follow (append-only; chart-aligned D1, no EMA)
+   int    bias_daily;
+   int    bias_pre;
+   int    bias_third;
+   int    bias_str_daily;
+   int    bias_str_pre;
+   int    bias_str_third;
+   int    bias_lane;
   };
 
 //+------------------------------------------------------------------+
@@ -126,15 +134,23 @@ void GsxBusBuildSymbolView(const string symbol,
       v.stale = true;
    v.swing = GsxInSwingWindow(TimeCurrent(), swingStartH, swingEndH);
    v.effMaxSpread = ignoreSpread ? 0 : maxSpreadPt;
+   v.bias_daily = 0;
+   v.bias_pre = 0;
+   v.bias_third = 0;
+   v.bias_str_daily = 0;
+   v.bias_str_pre = 0;
+   v.bias_str_third = 0;
+   v.bias_lane = 0;
   }
 
 string GsxSignalBusFingerprintFromView(const GsxBusSymbolView &v)
   {
-   return StringFormat("%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d",
+   return StringFormat("%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d",
                        v.direction, v.bull, v.bear, v.minAgree,
                        (v.marketOpen ? 1 : 0), (v.weekend ? 1 : 0), (v.fridayLate ? 1 : 0),
                        (v.swing ? 1 : 0), (int)v.spread, v.effMaxSpread, (v.stale ? 1 : 0),
-                       v.lastSigDir);
+                       v.lastSigDir,
+                       v.bias_daily, v.bias_pre, v.bias_third, v.bias_lane);
   }
 
 //+------------------------------------------------------------------+
@@ -237,6 +253,13 @@ bool GsxSignalBusWriteFromView(const string symbol,
    j += GsxJsonKV_I("closed_losses", closedLosses);
    j += GsxJsonKV_D("closed_realized", closedRealized, true);
    j += GsxJsonKV_S("fill_skip", fillSkip, false);
+   j += GsxJsonKV_I("bias_daily", v.bias_daily);
+   j += GsxJsonKV_I("bias_pre", v.bias_pre);
+   j += GsxJsonKV_I("bias_third", v.bias_third);
+   j += GsxJsonKV_I("bias_str_daily", v.bias_str_daily);
+   j += GsxJsonKV_I("bias_str_pre", v.bias_str_pre);
+   j += GsxJsonKV_I("bias_str_third", v.bias_str_third);
+   j += GsxJsonKV_I("bias_lane", v.bias_lane, true);
    j += "}";
 
    bool okMirror = GsxBusWriteAtomic(GsxBusDeskSignalPath(canon), j);

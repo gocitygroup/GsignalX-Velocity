@@ -52,6 +52,8 @@
 #include <GSignalX/LotSizing.mqh>
 #include <GSignalX/PropRisk.mqh>
 #include <GSignalX/CandleMetrics.mqh>
+#include <GSignalX/Bias/DailyBias.mqh>
+#include <GSignalX/Bias/BiasFollow.mqh>
 
 //+------------------------------------------------------------------+
 //| Globals                                                          |
@@ -61,6 +63,11 @@ string         g_roster[];
 GsxEngineState g_eng[];
 datetime       g_formWatch[];   // bar-0 open time last used for engine calc
 string         g_busFp[];       // last published fingerprint per roster slot
+// v2.18 Daily Bias Follow (live one-side FollowDir while armed; no EMA)
+GsxBiasSnapshot g_bias[];
+GsxBiasD1Cache  g_biasCache[];
+int            g_biasBudgetCursor = 0;
+datetime       g_biasLastPassAt = 0;
 double         g_rosterSeqSeen = -1.0;
 bool           g_svcEnabled   = true;
 bool           g_flipWait     = false;
@@ -246,6 +253,119 @@ bool GsxCoreSignalFresh(const int idx, const int joinDir, string &why)
    return(true);
   }
 
+//+------------------------------------------------------------------+
+//| v2.18 Daily Bias Follow — display + GV snap; never sticky FollowDir
+//+------------------------------------------------------------------+
+void GsxCoreBiasEnsure(const int n)
+  {
+   if(ArraySize(g_bias) != n)
+     {
+      int old = ArraySize(g_bias);
+      ArrayResize(g_bias, n);
+      for(int i = old; i < n; i++)
+         GsxBiasSnapshotClear(g_bias[i]);
+     }
+   if(ArraySize(g_biasCache) != n)
+     {
+      int oldc = ArraySize(g_biasCache);
+      ArrayResize(g_biasCache, n);
+      for(int j = oldc; j < n; j++)
+         GsxBiasD1CacheClear(g_biasCache[j]);
+     }
+  }
+
+void GsxCoreBiasUpdateSlot(const int i)
+  {
+   if(i < 0 || i >= ArraySize(g_roster))
+      return;
+   GsxCoreBiasEnsure(ArraySize(g_roster));
+   string sym = g_roster[i];
+   if(sym == "")
+     {
+      GsxBiasSnapshotClear(g_bias[i]);
+      return;
+     }
+   GsxBiasCompute(sym, g_biasCache[i], g_bias[i], false);
+   if(g_bias[i].valid)
+      GsxBiasSnapWrite(InpMagic, sym, g_bias[i]);
+  }
+
+void GsxCoreBiasFillView(const int i, GsxBusSymbolView &view)
+  {
+   if(i < 0 || i >= ArraySize(g_bias) || !g_bias[i].valid)
+      return;
+   view.bias_daily = g_bias[i].daily.dir;
+   view.bias_pre = g_bias[i].preDay.dir;
+   view.bias_third = g_bias[i].thirdDay.dir;
+   view.bias_str_daily = g_bias[i].daily.strength;
+   view.bias_str_pre = g_bias[i].preDay.strength;
+   view.bias_str_third = g_bias[i].thirdDay.strength;
+   view.bias_lane = GsxBiasDeskLaneGet(InpMagic, GSX_BIAS_LANE_NONE);
+  }
+
+// Budgeted bias refresh independent of engine TF bars (Daily float for live gate).
+void GsxCoreBiasRefreshBudgeted(const int maxSlots = 4)
+  {
+   int n = ArraySize(g_roster);
+   if(n <= 0)
+      return;
+   datetime now = TimeCurrent();
+   if(g_biasLastPassAt != 0 &&
+      (now - g_biasLastPassAt) < GSX_BIAS_INTRADAY_THROTTLE_SEC)
+      return;
+   g_biasLastPassAt = now;
+   GsxCoreBiasEnsure(n);
+   int budget = maxSlots;
+   if(budget < 1) budget = 1;
+   if(budget > n) budget = n;
+   if(g_biasBudgetCursor < 0 || g_biasBudgetCursor >= n)
+      g_biasBudgetCursor = 0;
+   int advanced = 0;
+   for(int step = 0; step < n && advanced < budget; step++)
+     {
+      int i = (g_biasBudgetCursor + step) % n;
+      if(g_roster[i] == "")
+         continue;
+      GsxCoreBiasUpdateSlot(i);
+      // Event-sync FollowDir while desk lane armed (Mode column + gate stay aligned)
+      if(GsxBiasDeskLaneGet(InpMagic, GSX_BIAS_LANE_NONE) != GSX_BIAS_LANE_NONE)
+         GsxBiasEffectiveFollowDir(InpMagic, g_roster[i], false, true);
+      advanced++;
+     }
+   g_biasBudgetCursor = (g_biasBudgetCursor + MathMax(1, advanced)) % n;
+  }
+
+// Same-process UI: live bias dirs without GV SnapRead.
+bool GsxCoreLiveBiasForSymbol(const string symbol,
+                              int &dailyDir, int &dailyStr,
+                              int &preDir, int &preStr,
+                              int &thirdDir, int &thirdStr)
+  {
+   dailyDir = preDir = thirdDir = GSX_BIAS_NEUTRAL;
+   dailyStr = preStr = thirdStr = 0;
+   if(symbol == "" || ArraySize(g_roster) <= 0)
+      return(false);
+   string want = GsxSymbolCanon(symbol);
+   for(int i = 0; i < ArraySize(g_roster); i++)
+     {
+      if(g_roster[i] == "")
+         continue;
+      if(g_roster[i] != symbol &&
+         (want == "" || GsxSymbolCanon(g_roster[i]) != want))
+         continue;
+      if(i >= ArraySize(g_bias) || !g_bias[i].valid)
+         return(false);
+      dailyDir = g_bias[i].daily.dir;
+      dailyStr = g_bias[i].daily.strength;
+      preDir = g_bias[i].preDay.dir;
+      preStr = g_bias[i].preDay.strength;
+      thirdDir = g_bias[i].thirdDay.dir;
+      thirdStr = g_bias[i].thirdDay.strength;
+      return(true);
+     }
+   return(false);
+  }
+
 void GsxCoreEnsureSlotMeta(const int n)
   {
    if(ArraySize(g_joinDirCache) != n)
@@ -265,6 +385,7 @@ void GsxCoreEnsureSlotMeta(const int n)
       for(int k = old; k < n; k++)
          g_drillWanted[k] = 0;
      }
+   GsxCoreBiasEnsure(n);
   }
 
 int GsxCoreClampDrillMinutes()
@@ -942,10 +1063,15 @@ bool GsxCoreTryFillIndex(const int i, const GsxEntryParams &ep, const int target
       return(false);
      }
 
-   int followDir = GsxRosterFollowDirGet(InpMagic, sym, GSX_FOLLOW_AUTO);
+   // While desk bias lane armed: live one-sided FollowDir (NEUT→WAIT)
+   int followDir = GsxBiasEffectiveFollowDir(InpMagic, sym, false, true);
    if(!GsxAllowEntry(joinDir, g_flipWait, InpMagic, followDir))
      {
-      GsxCoreSetFillSkip(i, StringFormat("FollowDir/%s", GsxRosterFollowDirLabel(followDir)));
+      string skipTag = GsxRosterFollowDirLabel(followDir);
+      if(followDir == GSX_FOLLOW_WAIT &&
+         GsxBiasDeskLaneGet(InpMagic, GSX_BIAS_LANE_NONE) != GSX_BIAS_LANE_NONE)
+         skipTag = "Bias/NEUT";
+      GsxCoreSetFillSkip(i, StringFormat("FollowDir/%s", skipTag));
       return(false);
      }
 
@@ -1174,6 +1300,8 @@ bool GsxCorePublishBusIndex(const int i, const bool forceThrottleBypass)
    GsxBusBuildSymbolView(g_roster[i], g_eng[i], InpMinAgree, maxSp, InpStaleTickSec,
                          g_ignoreSpread, InpSwingStartHour, InpSwingEndHour,
                          InpCryptoExtraList, InpFridayStop, InpFridayStopHr, 999, view);
+   GsxCoreBiasFillView(i, view);
+   // FingerprintFromView already includes bias_daily/pre/third/lane
    string fp = GsxSignalBusFingerprintFromView(view) + "|" + skip + "|" + IntegerToString(jd);
    if(g_busFp[i] == fp)
       return(true); // already published — skip redundant onboard/force I/O
@@ -1223,6 +1351,7 @@ void GsxCorePublishBus()
       GsxBusBuildSymbolView(g_roster[i], g_eng[i], InpMinAgree, maxSp, InpStaleTickSec,
                             g_ignoreSpread, InpSwingStartHour, InpSwingEndHour,
                             InpCryptoExtraList, InpFridayStop, InpFridayStopHr, 999, view);
+      GsxCoreBiasFillView(i, view);
       string fp = GsxSignalBusFingerprintFromView(view) + "|" + skip + "|" + IntegerToString(jd);
       bool dirty = fullSync || (g_busFp[i] != fp);
       if(!dirty)
@@ -1280,6 +1409,7 @@ bool GsxCoreCalcIndex(const int i, const ENUM_TIMEFRAMES deskTf, const GsxEngine
       g_coreCompactTips++;
       g_formWatch[i] = form;
       g_engineRecalcs++;
+      GsxCoreBiasUpdateSlot(i);
       return(true);
      }
    if(InpVerboseSignals)
@@ -1387,6 +1517,8 @@ void GsxCoreCycle()
    GsxEngineParams ep = GsxCoreBuildEngineParams();
    int n = ArraySize(g_roster);
    GsxCoreEnsureSlotMeta(n);
+   // Bias cadence independent of desk TF bars (Daily float + armed FollowDir sync)
+   GsxCoreBiasRefreshBudgeted(MathMax(2, MathMin(6, n)));
    int budget = GsxCoreEngineBudget();
    int done = 0;
    int advanced = 0;

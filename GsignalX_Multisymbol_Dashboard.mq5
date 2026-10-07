@@ -5,7 +5,7 @@
 //|  NEVER closes positions. Scouter owns exits.                      |
 //+------------------------------------------------------------------+
 #property copyright   "Gocity Group"
-#property version     "2.15"
+#property version     "2.18"
 #property description "Gsignalx Trade Center — single-chart multi-symbol runtime (v2.13)"
 #property description "DeskExecute embeds Core. Soft STOP only — Scouter owns closes."
 #property description "V2.13: EQ pads, Prop/EQ guidance, continuous fleet, desk risk UI."

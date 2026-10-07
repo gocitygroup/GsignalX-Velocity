@@ -479,6 +479,37 @@ void GsxMsPanelSetFollowDirAll(const int mode, const string &roster[])
                     " all (Affects new entries only — open positions unchanged)";
   }
 
+// Desk-wide bias lane arm → per-symbol live one-sided FollowDir (no EMA).
+void GsxMsPanelApplyBiasLane(const int lane, const string &roster[])
+  {
+   int n = 0;
+#ifdef GSX_DESK_CORE_LIVE
+   // Prefer Core in-memory snaps when desk hosts Core (avoid full-roster CopyRates)
+   if(ArraySize(g_bias) > 0 && ArraySize(g_bias) >= ArraySize(roster))
+      n = GsxBiasApplyLaneDesk(g_msMagic, lane, roster, g_bias);
+   else
+      n = GsxBiasApplyLaneDeskLive(g_msMagic, lane, roster);
+#else
+   n = GsxBiasApplyLaneDeskLive(g_msMagic, lane, roster);
+#endif
+   g_msDeskFollowDir = GSX_FOLLOW_AUTO; // may be mixed; chrome FDIR highlight not authoritative
+   g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                    " Bias " + GsxBiasLaneLabel(lane) +
+                    StringFormat(" → FollowDir desk (%d pairs, one-side)", n);
+  }
+
+string GsxMsBiasCellTxt(const int dir, const int strength)
+  {
+   return(GsxBiasCellTxt(dir, strength));
+  }
+
+color GsxMsBiasCellClr(const int dir)
+  {
+   if(dir > 0) return(g_msColBull);
+   if(dir < 0) return(g_msColBear);
+   return(g_msColMuted);
+  }
+
 // Retire automation for a symbol: STOP fills, cancel pendings, clear GVs.
 // Never closes open positions (Scouter owns exits).
 // Note: do not include EntryExec.mqh here — its GSX_ENTRY_* macros break chart enums.
@@ -726,6 +757,9 @@ void GsxMsTrimRowObjects(const int used)
       ObjectDelete(0, GSXMS_PFX + "BTN_MODE_" + IntegerToString(i));
       ObjectDelete(0, GSXMS_PFX + "BTN_MUTE_" + IntegerToString(i));
       ObjectDelete(0, GSXMS_PFX + "BTN_REM_" + IntegerToString(i));
+      ObjectDelete(0, GSXMS_PFX + "BTN_BIAS_D_" + IntegerToString(i));
+      ObjectDelete(0, GSXMS_PFX + "BTN_BIAS_P_" + IntegerToString(i));
+      ObjectDelete(0, GSXMS_PFX + "BTN_BIAS_T_" + IntegerToString(i));
      }
    g_msRowsDrawn = used;
   }
@@ -1477,7 +1511,21 @@ bool GsxMsPanelOnChartEvent(const int id,
          string roster[];
          GsxRosterStoreLoad(g_msMagic, roster);
          GsxMsPanelSetFollowDirAll(mode, roster);
+         GsxBiasDeskLaneSet(g_msMagic, GSX_BIAS_LANE_NONE); // manual FDIR clears bias arm
          GsxMsSettingsClick("FDIR " + GsxRosterFollowDirLabel(mode));
+         return(true);
+        }
+      if(tag == "BTN_BIAS_DAILY" || tag == "BTN_BIAS_PRE" ||
+         tag == "BTN_BIAS_THIRD" || tag == "BTN_BIAS_SIGNAL")
+        {
+         int lane = GSX_BIAS_LANE_NONE;
+         if(tag == "BTN_BIAS_DAILY") lane = GSX_BIAS_LANE_DAILY;
+         if(tag == "BTN_BIAS_PRE")   lane = GSX_BIAS_LANE_PRE;
+         if(tag == "BTN_BIAS_THIRD") lane = GSX_BIAS_LANE_THIRD;
+         string roster[];
+         GsxRosterStoreLoad(g_msMagic, roster);
+         GsxMsPanelApplyBiasLane(lane, roster);
+         GsxMsSettingsClick("BIAS " + GsxBiasLaneLabel(lane));
          return(true);
         }
       if(tag == "BTN_PAIR_START_ALL" || tag == "BTN_PAIR_STOP_ALL")
@@ -1741,6 +1789,21 @@ bool GsxMsPanelOnChartEvent(const int id,
          return(true);
         }
 
+      if(StringFind(tag, "BTN_BIAS_D_") == 0 ||
+         StringFind(tag, "BTN_BIAS_P_") == 0 ||
+         StringFind(tag, "BTN_BIAS_T_") == 0)
+        {
+         // Row bias click = desk-wide arm that lane (not "use this row's value for all")
+         int lane = GSX_BIAS_LANE_DAILY;
+         if(StringFind(tag, "BTN_BIAS_P_") == 0) lane = GSX_BIAS_LANE_PRE;
+         if(StringFind(tag, "BTN_BIAS_T_") == 0) lane = GSX_BIAS_LANE_THIRD;
+         string roster[];
+         GsxRosterStoreLoad(g_msMagic, roster);
+         GsxMsPanelApplyBiasLane(lane, roster);
+         GsxMsSettingsClick("BIAS " + GsxBiasLaneLabel(lane));
+         return(true);
+        }
+
       if(StringFind(tag, "BTN_MODE_") == 0)
         {
          string numPart = StringSubstr(tag, StringLen("BTN_MODE_"));
@@ -1749,6 +1812,7 @@ bool GsxMsPanelOnChartEvent(const int id,
          if(ri >= 0 && ri < ArraySize(view))
            {
             int mode = GsxRosterFollowDirCycle(g_msMagic, view[ri]);
+            GsxBiasDeskLaneSet(g_msMagic, GSX_BIAS_LANE_NONE); // manual Mode clears bias arm
             g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                              " " + view[ri] + " Follow " +
                              GsxRosterFollowDirLabel(mode) +
@@ -1772,8 +1836,9 @@ bool GsxMsPanelOnChartEvent(const int id,
             int st = GsxRosterStateCycle(g_msMagic, view[ri]);
             if(st == GSX_PAIR_START)
               {
-               // Re-arm like chart activate: FOLLOW + PLAY + drill
-               GsxRosterFollowDirSet(g_msMagic, view[ri], GSX_FOLLOW_AUTO);
+               // Re-arm: if desk bias lane armed, keep one-sided FollowDir; else AUTO
+               if(!GsxBiasReapplySymbolDesk(g_msMagic, view[ri]))
+                  GsxRosterFollowDirSetIfChanged(g_msMagic, view[ri], GSX_FOLLOW_AUTO);
                GsxRosterOnboardKickSet(g_msMagic, view[ri]);
                GsxFleetServiceRunSet(g_msMagic, true);
                GsxRosterDrillKickSet(g_msMagic);

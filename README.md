@@ -9,7 +9,8 @@
 Structured entries · winners-only harvest · prop-safe soft STOP · one magic.
 
 **GSignalX** opens risk. **ProfitScouter** banks winners. Desk PLAY/STOP never closes tickets.  
-Default lot **FIXED 0.01**. Bus schema **v1**. Current cut **Velocity 2.14**.
+Default lot **FIXED 0.01**. Bus schema **v1**. Current cut **Velocity 2.18**.  
+**Daily Bias Follow:** chart-aligned D1 lanes (Daily / Pre-D / Third-D) one-shot → FollowDir (entries only; no EMA; never sticky).
 
 **Start here**
 

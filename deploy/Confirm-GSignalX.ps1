@@ -1150,7 +1150,8 @@ function Confirm-Functional {
     }
   }
 
-  if ($coreText -match 'GsxRosterFollowDirGet' -and $coreText -match 'GsxAllowEntry' -and
+  if (($coreText -match 'GsxRosterFollowDirGet' -or $coreText -match 'GsxBiasEffectiveFollowDir') -and
+      $coreText -match 'GsxAllowEntry' -and
       $coreText -match 'GsxRosterTimeframeGet') {
     Add-Line "PASS  Core enforces FollowDir + live TF"
   }
@@ -1182,6 +1183,86 @@ function Confirm-Functional {
   }
   else {
     Add-Line "FAIL  FollowDir Wait mode missing"
+    $script:fail++
+  }
+
+  # --- V2.18 Daily Bias Follow (live one-side FollowDir while armed; no EMA) ---
+  $biasMath = Join-Path $RepoRoot "Include\GSignalX\Bias\DailyBias.mqh"
+  $biasFollow = Join-Path $RepoRoot "Include\GSignalX\Bias\BiasFollow.mqh"
+  $biasMathText = if (Test-Path $biasMath) { Get-Content $biasMath -Raw } else { "" }
+  $biasFollowText = if (Test-Path $biasFollow) { Get-Content $biasFollow -Raw } else { "" }
+  $biasTest = Join-Path $RepoRoot "GSX_Bias_Test.mq5"
+  $biasTestText = if (Test-Path $biasTest) { Get-Content $biasTest -Raw } else { "" }
+  $quadPath = Join-Path $RepoRoot "Include\GSignalX\MultisymbolQuadDraw.mqh"
+  $quadText = if (Test-Path $quadPath) { Get-Content $quadPath -Raw } else { "" }
+  $busPath = Join-Path $RepoRoot "Include\GSignalX\SignalBus.mqh"
+  $busText = if (Test-Path $busPath) { Get-Content $busPath -Raw } else { "" }
+
+  if ($biasMathText -match 'GsxBiasLegFromBarOutcome' -and $biasMathText -match 'GsxBiasHistFromCache' -and
+      $biasMathText -match 'GSX_BIAS_NEUTRAL_PCT' -and $biasMathText -match 'GsxBiasOverallFromCache') {
+    Add-Line "PASS  DailyBias pivot math + hist Pre/Third"
+  }
+  else {
+    Add-Line "FAIL  DailyBias math module incomplete"
+    $script:fail++
+  }
+
+  if ($biasFollowText -match 'GsxBiasToFollowDir' -and $biasFollowText -match 'GsxBiasApplyLaneDesk' -and
+      $biasFollowText -match 'GsxBiasApplyLaneChart' -and $biasFollowText -match 'GSX_MS_BIASLANE_' -and
+      $biasFollowText -match 'GsxBiasEffectiveFollowDir') {
+    Add-Line "PASS  BiasFollow Apply + GsxBiasEffectiveFollowDir helpers"
+  }
+  else {
+    Add-Line "FAIL  BiasFollow apply/effective helpers missing"
+    $script:fail++
+  }
+
+  if ($biasFollowText -match 'GSX_FOLLOW_WAIT' -and
+      $biasFollowText -match 'GsxBiasToFollowDir' -and
+      ($biasTestText -match 'neut' -and $biasTestText -match 'GSX_FOLLOW_WAIT')) {
+    Add-Line "PASS  Armed bias NEUT maps to FollowDir WAIT (one-side)"
+  }
+  else {
+    Add-Line "FAIL  Armed NEUT to WAIT one-side mapping missing"
+    $script:fail++
+  }
+
+  if ($coreText -match 'GsxBiasEffectiveFollowDir' -and $coreText -match 'GsxCoreBiasUpdateSlot' -and
+      $coreText -match 'g_bias' -and ($coreText -match 'bias_daily' -or $busText -match 'bias_daily') -and
+      $coreText -match 'GsxCoreBiasRefreshBudgeted') {
+    Add-Line "PASS  Core live bias gate + budgeted refresh + bus fields"
+  }
+  else {
+    Add-Line "FAIL  Core bias gate/refresh wiring missing"
+    $script:fail++
+  }
+
+  if (($msText -match 'BTN_BIAS_DAILY' -and $msText -match 'GsxMsPanelApplyBiasLane') -and
+      ($quadText -match 'BTN_BIAS_DAILY' -or $msText -match 'BTN_BIAS_D_') -and
+      $msText -match 'GsxBiasReapplySymbolDesk') {
+    Add-Line "PASS  Trade Center bias lane UI + START re-apply"
+  }
+  else {
+    Add-Line "FAIL  Trade Center bias UI / START re-apply missing"
+    $script:fail++
+  }
+
+  if ($chartText -match 'ChartBiasApplyLane' -and $chartText -match 'BTN_BIAS_DAILY' -and
+      $chartText -match 'GsxBiasApplyLaneChart' -and $chartText -match 'GsxBiasEffectiveFollowDir') {
+    Add-Line "PASS  Chart bias chips + effective one-side FollowDir"
+  }
+  else {
+    Add-Line "FAIL  Chart bias follow UI / effective gate missing"
+    $script:fail++
+  }
+
+  $deployPs1 = Join-Path $RepoRoot "deploy\Deploy-GSignalX.ps1"
+  $deployText = if (Test-Path $deployPs1) { Get-Content $deployPs1 -Raw } else { "" }
+  if ((Test-Path $biasTest) -and $deployText -match 'GSX_Bias_Test') {
+    Add-Line "PASS  GSX_Bias_Test in toolkit programs"
+  }
+  else {
+    Add-Line "FAIL  GSX_Bias_Test missing from manifest"
     $script:fail++
   }
 
@@ -1766,11 +1847,12 @@ function Confirm-Functional {
     $script:fail++
   }
 
-  if ($dashText -match 'version\s+"2\.15"' -and $svcText -match 'version\s+"2\.15"') {
-    Add-Line "PASS  V2.15 host versions Dashboard/Service"
+  if ($dashText -match 'version\s+"2\.18"' -and $svcText -match 'version\s+"2\.18"' -and
+      $chartText -match 'version\s+"2\.18"') {
+    Add-Line "PASS  V2.18 host versions Dashboard/Service/Chart"
   }
   else {
-    Add-Line "FAIL  V2.15 host version bump missing"
+    Add-Line "FAIL  V2.18 host version bump missing"
     $script:fail++
   }
 
