@@ -1708,6 +1708,16 @@ function Confirm-Functional {
     $script:fail++
   }
 
+  $quadTextOco = Get-Content (Join-Path $RepoRoot "Include\GSignalX\MultisymbolQuadDraw.mqh") -Raw -ErrorAction SilentlyContinue
+  if ($quadTextOco -match 'BTN_OCO' -and $quadTextOco -match 'GsxOcoChipLabel' -and
+      $msTextOco -match 'GsxRosterOcoEnableToggle') {
+    Add-Line "PASS  V2.20 Trade Center Automation BTN_OCO (QuadDraw)"
+  }
+  else {
+    Add-Line "FAIL  V2.20 Trade Center QuadDraw BTN_OCO missing"
+    $script:fail++
+  }
+
   # --- V2.20 production hardening (hang residual + DRY) ---
   $ocoDefaultOn = ($svcOco -match 'InpEnableOcoStraddle\s*=\s*true') -and
                   ($dashOco -match 'InpEnableOcoStraddle\s*=\s*true') -and

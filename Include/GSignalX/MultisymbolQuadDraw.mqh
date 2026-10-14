@@ -372,10 +372,16 @@ void GsxMsDrawQuadLL(GsxLayCtx &col, const GsxMsSnapshot &snap,
    GsxMsQuadInsetBegin(col, inset);
    avail = MathMax(1, col.packRemain - inset);
    col.packRemain = avail;
-   GsxLayEqual(col, 5, slots);
-   if(ArraySize(slots) >= 5)
+   // v2.20: AUTOLOT + OCO + discrete EQ pads (BTN_OCO click handled in MultisymbolPanel)
+   GsxLayEqual(col, 6, slots);
+   if(ArraySize(slots) >= 6)
      {
       string lotTxt = snap.autoLot ? "AUTOLOT" : "FIXED";
+      string ocoTxt = GsxOcoChipLabel(snap.ocoEnable, snap.ocoDeskState, g_msDense);
+      color ocoBg = chipIdle;
+      color ocoFg = g_msColText;
+      GsxOcoChipColors(snap.ocoEnable, snap.ocoDeskState, ocoBg, ocoFg,
+                       chipIdle, g_msColAccent, g_msColBull, g_msColMuted, g_msColBg);
       bool eq0 = (snap.eqGuardPct <= 0.0);
       bool eq5 = (snap.eqGuardPct > 0.0 && snap.eqGuardPct < 7.5);
       bool eq10 = (snap.eqGuardPct >= 7.5 && snap.eqGuardPct < 17.5);
@@ -383,16 +389,17 @@ void GsxMsDrawQuadLL(GsxLayCtx &col, const GsxMsSnapshot &snap,
       GsxPanelSlotButtonPad("BTN_AUTOLOT", slots[0], lotTxt,
                             snap.autoLot ? g_msColBull : chipIdle,
                             snap.autoLot ? g_msColBg : g_msColText, pad);
-      GsxPanelSlotButtonPad("BTN_EQ_0", slots[1], "EQ OFF",
+      GsxPanelSlotButtonPad("BTN_OCO", slots[1], ocoTxt, ocoBg, ocoFg, pad);
+      GsxPanelSlotButtonPad("BTN_EQ_0", slots[2], "EQ OFF",
                             eq0 ? g_msColMuted : chipIdle,
                             eq0 ? g_msColBg : g_msColText, pad);
-      GsxPanelSlotButtonPad("BTN_EQ_5", slots[2], "5%",
+      GsxPanelSlotButtonPad("BTN_EQ_5", slots[3], "5%",
                             eq5 ? g_msColAccent : chipIdle,
                             eq5 ? g_msColBg : g_msColText, pad);
-      GsxPanelSlotButtonPad("BTN_EQ_10", slots[3], "10%",
+      GsxPanelSlotButtonPad("BTN_EQ_10", slots[4], "10%",
                             eq10 ? g_msColAccent : chipIdle,
                             eq10 ? g_msColBg : g_msColText, pad);
-      GsxPanelSlotButtonPad("BTN_EQ_20", slots[4], "20%",
+      GsxPanelSlotButtonPad("BTN_EQ_20", slots[5], "20%",
                             eq20 ? g_msColAccent : chipIdle,
                             eq20 ? g_msColBg : g_msColText, pad);
      }

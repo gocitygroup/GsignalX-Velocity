@@ -1291,13 +1291,22 @@ void GsxMsPanelDrawCompact(const GsxMsSnapshot &snap, const int anchorX, const i
                                 g_msColAccent, g_msLay.fontBig, true);
    if(GsxLayPack(lay, sq, s))
       GsxPanelSlotButtonPad("BTN_CAR_N", s, ">", chipIdle, g_msColText, pad);
-   int actNeed = 3 * actW + 2 * lay.gap;
+   // Compact strip: OCO chip + ADD/SWAP/REM (same desk GV as Trade Center)
+   string ocoTxt = GsxOcoChipLabel(snap.ocoEnable, snap.ocoDeskState, true);
+   color ocoBg = chipIdle;
+   color ocoFg = g_msColText;
+   GsxOcoChipColors(snap.ocoEnable, snap.ocoDeskState, ocoBg, ocoFg,
+                    chipIdle, g_msColAccent, g_msColBull, g_msColMuted, g_msColBg);
+   int ocoW = MathMax(GsxSx(44), GsxMsTextChipW(ocoTxt, g_msLay.fontSmall, GsxSx(40)));
+   int actNeed = ocoW + 3 * actW + 3 * lay.gap;
    int spacer = MathMax(GsxSp(8), lay.packRemain - actNeed);
    if(spacer > 0)
      {
       GsxLaySlot skip;
       GsxLayPack(lay, spacer, skip);
      }
+   if(GsxLayPack(lay, ocoW, s))
+      GsxPanelSlotButtonPad("BTN_OCO", s, ocoTxt, ocoBg, ocoFg, pad);
    if(GsxLayPack(lay, actW, s))
       GsxPanelSlotButtonPad("BTN_ADD", s, "ADD",
                             (car == "" ? chipIdle : g_msColBull),
