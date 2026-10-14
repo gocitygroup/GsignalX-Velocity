@@ -34,6 +34,9 @@
 //|    InpDrillEnable, InpDrillMinutes, InpDrillAllowReentry (v2.10)   |
 //|    InpContinuousFleet (v2.13; optional continuous fills)          |
 //|    InpScaleProfile (v2.15; 0=Manual 1=Small 2=Medium 3=Large)      |
+//|    InpEnableOcoStraddle, InpOcoActivationHour/Minute,             |
+//|    InpOcoEntryOffsetPts, InpOcoInitialStopPts, InpOcoTakeProfitPts,|
+//|    InpOcoTrailPts, InpOcoTrailThrottleMs, InpOcoVolumeLots (v2.19) |
 //|                                                                   |
 //|  Enums may be redefined in the host; Core uses int casts.         |
 //+------------------------------------------------------------------+
@@ -48,6 +51,7 @@
 #include <GSignalX/Fleet.mqh>
 #include <GSignalX/ScoutLink.mqh>
 #include <GSignalX/EntryExec.mqh>
+// OcoStraddle.mqh pulled via EntryExec (GSX_OCO_* ownership)
 #include <GSignalX/SignalBus.mqh>
 #include <GSignalX/LotSizing.mqh>
 #include <GSignalX/PropRisk.mqh>
@@ -73,6 +77,7 @@ bool           g_svcEnabled   = true;
 bool           g_flipWait     = false;
 bool           g_ignoreSpread = false;
 bool           g_autoLot      = false;
+bool           g_ocoEnable    = false; // v2.19 desk OCO straddle (GV; seeded from input)
 double         g_eqGuardPct   = 0.0;  // v2.09 desk EQ guard (0=off)
 int            g_engineRecalcs = 0;
 int            g_fleetFills    = 0;
@@ -123,6 +128,9 @@ bool            g_coreInCycle = false;
 GsxPropState    g_corePropSt;
 bool            g_corePropLoaded = false;
 bool            g_corePropDirty = false;
+// v2.19 optional two-sided OCO straddle (per roster slot; parallel to InpEntryMode)
+GsxOcoInstance  g_oco[];
+bool            g_ocoBootstrapped = false;
 
 //+------------------------------------------------------------------+
 void GsxEngStateCopy(const GsxEngineState &src, GsxEngineState &dst)
@@ -394,7 +402,163 @@ void GsxCoreEnsureSlotMeta(const int n)
       for(int k = old; k < n; k++)
          g_drillWanted[k] = 0;
      }
+   if(ArraySize(g_oco) != n)
+     {
+      int oldO = ArraySize(g_oco);
+      ArrayResize(g_oco, n);
+      for(int k = oldO; k < n; k++)
+         GsxOcoInstClear(g_oco[k]);
+     }
    GsxCoreBiasEnsure(n);
+  }
+
+GsxOcoConfig GsxCoreBuildOcoConfig()
+  {
+   GsxOcoConfig c;
+   GsxOcoConfigClear(c);
+   c.enable            = g_ocoEnable; // desk GV (seeded from InpEnableOcoStraddle)
+   c.activationHour    = InpOcoActivationHour;
+   c.activationMinute  = InpOcoActivationMinute;
+   c.entryOffsetPts    = InpOcoEntryOffsetPts;
+   c.initialStopPts    = InpOcoInitialStopPts;
+   c.takeProfitPts     = InpOcoTakeProfitPts;
+   c.trailPts          = InpOcoTrailPts;
+   c.trailThrottleMs   = InpOcoTrailThrottleMs;
+   c.volumeLots        = InpOcoVolumeLots;
+   c.slippage          = InpSlippage;
+   c.magic             = InpMagic;
+   c.verbose           = InpVerboseSignals;
+   return(c);
+  }
+
+void GsxCorePublishOcoDeskState()
+  {
+   int maxSt = GSX_OCO_IDLE;
+   if(g_ocoEnable)
+     {
+      for(int i = 0; i < ArraySize(g_oco); i++)
+        {
+         int st = (int)g_oco[i].state;
+         if(st == GSX_OCO_FINISHED)
+            continue;
+         if(st > maxSt)
+            maxSt = st;
+        }
+     }
+   GsxRosterOcoDeskStateSet(InpMagic, maxSt);
+  }
+
+void GsxCoreOcoBootstrap()
+  {
+   if(g_ocoBootstrapped)
+      return;
+   g_ocoBootstrapped = true;
+   GsxOcoConfig cfg = GsxCoreBuildOcoConfig();
+   if(!cfg.enable)
+      return;
+   GsxCoreEnsureSlotMeta(ArraySize(g_roster));
+   for(int i = 0; i < ArraySize(g_roster); i++)
+     {
+      if(g_roster[i] == "")
+         continue;
+      g_oco[i].symbol = g_roster[i];
+      if(GsxOcoRestore(g_oco[i], g_roster[i], InpMagic))
+         GsxOcoReconcile(g_gsxTrade, g_oco[i], cfg);
+      GsxOcoPersist(g_oco[i], InpMagic, true);
+     }
+  }
+
+// Arm OCO from FollowDir-allowed signal without blocking InpEntryMode fills.
+void GsxCoreMaybeArmOco(const int i, const int joinDir)
+  {
+   if(!g_ocoEnable || joinDir == 0)
+      return;
+   if(i < 0 || i >= ArraySize(g_roster) || i >= ArraySize(g_oco))
+      return;
+   string sym = g_roster[i];
+   if(sym == "")
+      return;
+
+   datetime sigEvt = 0;
+   if(i < ArraySize(g_eng) && g_eng[i].lastSigChangeTime > 0)
+      sigEvt = g_eng[i].lastSigChangeTime;
+   else if(i < ArraySize(g_joinDirChangedAt) && g_joinDirChangedAt[i] > 0)
+      sigEvt = g_joinDirChangedAt[i];
+   else
+      sigEvt = TimeCurrent();
+
+   GsxOcoConfig cfg = GsxCoreBuildOcoConfig();
+   g_oco[i].symbol = sym;
+   if(GsxOcoOnSignal(g_oco[i], cfg, sym, sigEvt, TimeCurrent()))
+      GsxOcoPersist(g_oco[i], InpMagic, true);
+  }
+
+// Arm OCO for idle slots with FollowDir-allowed live joinDir (fleet-independent).
+void GsxCoreOcoArmPass()
+  {
+   if(!g_ocoEnable || !g_svcEnabled)
+      return;
+   int n = ArraySize(g_roster);
+   GsxCoreEnsureSlotMeta(n);
+   for(int i = 0; i < n; i++)
+     {
+      if(g_roster[i] == "" || i >= ArraySize(g_oco))
+         continue;
+      if(g_oco[i].state != GSX_OCO_IDLE && g_oco[i].state != GSX_OCO_FINISHED)
+         continue;
+      if(!GsxRosterIsFleetCandidate(InpMagic, g_roster[i]))
+         continue;
+      if(!GsxCoreEngOwnsSymbol(i, g_roster[i], PERIOD_CURRENT))
+         continue;
+      string why = "";
+      int joinDir = GsxCoreJoinDir(i, why);
+      if(joinDir == 0)
+         continue;
+      int followDir = GsxBiasEffectiveFollowDir(InpMagic, g_roster[i], false, true);
+      if(!GsxAllowEntry(joinDir, g_flipWait, InpMagic, followDir))
+         continue;
+      string freshWhy = "";
+      if(!GsxCoreSignalFresh(i, joinDir, freshWhy))
+         continue;
+      GsxCoreMaybeArmOco(i, joinDir);
+     }
+  }
+
+void GsxCoreManageOcoAll()
+  {
+   GsxCoreOcoBootstrap();
+   GsxCoreOcoArmPass();
+   GsxOcoConfig cfg = GsxCoreBuildOcoConfig();
+   datetime now = TimeCurrent();
+   int n = ArraySize(g_roster);
+   GsxCoreEnsureSlotMeta(n);
+   // v2.20: one OCO order/position walk for the whole manage pass
+   GsxOcoBookBegin(InpMagic);
+   for(int i = 0; i < n; i++)
+     {
+      if(g_roster[i] == "")
+         continue;
+      if(g_oco[i].symbol == "")
+         g_oco[i].symbol = g_roster[i];
+      if(!GsxOcoNeedsWork(g_oco[i], cfg) && cfg.enable && g_oco[i].state == GSX_OCO_IDLE)
+         continue;
+      GsxOcoOnTick(g_gsxTrade, g_oco[i], cfg, now);
+      GsxOcoPersist(g_oco[i], InpMagic, false);
+     }
+   GsxOcoBookEnd();
+   static bool s_ocoOffCleaned = false;
+   if(!cfg.enable)
+     {
+      // Taking off: cancel any leftover straddle pendings once
+      if(!s_ocoOffCleaned)
+        {
+         GsxOcoCancelAllMagic(g_gsxTrade, InpMagic, "oco_takeoff");
+         s_ocoOffCleaned = true;
+        }
+     }
+   else
+      s_ocoOffCleaned = false;
+   GsxCorePublishOcoDeskState();
   }
 
 int GsxCoreClampDrillMinutes()
@@ -425,11 +589,13 @@ int GsxCoreDrillSecondsLeft()
 
 void GsxCoreCancelAllRosterPendings(const string why)
   {
+   // Skip GSX_OCO_* — drill/hygiene must not wipe the optional straddle;
+   // soft STOP cancels straddles explicitly via GsxOcoCancelAllMagic.
    for(int i = 0; i < ArraySize(g_roster); i++)
      {
       if(g_roster[i] == "")
          continue;
-      GsxDeletePendings(g_gsxTrade, g_roster[i], InpMagic, why);
+      GsxDeletePendings(g_gsxTrade, g_roster[i], InpMagic, why, true);
      }
   }
 
@@ -963,6 +1129,8 @@ void GsxCoreInitEx(const int hostTag, const bool claimOwn)
    g_flipWait     = InpFlipWaitDefault;
    g_ignoreSpread = GsxRosterSpreadIgnGet(InpMagic, InpIgnoreSpreadDefault);
    g_autoLot      = GsxRosterAutoLotGet(InpMagic, InpAutoLotDefault);
+   GsxRosterOcoEnableSeed(InpMagic, InpEnableOcoStraddle);
+   g_ocoEnable    = GsxRosterOcoEnableGet(InpMagic, InpEnableOcoStraddle);
    g_eqGuardPct   = GsxRosterEqGuardGet(InpMagic, 0.0);
    g_engineRecalcs = 0;
    g_fleetFills    = 0;
@@ -1137,6 +1305,10 @@ bool GsxCoreTryFillIndex(const int i, const GsxEntryParams &ep, const int target
       return(false);
      }
 
+   // Optional OCO straddle: arm on FollowDir-allowed fresh signal (AUTO or Bias).
+   // Does not replace or block InpEntryMode — PlaceEntry still runs below.
+   GsxCoreMaybeArmOco(i, joinDir);
+
    if(!GsxCoreGatesOk(sym, why))
      {
       GsxCoreSetFillSkip(i, why);
@@ -1183,7 +1355,7 @@ bool GsxCoreTryFillIndex(const int i, const GsxEntryParams &ep, const int target
      {
       g_joinDirCache[i] = joinDir;
       g_fleetFills++;
-      g_fleetActive = GsxFleetActivePairs(InpMagic);
+      g_fleetActive = GsxFleetActivePairs(InpMagic, g_coreAccountBook);
       GsxCoreSetFillSkip(i, "");
       GsxRosterLastDirSet(InpMagic, sym, joinDir);
       // v2.13: Prop MAX_TRADES — in-cycle RAM + flush once per Core cycle
@@ -1492,6 +1664,11 @@ void GsxCoreCycle()
       return;
    g_coreInCycle = true;
 
+   // v2.20: DeskExecute must not Sleep on bus register contention (UI thread)
+   bool deskNoSleep = (g_coreHostTag == GSX_HOST_DESK);
+   if(deskNoSleep)
+      GsxBusWriterNoSleepBegin();
+
    g_coreCycleStartMs = GetTickCount();
    g_coreFleetSnapFresh = false; // force one fleet scan this cycle (reuse thereafter)
    // 0) live roster hot-reload from Dashboard / chart strip
@@ -1509,6 +1686,7 @@ void GsxCoreCycle()
 
    // 0b3) Desk AUTOLOT + EQ guard (Trade Center → Service) v2.09
    g_autoLot    = GsxRosterAutoLotGet(InpMagic, InpAutoLotDefault);
+   g_ocoEnable  = GsxRosterOcoEnableGet(InpMagic, InpEnableOcoStraddle);
    g_eqGuardPct = GsxRosterEqGuardGet(InpMagic, 0.0);
 
    // 0c) Desk timeframe from Trade Center chart (fallback InpTimeframe → M5)
@@ -1528,9 +1706,18 @@ void GsxCoreCycle()
       GsxCoreClearDrill("STOP");
       // Soft STOP: kill working brackets so old pairs cannot still trigger
       GsxCoreCancelAllRosterPendings("soft STOP");
+      // Soft STOP also takes off optional OCO straddles (same magic)
+      int ocoKill = GsxOcoCancelAllMagic(g_gsxTrade, InpMagic, "soft STOP");
+      for(int oi = 0; oi < ArraySize(g_oco); oi++)
+        {
+         if(g_oco[oi].symbol != "")
+            GsxOcoClearGv(g_oco[oi].symbol, InpMagic);
+         GsxOcoInstClear(g_oco[oi]);
+        }
       int orphans = GsxCleanupOrphanPendings(g_gsxTrade, InpMagic, g_roster);
-      if(InpVerboseSignals && orphans > 0)
-         PrintFormat("GsignalX Core: STOP cleared %d orphan pending(s)", orphans);
+      if(InpVerboseSignals && (orphans > 0 || ocoKill > 0))
+         PrintFormat("GsignalX Core: STOP cleared %d orphan pending(s) oco=%d",
+                     orphans, ocoKill);
      }
    g_corePrevRun = g_svcEnabled;
 
@@ -1700,10 +1887,15 @@ void GsxCoreCycle()
    // Re-anchor catastrophe SL after pending fills (one-shot per ticket)
    GsxStratStopRefreshFilled(g_gsxTrade, InpMagic, InpVerboseSignals);
 
+   // Optional OCO: place / OCO-cancel sibling / trail (never market-close)
+   GsxCoreManageOcoAll();
+
    if(g_svcEnabled)
       GsxCoreFleetFillOnce(); // onboard + dir-change preferred
 
    GsxCorePropFlush();
+   if(deskNoSleep)
+      GsxBusWriterNoSleepEnd();
    g_coreInCycle = false;
   }
 

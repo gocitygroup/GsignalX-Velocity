@@ -23,6 +23,19 @@ bool   g_gsxBusSnapActive = false;
 string g_gsxBusSnapTids[];
 bool   g_gsxBusSnapTidsReady = false;
 
+// v2.20: DeskExecute Core — register/write retries without Sleep (UI thread)
+bool   g_gsxBusWriterNoSleep = false;
+
+void GsxBusWriterNoSleepBegin()
+  {
+   g_gsxBusWriterNoSleep = true;
+  }
+
+void GsxBusWriterNoSleepEnd()
+  {
+   g_gsxBusWriterNoSleep = false;
+  }
+
 void GsxBusSnapBegin()
   {
    g_gsxBusSnapActive = true;
@@ -294,9 +307,11 @@ void GsxBusRegisterTid(const string tid)
       return;
 
    string indexPath = GSX_BUS_TERMINALS + "\\_index.txt";
-   for(int attempt = 0; attempt < GSX_BUS_REG_RETRY; attempt++)
+   int maxAttempts = (g_gsxBusWriterNoSleep ? 1 : GSX_BUS_REG_RETRY);
+   int readRetries = (g_gsxBusWriterNoSleep ? 0 : 1);
+   for(int attempt = 0; attempt < maxAttempts; attempt++)
      {
-      string existing = GsxBusReadAllRetry(indexPath, 1);
+      string existing = GsxBusReadAllRetry(indexPath, readRetries);
       if(GsxBusLinePresent(existing, tid))
         {
          GsxBusCacheAdd(g_gsxBusCachedTids, g_gsxBusCachedTidN, tid);
@@ -309,14 +324,15 @@ void GsxBusRegisterTid(const string tid)
       if(GsxBusWriteAtomic(indexPath, body))
         {
          // Verify-after-write: concurrent terminals may have overwritten us
-         string check = GsxBusReadAllRetry(indexPath, 1);
+         string check = GsxBusReadAllRetry(indexPath, readRetries);
          if(GsxBusLinePresent(check, tid))
            {
             GsxBusCacheAdd(g_gsxBusCachedTids, g_gsxBusCachedTidN, tid);
             return;
            }
         }
-      Sleep(5);
+      if(!g_gsxBusWriterNoSleep)
+         Sleep(5);
      }
   }
 
@@ -330,9 +346,11 @@ void GsxBusRegisterSignal(const string tid, const string symbolCanon)
       return;
 
    string listPath = GsxBusTerminalDir(tid) + "\\signals\\_list.txt";
-   for(int attempt = 0; attempt < GSX_BUS_REG_RETRY; attempt++)
+   int maxAttempts = (g_gsxBusWriterNoSleep ? 1 : GSX_BUS_REG_RETRY);
+   int readRetries = (g_gsxBusWriterNoSleep ? 0 : 1);
+   for(int attempt = 0; attempt < maxAttempts; attempt++)
      {
-      string existing = GsxBusReadAllRetry(listPath, 1);
+      string existing = GsxBusReadAllRetry(listPath, readRetries);
       if(GsxBusLinePresent(existing, fileName))
         {
          GsxBusCacheAdd(g_gsxBusCachedSigKeys, g_gsxBusCachedSigN, cacheKey);
@@ -344,14 +362,15 @@ void GsxBusRegisterSignal(const string tid, const string symbolCanon)
       body += fileName + "\n";
       if(GsxBusWriteAtomic(listPath, body))
         {
-         string check = GsxBusReadAllRetry(listPath, 1);
+         string check = GsxBusReadAllRetry(listPath, readRetries);
          if(GsxBusLinePresent(check, fileName))
            {
             GsxBusCacheAdd(g_gsxBusCachedSigKeys, g_gsxBusCachedSigN, cacheKey);
             return;
            }
         }
-      Sleep(5);
+      if(!g_gsxBusWriterNoSleep)
+         Sleep(5);
      }
   }
 

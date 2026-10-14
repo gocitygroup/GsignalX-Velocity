@@ -5,7 +5,7 @@
 //|  NEVER closes positions. Scouter owns exits.                      |
 //+------------------------------------------------------------------+
 #property copyright   "Gocity Group"
-#property version     "2.18"
+#property version     "2.20"
 #property description "Gsignalx Trade Center — single-chart multi-symbol runtime (v2.13)"
 #property description "DeskExecute embeds Core. Soft STOP only — Scouter owns closes."
 #property description "V2.13: EQ pads, Prop/EQ guidance, continuous fleet, desk risk UI."
@@ -134,6 +134,17 @@ input int          InpLimitOffset        = 5;
 input int          InpStopOffset         = 5;
 input bool         InpPendFromSignalOpen = true;
 input int          InpPendMaxAgeMin      = 60;   // Cancel unfilled pendings older than N min (was 240)
+
+input group "8b) OCO straddle (optional two-sided stops)"
+input bool   InpEnableOcoStraddle    = true;  // BuyStop+SellStop parallel to EntryMode; default on
+input int    InpOcoActivationHour    = 0;     // Server hour; past today → place immediately
+input int    InpOcoActivationMinute  = 0;
+input int    InpOcoEntryOffsetPts    = 20;    // Points above Ask / below Bid
+input int    InpOcoInitialStopPts    = 50;    // Initial SL on each stop (0=none)
+input int    InpOcoTakeProfitPts     = 0;     // 0 = no TP (Scouter exits)
+input int    InpOcoTrailPts          = 30;    // Trail distance points (0=off)
+input int    InpOcoTrailThrottleMs   = 250;
+input double InpOcoVolumeLots        = 0.01;  // Lot per OCO stop order
 
 input group "9) Money management"
 input EnRiskMode InpRiskMode       = GSX_RISK_PCT;
@@ -514,6 +525,7 @@ int OnInit()
 
    // Product default: FIXED 0.01 — seed only if missing so reattach keeps desk toggle (v2.14)
    GsxRosterAutoLotSeed(InpMagic, InpAutoLotDefault);
+   GsxRosterOcoEnableSeed(InpMagic, InpEnableOcoStraddle);
 
    if(!GlobalVariableCheck(GsxEventModeVar(InpMagic)))
       GsxEventModeSet(InpMagic, (InpEvtModeDefault == 1 ? GSX_EVT_MODE_SKIP : GSX_EVT_MODE_TRADE));

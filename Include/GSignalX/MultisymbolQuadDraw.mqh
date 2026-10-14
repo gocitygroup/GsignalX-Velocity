@@ -1011,6 +1011,7 @@ void GsxMsPanelDrawFull(const GsxMsSnapshot &snap, const bool deferRedraw = fals
       ObjectSetInteger(0, bgName, OBJPROP_XDISTANCE, g_msPanelX - inset);
       ObjectSetInteger(0, bgName, OBJPROP_YDISTANCE, g_msPanelY - inset);
      }
+   GsxMsObjCacheRebuild();
    if(!deferRedraw)
       ChartRedraw();
   }

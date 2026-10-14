@@ -12,6 +12,7 @@
 #include <GSignalX/Fleet.mqh>
 #include <GSignalX/FollowGate.mqh>
 #include <GSignalX/StrategicStop.mqh>
+#include <GSignalX/OcoStraddle.mqh>
 
 #define GSX_ENTRY_MARKET 0
 #define GSX_ENTRY_LIMIT  1
@@ -277,7 +278,10 @@ int GsxCountPendings(const string symbol, const long magic)
    return(c);
   }
 
-void GsxDeletePendings(CTrade &trade, const string symbol, const long magic, const string why)
+// skipOcoStraddle: true for pre-bracket so GSX_ENTRY_BOTH does not wipe the optional
+// two-sided OCO straddle (GSX_OCO_*). Soft STOP / retire should pass false.
+void GsxDeletePendings(CTrade &trade, const string symbol, const long magic, const string why,
+                       const bool skipOcoStraddle = false)
   {
    for(int i = OrdersTotal() - 1; i >= 0; i--)
      {
@@ -287,6 +291,8 @@ void GsxDeletePendings(CTrade &trade, const string symbol, const long magic, con
       if(OrderGetInteger(ORDER_MAGIC) != magic)
          continue;
       if(OrderGetString(ORDER_SYMBOL) != symbol)
+         continue;
+      if(skipOcoStraddle && GsxIsOcoStraddleComment(OrderGetString(ORDER_COMMENT)))
          continue;
       if(trade.OrderDelete(ticket))
          Print("GsignalX EntryExec: pending #", ticket, " deleted (", why, ")");
@@ -307,6 +313,7 @@ int GsxCleanupOrphanPendings(CTrade &trade, const long magic, const string &rost
          continue;
       if(OrderGetInteger(ORDER_MAGIC) != magic)
          continue;
+      // Orphan hygiene includes OCO straddles (symbol off roster).
       string sym = OrderGetString(ORDER_SYMBOL);
       if(sym == "")
          continue;
@@ -345,6 +352,9 @@ void GsxCleanupStalePendings(CTrade &trade, const long magic, const int maxAgeMi
          continue;
       if(OrderGetInteger(ORDER_MAGIC) != magic)
          continue;
+      // OCO straddle lifetime is owned by OcoStraddle.mqh — do not age-sweep it here.
+      if(GsxIsOcoStraddleComment(OrderGetString(ORDER_COMMENT)))
+         continue;
       datetime setup = (datetime)OrderGetInteger(ORDER_TIME_SETUP);
       if((long)(TimeCurrent() - setup) >= maxAge)
         {
@@ -374,6 +384,8 @@ void GsxCleanupStalePendings(CTrade &trade,
       if(OrderGetInteger(ORDER_MAGIC) != magic)
          continue;
       if(OrderGetString(ORDER_SYMBOL) != symbol)
+         continue;
+      if(GsxIsOcoStraddleComment(OrderGetString(ORDER_COMMENT)))
          continue;
       datetime setup = (datetime)OrderGetInteger(ORDER_TIME_SETUP);
       if((long)(TimeCurrent() - setup) >= maxAge)
@@ -755,8 +767,9 @@ bool GsxPlaceEntry(CTrade &trade,
    bool placed = false;
    string lastAct = "";
 
-   // Clean same-symbol pendings before placing a fresh BOTH bracket
-   GsxDeletePendings(trade, symbol, p.magic, "pre-bracket");
+   // Clean same-symbol bracket pendings before placing a fresh BOTH —
+   // never wipe optional GSX_OCO_* straddle legs (parallel feature).
+   GsxDeletePendings(trade, symbol, p.magic, "pre-bracket", true);
 
    if(p.entryMode == GSX_ENTRY_LIMIT || p.entryMode == GSX_ENTRY_BOTH)
      {

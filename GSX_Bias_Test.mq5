@@ -3,7 +3,7 @@
 //|  Unit test: chart-aligned day-outcome bias + FollowDir mapping.   |
 //+------------------------------------------------------------------+
 #property copyright "GocityGroup"
-#property version   "2.18"
+#property version   "2.20"
 #property script_show_inputs
 
 #include <GSignalX/Bias/DailyBias.mqh>

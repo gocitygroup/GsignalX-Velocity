@@ -1,10 +1,10 @@
 # Windows deploy — simple guide (non-technical)
 
-**Product:** Gsignalx Velocity **2.18**  
+**Product:** Gsignalx Velocity **2.20**  
 **Goal:** Toolkit on Windows → MetaTrader 5 **without coding**.
 
 Stuck? [Problems and fixes](#problems-and-fixes).  
-Manual: [Gsignalx_Velocity_Users_Manual.html](Gsignalx_Velocity_Users_Manual.html) · Current cut: [RELEASE_v2.18](RELEASE_v2.18_Daily_Bias_Follow.md) · Tech: [DEPLOYMENT.md](../DEPLOYMENT.md)
+Manual: [Gsignalx_Velocity_Users_Manual.html](Gsignalx_Velocity_Users_Manual.html) · Current cut: [RELEASE_v2.20](RELEASE_v2.20_Integrations_OCO.md) · Tech: [DEPLOYMENT.md](../DEPLOYMENT.md)
 
 ### Best use after deploy (prop / practice desk)
 
@@ -135,7 +135,7 @@ Aim for **SUMMARY: PASS**. Yellow WARN about stale bus is normal if Services wer
 
 ---
 
-## Recommended first desk (Velocity 2.18)
+## Recommended first desk (Velocity 2.20)
 
 | Role | Program | Closes trades? |
 |---|---|---|
@@ -146,7 +146,7 @@ Aim for **SUMMARY: PASS**. Yellow WARN about stale bus is normal if Services wer
 
 **After start:** FIXED **0.01** · EQ **OFF** (unless wanted) · STOP once (clear pendings) · PROP CLEAR if LOCK · Scouter ON · REM unused pairs. Optional: arm Daily Bias when you want one-side entries ([Manual § Bias](Gsignalx_Velocity_Users_Manual.html#bias-follow)).
 
-Full Best use: [RELEASE_v2.18](RELEASE_v2.18_Daily_Bias_Follow.md) · [Manual § System UI Best Use](Gsignalx_Velocity_Users_Manual.html#desk213)
+Full Best use: [RELEASE_v2.20](RELEASE_v2.20_Integrations_OCO.md) · [Manual § Integrations](Gsignalx_Velocity_Users_Manual.html#integrations) · [System UI Best Use](Gsignalx_Velocity_Users_Manual.html#desk213)
 
 ---
 

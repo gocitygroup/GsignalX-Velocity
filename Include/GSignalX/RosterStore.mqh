@@ -359,6 +359,67 @@ bool GsxRosterAutoLotToggle(const long magic)
   }
 
 //+------------------------------------------------------------------+
+//| Desk OCO straddle enable (Trade Center / Chart → Core) v2.19     |
+//| Seed once from InpEnableOcoStraddle; runtime UI wins after seed. |
+//+------------------------------------------------------------------+
+string GsxRosterOcoEnableVarName(const long magic)
+  {
+   return("GSX_MS_OCOENABLE_" + IntegerToString((int)magic));
+  }
+
+bool GsxRosterOcoEnableGet(const long magic, const bool defaultOn = false)
+  {
+   string name = GsxRosterOcoEnableVarName(magic);
+   if(!GlobalVariableCheck(name))
+      return(defaultOn);
+   return(GlobalVariableGet(name) > 0.5);
+  }
+
+void GsxRosterOcoEnableSet(const long magic, const bool on)
+  {
+   GlobalVariableSet(GsxRosterOcoEnableVarName(magic), on ? 1.0 : 0.0);
+  }
+
+bool GsxRosterOcoEnableSeed(const long magic, const bool defaultOn)
+  {
+   string name = GsxRosterOcoEnableVarName(magic);
+   if(GlobalVariableCheck(name))
+      return(false);
+   GsxRosterOcoEnableSet(magic, defaultOn);
+   return(true);
+  }
+
+bool GsxRosterOcoEnableToggle(const long magic)
+  {
+   bool next = !GsxRosterOcoEnableGet(magic, false);
+   GsxRosterOcoEnableSet(magic, next);
+   return(next);
+  }
+
+// Desk-wide max OCO lifecycle state for Multi chrome (Core writes; panel reads).
+string GsxRosterOcoDeskStateVarName(const long magic)
+  {
+   return("GSX_MS_OCOSTATE_" + IntegerToString((int)magic));
+  }
+
+int GsxRosterOcoDeskStateGet(const long magic, const int defaultState = 0)
+  {
+   string name = GsxRosterOcoDeskStateVarName(magic);
+   if(!GlobalVariableCheck(name))
+      return(defaultState);
+   return((int)GlobalVariableGet(name));
+  }
+
+void GsxRosterOcoDeskStateSet(const long magic, const int state)
+  {
+   string name = GsxRosterOcoDeskStateVarName(magic);
+   double v = (double)state;
+   if(GlobalVariableCheck(name) && GlobalVariableGet(name) == v)
+      return; // dirty-gate
+   GlobalVariableSet(name, v);
+  }
+
+//+------------------------------------------------------------------+
 //| Desk equity guard % (0=off; cycle 0→5→10→20→0) v2.09             |
 //+------------------------------------------------------------------+
 string GsxRosterEqGuardVarName(const long magic)

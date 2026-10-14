@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property service
 #property copyright "Gocity Group"
-#property version   "2.18"
+#property version   "2.20"
 #property description "Gsignalx Velocity 2.13 Service - multi-symbol roster scan + fleet fill"
 #property description "Entry only (Scouter exits). Yields to DeskExecute OWN when InpYieldToDesk."
 #property description "OWN/HOST GV prevents chart+desk+service double-fill. V2.13 host-scoped HB."
@@ -122,6 +122,17 @@ input int          InpLimitOffset       = 5;
 input int          InpStopOffset        = 5;
 input bool         InpPendFromSignalOpen = true;
 input int          InpPendMaxAgeMin     = 60;   // Cancel unfilled pendings older than N min (was 240)
+
+input group "8b) OCO straddle (optional two-sided stops)"
+input bool   InpEnableOcoStraddle    = true;  // BuyStop+SellStop parallel to EntryMode; default on
+input int    InpOcoActivationHour    = 0;     // Server hour; past today → place immediately
+input int    InpOcoActivationMinute  = 0;
+input int    InpOcoEntryOffsetPts    = 20;    // Points above Ask / below Bid
+input int    InpOcoInitialStopPts    = 50;    // Initial SL on each stop (0=none)
+input int    InpOcoTakeProfitPts     = 0;     // 0 = no TP (Scouter exits)
+input int    InpOcoTrailPts          = 30;    // Trail distance points (0=off)
+input int    InpOcoTrailThrottleMs   = 250;
+input double InpOcoVolumeLots        = 0.01;  // Lot per OCO stop order
 
 input group "9) Exit ownership / flip"
 input bool InpFlipWaitDefault  = false; // false=FOLLOW, true=WAIT
@@ -338,6 +349,7 @@ void OnStart()
 
    // Align desk lot mode with Service input default only when GV missing (v2.14)
    GsxRosterAutoLotSeed(InpMagic, InpAutoLotDefault);
+   GsxRosterOcoEnableSeed(InpMagic, InpEnableOcoStraddle);
 
    bool coreOn = false;
    int needHits = MathMax(1, InpYieldConfirmTicks);

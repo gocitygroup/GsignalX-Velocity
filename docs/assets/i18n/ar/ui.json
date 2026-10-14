@@ -1,12 +1,12 @@
 {
-  "ui.meta.title": "Gsignalx Velocity 2.18 — دليل المتداول | Gocity Group",
-  "ui.meta.description": "دليل المتداول Gsignalx Velocity 2.18 لإدارة المخاطر التكيفية. تحصيل Profit CASH، وإيقاف Prop اللطيف، وإطار ظروف السوق، ونصائح RiskGuidance.",
-  "ui.splash.title": "Gsignalx Velocity 2.18 — دليل المتداول والمستثمر",
-  "ui.splash.description": "دليل Gsignalx Velocity 2.18 للمتداول والمستثمر — Profit CASH، وVERIFY اللطيف، ومكتب Prop",
-  "ui.splash.opening": "جارٍ فتح دليل المتداول <strong>Gsignalx Velocity 2.18</strong>…",
-  "ui.splash.version": "Velocity 2.18 · مخطط الناقل v1",
+  "ui.meta.title": "Gsignalx Velocity 2.20 — دليل المتداول | Gocity Group",
+  "ui.meta.description": "دليل المتداول Gsignalx Velocity 2.20 لإدارة المخاطر التكيفية. تحصيل Profit CASH، وإيقاف Prop اللطيف، وإطار ظروف السوق، ونصائح RiskGuidance.",
+  "ui.splash.title": "Gsignalx Velocity 2.20 — دليل المتداول والمستثمر",
+  "ui.splash.description": "دليل Gsignalx Velocity 2.20 للمتداول والمستثمر — Profit CASH، وVERIFY اللطيف، ومكتب Prop",
+  "ui.splash.opening": "جارٍ فتح دليل المتداول <strong>Gsignalx Velocity 2.20</strong>…",
+  "ui.splash.version": "Velocity 2.20 · مخطط الناقل v1",
   "ui.splash.continue": "تابع إذا لم يتم التحويل",
-  "ui.brand.tagline": "من Gocity Group · دليل مكتب MT5 · v2.18",
+  "ui.brand.tagline": "من Gocity Group · دليل مكتب MT5 · v2.20",
   "ui.nav.sections": "أقسام الدليل",
   "ui.nav.chapters": "الفصول",
   "ui.nav.jump": "الانتقال إلى فصل",
@@ -182,5 +182,9 @@
   "chapters.cloud.short": "السحابة",
   "ui.splash.cloud": "<strong>جديد — التداول السحابي:</strong> أدر محفظة Velocity من <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">لوحة التداول</a> · <a href=\"Gsignalx_Velocity_Users_Manual.html#cloud\">طريقة الاتصال</a> · الإشارات على <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">gsignalx.cloud</a>.",
   "chapters.bias-follow.title": "Daily Bias Follow",
-  "chapters.bias-follow.short": "Bias"
+  "chapters.bias-follow.short": "Bias",
+  "ui.links.integrations.title": "Integrations",
+  "ui.links.integrations.hint": "Cloud · TG · bus · OCO · ScoutLink",
+  "chapters.integrations.title": "Integrations",
+  "chapters.integrations.short": "Integrations"
 }

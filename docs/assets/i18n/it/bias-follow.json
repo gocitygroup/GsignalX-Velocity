@@ -1,5 +1,5 @@
 {
-  "bias-follow.kicker1": "Velocity 2.18 · Daily Bias Follow",
+  "bias-follow.kicker1": "Velocity 2.20 · Daily Bias Follow",
   "bias-follow.h11": "Filter signal sides · stay one-directional",
   "bias-follow.lede1": "Bias is <strong>chart-aligned</strong> to each D1 bar’s open→close outcome — <strong>not EMA</strong>, not MACD, and not joinDir. Engines still produce BUY/SELL; an armed bias lane <strong>filters</strong> which sides may enter via FollowDir.",
   "bias-follow.riskDoNot": "DO NOT OVERRIDE · Desk contract",

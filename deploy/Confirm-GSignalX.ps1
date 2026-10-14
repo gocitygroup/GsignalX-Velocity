@@ -626,6 +626,13 @@ function Confirm-Files {
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\HostConfig.mqh") "Include GSignalX\HostConfig.mqh" | Out-Null
   Test-PathMark (Join-Path $RepoRoot "Include\GSignalX\HostConfig.mqh") "Repo HostConfig.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\EntryExec.mqh") "Include GSignalX\EntryExec.mqh" | Out-Null
+  Test-PathMark (Join-Path $RepoRoot "Include\GSignalX\OcoStraddle.mqh") "Repo OcoStraddle.mqh" | Out-Null
+  if (Test-Path (Join-Path $mql5 "Include\GSignalX\OcoStraddle.mqh")) {
+    Test-PathMark (Join-Path $mql5 "Include\GSignalX\OcoStraddle.mqh") "Include GSignalX\OcoStraddle.mqh" | Out-Null
+  }
+  else {
+    Add-Line "WARN  Include GSignalX\OcoStraddle.mqh not in Terminal yet (deploy to sync)"
+  }
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\RosterStore.mqh") "Include GSignalX\RosterStore.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\MultisymbolPanel.mqh") "Include GSignalX\MultisymbolPanel.mqh" | Out-Null
   Test-PathMark (Join-Path $mql5 "Include\GSignalX\RosterViewModel.mqh") "Include GSignalX\RosterViewModel.mqh" | Out-Null
@@ -1664,6 +1671,106 @@ function Confirm-Functional {
     $script:fail++
   }
 
+  # --- V2.19 optional two-sided OCO straddle (parallel to EntryMode) ---
+  $ocoPath = Join-Path $RepoRoot "Include\GSignalX\OcoStraddle.mqh"
+  $ocoText = if (Test-Path $ocoPath) { Get-Content $ocoPath -Raw } else { "" }
+  $svcOco = Get-Content (Join-Path $RepoRoot "GsignalX_Service.mq5") -Raw -ErrorAction SilentlyContinue
+  $dashOco = Get-Content (Join-Path $RepoRoot "GsignalX_Multisymbol_Dashboard.mq5") -Raw -ErrorAction SilentlyContinue
+  $chartOco = Get-Content (Join-Path $RepoRoot "GsignalX_GocityGroup.mq5") -Raw -ErrorAction SilentlyContinue
+  if ($ocoText -match 'GSX_OCO_BUY' -and $ocoText -match 'GSX_OCO_SELL' -and
+      $ocoText -match 'GsxOcoOnSignal' -and $ocoText -match 'GsxOcoOnTick' -and
+      $entryExText -match 'skipOcoStraddle' -and $coreText -match 'GsxCoreMaybeArmOco' -and
+      $coreText -match 'GsxCoreManageOcoAll' -and $coreText -match 'GsxPlaceEntry' -and
+      $svcOco -match 'InpEnableOcoStraddle' -and $dashOco -match 'InpEnableOcoStraddle' -and
+      $chartOco -match 'InpEnableOcoStraddle' -and
+      $svcOco -match 'GSX_ENTRY_BOTH' -and $dashOco -match 'GSX_ENTRY_BOTH') {
+    Add-Line "PASS  V2.19 optional OCO straddle (parallel EntryMode; Service+Desk+Chart)"
+  }
+  else {
+    Add-Line "FAIL  V2.19 OCO straddle wiring missing"
+    $script:fail++
+  }
+
+  $storeTextOco = Get-Content (Join-Path $RepoRoot "Include\GSignalX\RosterStore.mqh") -Raw -ErrorAction SilentlyContinue
+  $msTextOco = Get-Content (Join-Path $RepoRoot "Include\GSignalX\MultisymbolPanel.mqh") -Raw -ErrorAction SilentlyContinue
+  $rvmTextOco = Get-Content (Join-Path $RepoRoot "Include\GSignalX\RosterViewModel.mqh") -Raw -ErrorAction SilentlyContinue
+  if ($storeTextOco -match 'GsxRosterOcoEnableToggle' -and $storeTextOco -match 'GSX_MS_OCOENABLE_' -and
+      $storeTextOco -match 'GsxRosterOcoDeskStateSet' -and $storeTextOco -match 'GSX_MS_OCOSTATE_' -and
+      $ocoText -match 'GsxOcoChipLabel' -and $ocoText -match 'GsxOcoChipColors' -and
+      $coreText -match 'g_ocoEnable' -and $coreText -match 'GsxCorePublishOcoDeskState' -and
+      $coreText -match 'GsxRosterOcoEnableSeed' -and
+      $msTextOco -match 'BTN_OCO' -and $chartOco -match 'BTN_OCO' -and
+      $chartOco -match 'ChartToggleOco' -and $rvmTextOco -match 'ocoDeskState') {
+    Add-Line "PASS  V2.19 OCO UI chip (desk GV + Chart/Multi BTN_OCO)"
+  }
+  else {
+    Add-Line "FAIL  V2.19 OCO UI chip wiring missing"
+    $script:fail++
+  }
+
+  # --- V2.20 production hardening (hang residual + DRY) ---
+  $ocoDefaultOn = ($svcOco -match 'InpEnableOcoStraddle\s*=\s*true') -and
+                  ($dashOco -match 'InpEnableOcoStraddle\s*=\s*true') -and
+                  ($chartOco -match 'InpEnableOcoStraddle\s*=\s*true')
+  if ($ocoDefaultOn) {
+    Add-Line "PASS  V2.20 OCO default On (Service+Desk+Chart)"
+  }
+  else {
+    Add-Line "FAIL  V2.20 OCO default On missing on a host"
+    $script:fail++
+  }
+
+  if ($ocoText -match 'GsxOcoBookBegin' -and $ocoText -match 'GsxOcoBookBuild' -and
+      $ocoText -match 'struct GsxOcoBook' -and
+      $coreText -match 'GsxOcoBookBegin' -and $chartOco -match 'GsxOcoBookBegin') {
+    Add-Line "PASS  V2.20 OCO one-book ticket map (Core+Chart)"
+  }
+  else {
+    Add-Line "FAIL  V2.20 OCO book helpers missing"
+    $script:fail++
+  }
+
+  $fleetTextV20 = Get-Content (Join-Path $RepoRoot "Include\GSignalX\Fleet.mqh") -Raw -ErrorAction SilentlyContinue
+  if ($fleetTextV20 -match 'GsxFleetSymbolBusy\(const string symbol, const long magic, const GsxAccountBook' -and
+      $fleetTextV20 -match 'GsxFleetActivePairs\(const long magic, const GsxAccountBook' -and
+      $coreText -match 'GsxFleetActivePairs\(InpMagic, g_coreAccountBook\)') {
+    Add-Line "PASS  V2.20 Fleet AccountBook overloads (DRY)"
+  }
+  else {
+    Add-Line "FAIL  V2.20 Fleet book overloads missing"
+    $script:fail++
+  }
+
+  if ($chartOco -match 'ChartServiceOwnsFleet\(\)' -and
+      $chartOco -match 'ChartManageOco' -and
+      ($chartOco -match 'chart is UI consumer only' -or $chartOco -match 'must not dual')) {
+    Add-Line "PASS  V2.20 Chart OCO yield when Core host owns"
+  }
+  else {
+    Add-Line "FAIL  V2.20 Chart OCO yield missing"
+    $script:fail++
+  }
+
+  if ($rvmTextOco -match 'GsxMsRefreshRowMarket' -and
+      $msTextOco -match 'GsxMsObjCacheRebuild' -and
+      $msTextOco -match 'g_msObjNames') {
+    Add-Line "PASS  V2.20 snapshot off-page skip + panel object cache"
+  }
+  else {
+    Add-Line "FAIL  V2.20 snapshot/UI polish missing"
+    $script:fail++
+  }
+
+  $busTextV20 = Get-Content (Join-Path $RepoRoot "Include\GSignalX\BusIO.mqh") -Raw -ErrorAction SilentlyContinue
+  if ($busTextV20 -match 'GsxBusWriterNoSleepBegin' -and $busTextV20 -match 'g_gsxBusWriterNoSleep' -and
+      $coreText -match 'GsxBusWriterNoSleepBegin') {
+    Add-Line "PASS  V2.20 Desk Core bus writer NoSleep"
+  }
+  else {
+    Add-Line "FAIL  V2.20 Bus NoSleep path missing"
+    $script:fail++
+  }
+
   if ($storeText -match 'GSX_MS_DRILLSEC_' -and $rvmText -match 'drillSecLeft' -and
       ($qdText -match 'ST_DRILL' -or $msText -match 'ST_DRILL')) {
     Add-Line "PASS  V2.10 desk DRILL status chip"
@@ -1854,12 +1961,25 @@ function Confirm-Functional {
     $script:fail++
   }
 
-  if ($dashText -match 'version\s+"2\.18"' -and $svcText -match 'version\s+"2\.18"' -and
-      $chartText -match 'version\s+"2\.18"') {
-    Add-Line "PASS  V2.18 host versions Dashboard/Service/Chart"
+  if ($dashText -match 'version\s+"2\.20"' -and $svcText -match 'version\s+"2\.20"' -and
+      $chartText -match 'version\s+"2\.20"') {
+    Add-Line "PASS  V2.20 host versions Dashboard/Service/Chart"
   }
   else {
-    Add-Line "FAIL  V2.18 host version bump missing"
+    Add-Line "FAIL  V2.20 host version bump missing"
+    $script:fail++
+  }
+
+  $release220 = Join-Path $RepoRoot "docs\RELEASE_v2.20_Integrations_OCO.md"
+  $manualHtml = Get-Content (Join-Path $RepoRoot "docs\Gsignalx_Velocity_Users_Manual.html") -Raw -ErrorAction SilentlyContinue
+  $readmeText = Get-Content (Join-Path $RepoRoot "README.md") -Raw -ErrorAction SilentlyContinue
+  if ((Test-Path $release220) -and $manualHtml -match 'id="integrations"' -and
+      $manualHtml -match 'InpEnableOcoStraddle' -and
+      $readmeText -match 'Velocity 2\.20' -and $readmeText -match 'Integrations') {
+    Add-Line "PASS  V2.20 public Integrations publication (RELEASE + Manual + README)"
+  }
+  else {
+    Add-Line "FAIL  V2.20 public Integrations publication incomplete"
     $script:fail++
   }
 

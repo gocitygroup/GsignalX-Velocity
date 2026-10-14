@@ -59,6 +59,8 @@ struct GsxMsSnapshot
    bool   hbFresh;       // v2.08: heartbeat alone
    bool   ignoreSpread;  // v2.08: desk SPREAD/IGN
    bool   autoLot;       // v2.09: desk AUTOLOT
+   bool   ocoEnable;     // v2.19: desk OCO straddle enable
+   int    ocoDeskState;  // v2.19: max lifecycle (Idle/Waiting/Orders/Managing)
    double eqGuardPct;    // v2.09: desk EQ guard %
    int    drillSecLeft;  // v2.10: desk drill seconds remaining (0=off/expired)
    int    fleetActive;
@@ -215,6 +217,14 @@ bool GsxMsRowMarketOpen(const string symbol)
    return(true);
   }
 
+void GsxMsRefreshRowMarket(GsxMsRow &row)
+  {
+   if(row.symbol == "")
+      return;
+   row.spreadPt = (int)SymbolInfoInteger(row.symbol, SYMBOL_SPREAD);
+   row.marketOpen = GsxMsRowMarketOpen(row.symbol);
+  }
+
 void GsxMsFillRow(const long magic,
                   const string sym,
                   const string grades,
@@ -222,24 +232,28 @@ void GsxMsFillRow(const long magic,
                   GsxMsRow &row,
                   const double floatingPl,
                   const bool floatingPlKnown,
-                  const GsxAccountBook &book)
+                  const GsxAccountBook &book,
+                  const bool refreshMarket = true)
   {
    string canon = GsxSymbolCanon(sym);
    row.symbol     = sym;
    row.canon      = canon;
    row.direction  = 0;
-   row.spreadPt   = (int)SymbolInfoInteger(sym, SYMBOL_SPREAD);
+   row.spreadPt   = 0;
    // v2.15: prefer snapshot AccountBook when valid
    if(book.valid)
       row.busy = GsxAccountBookBusy(book, sym);
    else
-      row.busy = GsxFleetSymbolBusy(sym, magic);
+      row.busy = GsxFleetSymbolBusy(sym, magic, book);
    row.pairState  = GsxRosterStateGet(magic, sym);
    row.muted      = (row.pairState != GSX_PAIR_START);
    row.symClass   = (int)GsxSymbolClass(sym);
    row.floatingPl = (floatingPlKnown ? floatingPl : GsxMsSymbolFloating(magic, sym));
    row.gradeScore = GsxMsGradeScoreForCanon(grades, canon);
-   row.marketOpen = GsxMsRowMarketOpen(sym);
+   // v2.20: off-page rows skip SymbolInfoTick until page refresh
+   row.marketOpen = true;
+   if(refreshMarket)
+      GsxMsRefreshRowMarket(row);
    row.eventBlocked = GsxEventBlocksSymbol(magic, sym);
    row.signalStale = false;
    row.followDir = GsxRosterFollowDirGet(magic, sym, GSX_FOLLOW_AUTO);
@@ -431,12 +445,14 @@ bool GsxMsNeedLivePulse(const bool force)
 string GsxMsSnapshotFingerprint(const GsxMsSnapshot &snap)
   {
    // Round money fields so micro equity/PL noise does not force 10Hz paints
-   string f = StringFormat("%I64d|%d|%d|%d|%d|%d|%d|%.0f|%d|%d|%.1f|%d|%.0f|%d|%s|%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%.1f|%.1f|%.1f|%s|%.1f|%.1f|%d|%d|%d|%.1f|%d|",
+   string f = StringFormat("%I64d|%d|%d|%d|%d|%d|%d|%d|%d|%.0f|%d|%d|%.1f|%d|%.0f|%d|%s|%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%.1f|%.1f|%.1f|%s|%.1f|%.1f|%d|%d|%d|%.1f|%d|",
                            snap.magic, snap.own ? 1 : 0, snap.run ? 1 : 0,
                            snap.svcAlive ? 1 : 0,
                            snap.hbFresh ? 1 : 0,
                            snap.ignoreSpread ? 1 : 0,
                            snap.autoLot ? 1 : 0,
+                           snap.ocoEnable ? 1 : 0,
+                           snap.ocoDeskState,
                            snap.eqGuardPct,
                            snap.fleetActive, snap.fleetTarget, snap.fleetPl,
                            snap.positions, snap.rosterSeq, snap.page,
@@ -502,6 +518,8 @@ void GsxMsBuildSnapshot(const long magic,
    out.svcAlive     = (out.own && out.hbFresh);
    out.ignoreSpread = GsxRosterSpreadIgnGet(magic, false);
    out.autoLot      = GsxRosterAutoLotGet(magic, false);
+   out.ocoEnable    = GsxRosterOcoEnableGet(magic, false);
+   out.ocoDeskState = out.ocoEnable ? GsxRosterOcoDeskStateGet(magic, 0) : 0;
    out.eqGuardPct   = GsxRosterEqGuardGet(magic, 0.0);
    out.drillSecLeft = GsxRosterDrillSecGet(magic);
    out.rosterSeq    = GsxRosterSeqGet(magic);
@@ -560,7 +578,8 @@ void GsxMsBuildSnapshot(const long magic,
    for(int i = 0; i < nAll; i++)
      {
       double rowPl = GsxAccountBookSymbolPl(book, names[i]);
-      GsxMsFillRow(magic, names[i], grades, tid, out.allRows[i], rowPl, true, book);
+      // v2.20: defer SymbolInfoTick until visible page is known
+      GsxMsFillRow(magic, names[i], grades, tid, out.allRows[i], rowPl, true, book, false);
       if(out.allRows[i].symClass == GSX_CLASS_FOREX)     out.countFx++;
       if(out.allRows[i].symClass == GSX_CLASS_COMMODITY) out.countCmd++;
       if(out.allRows[i].symClass == GSX_CLASS_CRYPTO)    out.countCr++;
@@ -592,6 +611,17 @@ void GsxMsBuildSnapshot(const long magic,
       out.page = out.pageCount - 1;
    if(out.page < 0)
       out.page = 0;
+
+   // v2.20: market/spread tick only for on-page rows (+ busy always for live pulse)
+   int pageStart = out.page * out.pageSize;
+   int pageEnd = pageStart + out.pageSize;
+   for(int i = 0; i < n; i++)
+     {
+      bool onPage = (i >= pageStart && i < pageEnd);
+      if(!onPage && !out.rows[i].busy)
+         continue;
+      GsxMsRefreshRowMarket(out.rows[i]);
+     }
 
    out.pracBand  = GsxRosterPracBandGet(magic);
    out.pracCost  = GsxRosterPracCostGet(magic);

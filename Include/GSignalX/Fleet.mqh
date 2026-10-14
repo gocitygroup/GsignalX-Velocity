@@ -268,7 +268,22 @@ double GsxAccountBookSymbolPl(const GsxAccountBook &book, const string symbol)
 
 //+------------------------------------------------------------------+
 //| Account-wide floating P/L + position count for magic             |
+//| v2.20: overloads reuse caller AccountBook (no rebuild).          |
 //+------------------------------------------------------------------+
+void GsxFleetFloating(const long magic, double &pl, int &count, const GsxAccountBook &book)
+  {
+   if(book.valid && book.magic == magic)
+     {
+      pl = book.pl;
+      count = book.posCount;
+      return;
+     }
+   GsxAccountBook built;
+   GsxAccountBookBuild(magic, built);
+   pl = built.pl;
+   count = built.posCount;
+  }
+
 void GsxFleetFloating(const long magic, double &pl, int &count)
   {
    GsxAccountBook book;
@@ -280,6 +295,15 @@ void GsxFleetFloating(const long magic, double &pl, int &count)
 //+------------------------------------------------------------------+
 //| Distinct symbols with open position OR working pending (magic)   |
 //+------------------------------------------------------------------+
+int GsxFleetActivePairs(const long magic, const GsxAccountBook &book)
+  {
+   if(book.valid && book.magic == magic)
+      return(GsxAccountBookActivePairs(book));
+   GsxAccountBook built;
+   GsxAccountBookBuild(magic, built);
+   return(GsxAccountBookActivePairs(built));
+  }
+
 int GsxFleetActivePairs(const long magic)
   {
    GsxAccountBook book;
@@ -288,6 +312,15 @@ int GsxFleetActivePairs(const long magic)
   }
 
 // How many busy (pos/pending) symbols of a given asset class for this magic.
+int GsxFleetActiveInClass(const long magic, const int symClass, const GsxAccountBook &book)
+  {
+   if(book.valid && book.magic == magic)
+      return(GsxAccountBookActiveInClass(book, symClass));
+   GsxAccountBook built;
+   GsxAccountBookBuild(magic, built);
+   return(GsxAccountBookActiveInClass(built, symClass));
+  }
+
 int GsxFleetActiveInClass(const long magic, const int symClass)
   {
    GsxAccountBook book;
@@ -321,6 +354,17 @@ void GsxFleetClearClaim(const long magic)
 //+------------------------------------------------------------------+
 //| True if magic already has a position or pending on symbol        |
 //+------------------------------------------------------------------+
+bool GsxFleetSymbolBusy(const string symbol, const long magic, const GsxAccountBook &book)
+  {
+   if(symbol == "")
+      return(false);
+   if(book.valid && book.magic == magic)
+      return(GsxAccountBookBusy(book, symbol));
+   GsxAccountBook built;
+   GsxAccountBookBuild(magic, built);
+   return(GsxAccountBookBusy(built, symbol));
+  }
+
 bool GsxFleetSymbolBusy(const string symbol, const long magic)
   {
    if(symbol == "")

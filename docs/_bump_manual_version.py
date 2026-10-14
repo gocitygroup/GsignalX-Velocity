@@ -9,13 +9,12 @@ from pathlib import Path
 from _manual_version import MANUAL_VERSION
 
 DOCS = Path(__file__).resolve().parent
-ROOT = DOCS.parent
 HTML = DOCS / "Gsignalx_Velocity_Users_Manual.html"
 I18N_JS = DOCS / "assets" / "js" / "gsx-i18n.js"
-LANGS = ("it", "fr", "ru", "ar", "zh", "es")
 
-# Public-facing cuts previously advertised as 2.14 / 2.15
-OLD_VERS = ("2.14", "2.15")
+# Prior public cuts to rewrite toward MANUAL_VERSION
+OLD_VERS = ("2.14", "2.15", "2.18")
+RELEASE_CURRENT = f"RELEASE_v{MANUAL_VERSION}_Integrations_OCO.md"
 
 
 def bump_text(text: str) -> str:
@@ -24,11 +23,19 @@ def bump_text(text: str) -> str:
         # Filename / RELEASE first — before bare "v{old}" eats the middle.
         out = out.replace(
             f"RELEASE_v{old}_Input_Reliability.md",
-            f"RELEASE_v{MANUAL_VERSION}_Daily_Bias_Follow.md",
+            RELEASE_CURRENT,
+        )
+        out = out.replace(
+            f"RELEASE_v{old}_Daily_Bias_Follow.md",
+            RELEASE_CURRENT,
         )
         out = out.replace(
             f"RELEASE_v{MANUAL_VERSION}_Input_Reliability.md",
+            RELEASE_CURRENT,
+        )
+        out = out.replace(
             f"RELEASE_v{MANUAL_VERSION}_Daily_Bias_Follow.md",
+            RELEASE_CURRENT,
         )
         out = out.replace(f"Velocity {old}", f"Velocity {MANUAL_VERSION}")
         out = out.replace(f"Best Use {old}", f"Best Use {MANUAL_VERSION}")
@@ -38,8 +45,10 @@ def bump_text(text: str) -> str:
             f"version <strong>{old}</strong>",
             f"version <strong>{MANUAL_VERSION}</strong>",
         )
-        out = out.replace(f"V{old}", f"V{MANUAL_VERSION}")
-        out = out.replace(f"v{old}", f"v{MANUAL_VERSION}")
+        # Host Confirm markers / chips — keep V2.19 gate strings intact
+        if old != "2.19":
+            out = out.replace(f"V{old}", f"V{MANUAL_VERSION}")
+            out = out.replace(f"v{old}", f"v{MANUAL_VERSION}")
         out = re.sub(
             rf"(Gsignalx Velocity ){re.escape(old)}",
             rf"\g<1>{MANUAL_VERSION}",
@@ -77,10 +86,6 @@ def bump_i18n_json() -> None:
             if not isinstance(v, str):
                 continue
             nv = bump_text(v)
-            nv = nv.replace(
-                f"RELEASE_v{MANUAL_VERSION}_Input_Reliability.md",
-                f"RELEASE_v{MANUAL_VERSION}_Daily_Bias_Follow.md",
-            )
             if nv != v:
                 data[k] = nv
                 changed = True

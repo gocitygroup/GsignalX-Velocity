@@ -1,0 +1,139 @@
+# -*- coding: utf-8 -*-
+"""Write EN-keyed integrations.json + ui chapter keys for all locales."""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+DOCS = Path(__file__).resolve().parent
+LANGS = ("it", "fr", "ru", "ar", "zh", "es")
+
+INTEGRATIONS = {
+    "integrations.kicker1": "Velocity 2.20 · prop desk fabric",
+    "integrations.h11": "Integrations the desk actually runs",
+    "integrations.lede1": (
+        "Fund-manager view: <strong>who owns risk, who banks P/L, what is advisory, "
+        "what is remote.</strong> Soft STOP never flattens the book. Educational — no profit guarantee."
+    ),
+    "integrations.div1": (
+        '<strong class="label">Separation of duties</strong> '
+        "<strong>GSignalX</strong> opens risk · <strong>ProfitScouter</strong> banks winners · "
+        "desk <strong>STOP / HALT</strong> pause entries (and Scouter on HALT) but <em>never</em> "
+        "close tickets · cloud <strong>remote closes default OFF</strong>."
+    ),
+    "integrations.h21": "Capability map",
+    "integrations.th1": "Integration",
+    "integrations.th2": "Operator meaning",
+    "integrations.th3": "Key truth",
+    "integrations.td1": "<strong>Cloud connector</strong>",
+    "integrations.td2": "Phone / browser book control",
+    "integrations.td3": (
+        'Service group <strong>16</strong> only · remote opens default ON · '
+        '<strong>remote closes default OFF</strong> · '
+        '<a href="#cloud" data-tab="cloud">Cloud chapter</a>'
+    ),
+    "integrations.td4": "<strong>Telegram</strong>",
+    "integrations.td5": "Ops channel (fills, PROP, closes)",
+    "integrations.td6": (
+        'Soft <strong>VERIFY</strong> · deals / PROP / CLOSE / SETTINGS · silent hours · '
+        '<a href="#telegram" data-tab="telegram">Telegram chapter</a>'
+    ),
+    "integrations.td7": "<strong>Signal bus + Grader</strong>",
+    "integrations.td8": "Multi-terminal DIR + advisory grades",
+    "integrations.td9": (
+        "Common Files <code>GSignalX/bus/v1</code> · schema <strong>v1</strong> · "
+        "grades are advisory, not fills"
+    ),
+    "integrations.td10": "<strong>ScoutLink</strong>",
+    "integrations.td11": "Desk arms Scouter without closing",
+    "integrations.td12": (
+        "LINK / RUN / CASH / LOSS / TRAIL GVs · Trade Center never market-closes via ScoutLink"
+    ),
+    "integrations.td13": "<strong>CloseTrigger</strong>",
+    "integrations.td14": "Exit audit trail",
+    "integrations.td15": "jsonl audit + TG CLOSE <code>reason=</code> (incl. BROKER-SL)",
+    "integrations.td16": "<strong>SettingsNotify</strong>",
+    "integrations.td17": "Prop-critical setting changes → TG",
+    "integrations.td18": "No PAGE / carousel spam — only desk-critical LOAD / announce",
+    "integrations.td19": "<strong>PropRisk</strong>",
+    "integrations.td20": "Challenge soft STOP",
+    "integrations.td21": (
+        '<code>RUN=0</code> · never <code>PositionClose</code> · '
+        '<a href="#prop" data-tab="prop">Prop Behaviour</a>'
+    ),
+    "integrations.td22": "<strong>OCO straddle</strong>",
+    "integrations.td23": "Two-sided breakout (BuyStop + SellStop)",
+    "integrations.td24": (
+        "Default <strong>On</strong> · parallel to EntryMode · sibling cancel on fill · "
+        "trail · Scouter still exits · Chart yields when Core owns magic"
+    ),
+    "integrations.h22": "OCO chip (Trade Center + Chart)",
+    "integrations.p1": (
+        "Desk-wide <strong>BTN_OCO</strong> toggles enable. Seed-once from "
+        "<code>InpEnableOcoStraddle=true</code>; after seed, UI / desk GV wins. "
+        "Soft STOP and takeoff cancel straddle pendings."
+    ),
+    "integrations.th4": "Chip",
+    "integrations.th5": "Meaning",
+    "integrations.td25": "Off / takeoff — no new straddles; leftover pendings cancelled",
+    "integrations.td26": "Waiting for activation window",
+    "integrations.td27": "Both stops working",
+    "integrations.td28": "One side filled; sibling cancelled; trail managing",
+    "integrations.div2": (
+        '<strong class="label">Topology A</strong> One Core host (Trade Center DeskExecute or Service) '
+        "places and manages OCO. Chart attached with the same magic is a <em>consumer</em> — "
+        'it does not dual-place. Details: <a href="#desk213" data-tab="desk213">System UI Best Use</a> · '
+        '<a href="#bias-follow" data-tab="bias-follow">Daily Bias Follow</a> still gates one-side entries.'
+    ),
+    "integrations.h23": "Recommended production posture",
+    "integrations.li1": (
+        "<strong>Topology A</strong> — DeskExecute ON, Service Yield ON (or Service stopped)."
+    ),
+    "integrations.li2": "FIXED <strong>0.01</strong> · EQ OFF unless you want a floating-DD brake.",
+    "integrations.li3": (
+        "OCO default On; takeoff with <strong>BTN_OCO</strong> when you do not want straddles."
+    ),
+    "integrations.li4": (
+        "Cloud: allowlist <code>https://trade-api.gsignalx.cloud</code>; "
+        "keep remote closes <strong>OFF</strong>."
+    ),
+    "integrations.li5": (
+        "Telegram: allowlist <code>https://api.telegram.org</code>; "
+        "press <strong>VERIFY</strong> until Verified."
+    ),
+    "integrations.li6": (
+        "Confirm: <code>Confirm-GSignalX.ps1 -Gate All</code> — expect hosts "
+        "<strong>2.20</strong> + V2.20 markers."
+    ),
+    "integrations.p2": (
+        "Operator cut note: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · "
+        'Cloud how-to: <a href="#cloud" data-tab="cloud">Cloud Trading</a> · '
+        "<code>docs/CLOUD_TRADING.md</code>."
+    ),
+}
+
+
+def main() -> None:
+    root = DOCS / "assets" / "i18n"
+    for lang in LANGS:
+        path = root / lang / "integrations.json"
+        path.write_text(
+            json.dumps(INTEGRATIONS, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        ui_path = root / lang / "ui.json"
+        ui = json.loads(ui_path.read_text(encoding="utf-8"))
+        ui["ui.links.integrations.title"] = "Integrations"
+        ui["ui.links.integrations.hint"] = "Cloud · TG · bus · OCO · ScoutLink"
+        ui["chapters.integrations.title"] = "Integrations"
+        ui["chapters.integrations.short"] = "Integrations"
+        ui_path.write_text(
+            json.dumps(ui, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(f"wrote {path.relative_to(DOCS)}")
+    print("done")
+
+
+if __name__ == "__main__":
+    main()

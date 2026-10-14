@@ -18,7 +18,7 @@
 //|  (c) Gocity Group - GsignalX. Research / educational use.        |
 //+------------------------------------------------------------------+
 #property copyright "Gocity Group"
-#property version   "2.18"
+#property version   "2.20"
 #property description "Gsignalx Velocity 2.18 - PP/ATR/SBT engines + Daily Bias Follow (no EMA)."
 #property description "AutoLot/FIXED + EQ equity guide + Compact/Full outcome panel."
 #property description "Entry engine: limit/stop bracket, scalping drill, fleet fill."
@@ -52,6 +52,7 @@
 #include <GSignalX/SettingsNotify.mqh>
 #include <GSignalX/HostConfig.mqh>
 #include <GSignalX/StrategicStop.mqh>
+#include <GSignalX/OcoStraddle.mqh>
 
 //+------------------------------------------------------------------+
 //| Enumerations                                                     |
@@ -169,6 +170,17 @@ input int          InpPendExpiryBars = 0;              // Cancel unfilled after 
 input int          InpPendMaxAgeMin  = 240;            // Cancel unfilled pendings older than N minutes (0 = off)
 input bool         InpCancelOnFlip   = true;           // Cancel pendings if engines flip against them
 input bool         InpPendFromSignalOpen = true;       // Anchor limit/stop to signal bar open
+
+input group "5b2) OCO straddle (optional two-sided stops)"
+input bool   InpEnableOcoStraddle    = true;  // BuyStop+SellStop parallel to EntryMode; default on
+input int    InpOcoActivationHour    = 0;     // Server hour; past today → place immediately
+input int    InpOcoActivationMinute  = 0;
+input int    InpOcoEntryOffsetPts    = 20;    // Points above Ask / below Bid
+input int    InpOcoInitialStopPts    = 50;    // Initial SL on each stop (0=none)
+input int    InpOcoTakeProfitPts     = 0;     // 0 = no TP (Scouter exits)
+input int    InpOcoTrailPts          = 30;    // Trail distance points (0=off)
+input int    InpOcoTrailThrottleMs   = 250;
+input double InpOcoVolumeLots        = 0.01;  // Lot per OCO stop order
 
 input group "5c) Scalping drill"
 input bool        InpDrillEnable       = true;   // Enable scalping drill window
@@ -329,6 +341,8 @@ int      gClosedWins     = 0;     // closes with profit >= 0
 int      gClosedLosses   = 0;     // closes with profit < 0 (manual / legacy only)
 double   gClosedRealized = 0.0;   // realized P/L this session (profit + swap + commission)
 bool     gFlipWaitMode   = false; // false=FOLLOW (2A), true=WAIT (2B)
+GsxOcoInstance g_chartOco;       // optional two-sided OCO straddle (parallel to EntryMode)
+bool     gOcoEnable      = false; // desk GV (seeded from InpEnableOcoStraddle)
 bool     gIgnoreSpread   = false; // true=bypass InpMaxSpreadPt on entries (IGN)
 bool     gAutoLot        = true;  // true=risk%/InpRiskMode sizing; false=fixed lot
 double   gMaxDailyDrawdownPct = 0.0; // equity guard threshold % (0 = OFF; chart EQ cycle)
@@ -997,8 +1011,12 @@ int CountOurPendings()
      {
       if(OrderGetTicket(i) == 0)
          continue;
-      if(IsOurOrder())
-         c++;
+      if(!IsOurOrder())
+         continue;
+      // Bracket bookkeeping ignores optional GSX_OCO_* straddle legs
+      if(GsxIsOcoStraddleComment(OrderGetString(ORDER_COMMENT)))
+         continue;
+      c++;
      }
    return(c);
   }
@@ -1012,6 +1030,9 @@ void DeleteOurPendings(string why)
          continue;
       if(!IsOurOrder())
          continue;
+      // Never wipe optional GSX_OCO_* straddle when cancelling same-dir brackets
+      if(GsxIsOcoStraddleComment(OrderGetString(ORDER_COMMENT)))
+         continue;
       if(trade.OrderDelete(ticket))
          Print("GsignalX: pending #", ticket, " deleted (", why, ")");
       else
@@ -1019,6 +1040,102 @@ void DeleteOurPendings(string why)
      }
    if(CountOurPendings() == 0)
       gPendDir = 0;
+  }
+
+void LoadOcoEnable()
+  {
+   GsxRosterOcoEnableSeed(InpMagic, InpEnableOcoStraddle);
+   gOcoEnable = GsxRosterOcoEnableGet(InpMagic, InpEnableOcoStraddle);
+  }
+
+GsxOcoConfig ChartBuildOcoConfig()
+  {
+   GsxOcoConfig c;
+   GsxOcoConfigClear(c);
+   c.enable           = gOcoEnable;
+   c.activationHour   = InpOcoActivationHour;
+   c.activationMinute = InpOcoActivationMinute;
+   c.entryOffsetPts   = InpOcoEntryOffsetPts;
+   c.initialStopPts   = InpOcoInitialStopPts;
+   c.takeProfitPts    = InpOcoTakeProfitPts;
+   c.trailPts         = InpOcoTrailPts;
+   c.trailThrottleMs  = InpOcoTrailThrottleMs;
+   c.volumeLots       = InpOcoVolumeLots;
+   c.slippage         = InpSlippage;
+   c.magic            = InpMagic;
+   c.verbose          = InpVerboseSignals;
+   return(c);
+  }
+
+void ChartArmOcoFromSignal(const int wanted)
+  {
+   // Topology A: Core host (Service/Desk OWN) arms OCO — chart must not dual-arm
+   if(ChartServiceOwnsFleet())
+      return;
+   gOcoEnable = GsxRosterOcoEnableGet(InpMagic, InpEnableOcoStraddle);
+   if(!gOcoEnable || wanted == 0)
+      return;
+   if(!AllowNewDirEntry(wanted))
+      return;
+   GsxOcoConfig cfg = ChartBuildOcoConfig();
+   datetime sigEvt = (gSignalEventAt > 0 ? gSignalEventAt : TimeCurrent());
+   g_chartOco.symbol = _Symbol;
+   if(GsxOcoOnSignal(g_chartOco, cfg, _Symbol, sigEvt, TimeCurrent()))
+      GsxOcoPersist(g_chartOco, InpMagic, true);
+  }
+
+void ChartManageOco()
+  {
+   gOcoEnable = GsxRosterOcoEnableGet(InpMagic, InpEnableOcoStraddle);
+   // v2.20: when Service/Desk Core owns magic, chart is UI consumer only (no dual place)
+   if(ChartServiceOwnsFleet())
+      return;
+   GsxOcoConfig cfg = ChartBuildOcoConfig();
+   static bool s_offCleaned = false;
+   if(!cfg.enable)
+     {
+      if(!s_offCleaned)
+        {
+         GsxOcoCancelAllForSymbol(trade, _Symbol, InpMagic, "oco_takeoff");
+         GsxOcoClearGv(_Symbol, InpMagic);
+         GsxOcoInstClear(g_chartOco);
+         GsxRosterOcoDeskStateSet(InpMagic, 0);
+         s_offCleaned = true;
+        }
+      return;
+     }
+   s_offCleaned = false;
+   if(g_chartOco.symbol == "")
+      g_chartOco.symbol = _Symbol;
+   GsxOcoBookBegin(InpMagic);
+   GsxOcoOnTick(trade, g_chartOco, cfg, TimeCurrent());
+   GsxOcoBookEnd();
+   GsxOcoPersist(g_chartOco, InpMagic, false);
+   // Raise desk state for Multi chrome when chart is ahead of Core (no lower)
+   int st = (int)g_chartOco.state;
+   if(st == GSX_OCO_FINISHED)
+      st = GSX_OCO_IDLE;
+   int cur = GsxRosterOcoDeskStateGet(InpMagic, 0);
+   if(st > cur)
+      GsxRosterOcoDeskStateSet(InpMagic, st);
+  }
+
+void ChartToggleOco()
+  {
+   gOcoEnable = GsxRosterOcoEnableToggle(InpMagic);
+   if(!gOcoEnable)
+     {
+      GsxOcoCancelAllForSymbol(trade, _Symbol, InpMagic, "oco_takeoff");
+      GsxOcoClearGv(_Symbol, InpMagic);
+      GsxOcoInstClear(g_chartOco);
+      GsxRosterOcoDeskStateSet(InpMagic, 0);
+     }
+   gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                 (gOcoEnable ? " OCO straddle ON" : " OCO straddle OFF (takeoff)");
+   Notify(gOcoEnable ? "OCO straddle ON — BuyStop+SellStop on signal"
+                     : "OCO straddle OFF — straddle pendings cancelled");
+   GsxSettingsAnnounce(gOcoEnable ? "OCO ON" : "OCO OFF");
+   GsxUiMarkDirty();
   }
 
 //+------------------------------------------------------------------+
@@ -1041,6 +1158,8 @@ void CleanupStalePendings()
          continue;
       if(!IsOurOrder())
          continue;
+      if(GsxIsOcoStraddleComment(OrderGetString(ORDER_COMMENT)))
+         continue; // OCO straddle lifetime owned by OcoStraddle.mqh
       datetime setup = (datetime)OrderGetInteger(ORDER_TIME_SETUP);
       if((long)(TimeCurrent() - setup) >= maxAge)
         {
@@ -2110,6 +2229,8 @@ void EvaluateSignals()
          return;
         }
      }
+   // Optional OCO straddle arms in parallel — does not replace PlaceEntry
+   ChartArmOcoFromSignal(wanted);
    PlaceEntry(wanted);
   }
 
@@ -2760,8 +2881,8 @@ void UpdatePanel(string tradeState)
       GsxLayAdvance(blay, bh);
 
       GsxLayRowStart(blay, bh);
-      GsxLayEqual(blay, 5, bslots);
-      if(ArraySize(bslots) >= 5)
+      GsxLayEqual(blay, 6, bslots);
+      if(ArraySize(bslots) >= 6)
         {
          GsxPanelSlotButtonPad("BTN_SPREAD", bslots[0],
                                gIgnoreSpread ? "IGN" : "SPREAD",
@@ -2771,14 +2892,24 @@ void UpdatePanel(string tradeState)
                                gAutoLot ? "AUTOLOT" : "FIXED",
                                gAutoLot ? InpColBull : chipIdle,
                                gAutoLot ? InpColPanelBg : InpColText, bpad);
+         gOcoEnable = GsxRosterOcoEnableGet(InpMagic, InpEnableOcoStraddle);
+         int ocoSt = gOcoEnable ? (int)g_chartOco.state : GSX_OCO_IDLE;
+         if(ocoSt == GSX_OCO_FINISHED)
+            ocoSt = GSX_OCO_IDLE;
+         string ocoLbl = GsxOcoChipLabel(gOcoEnable, ocoSt, false);
+         color ocoBg = chipIdle;
+         color ocoFg = InpColText;
+         GsxOcoChipColors(gOcoEnable, ocoSt, ocoBg, ocoFg,
+                          chipIdle, InpColAccent, InpColBull, InpColText, InpColPanelBg);
+         GsxPanelSlotButtonPad("BTN_OCO", bslots[2], ocoLbl, ocoBg, ocoFg, bpad);
          bool eqOn = (gMaxDailyDrawdownPct > 0.0);
          string eqLbl = eqOn ? StringFormat("EQ %.0f%%", gMaxDailyDrawdownPct) : "EQ OFF";
-         GsxPanelSlotButtonPad("BTN_EQGUARD", bslots[2], eqLbl,
+         GsxPanelSlotButtonPad("BTN_EQGUARD", bslots[3], eqLbl,
                                eqOn ? InpColAccent : chipIdle,
                                eqOn ? InpColPanelBg : InpColText, bpad);
-         GsxPanelSlotButtonPad("BTN_TV", bslots[3], GSX_TV_PUB_LABEL,
+         GsxPanelSlotButtonPad("BTN_TV", bslots[4], GSX_TV_PUB_LABEL,
                                InpColAccent, InpColPanelBg, bpad);
-         GsxPanelSlotButtonPad("BTN_PRM", bslots[4], GSX_PREMIUM_LABEL,
+         GsxPanelSlotButtonPad("BTN_PRM", bslots[5], GSX_PREMIUM_LABEL,
                                InpColAccent, InpColPanelBg, bpad);
         }
 
@@ -3083,6 +3214,9 @@ void SetRunState(bool on, bool announce)
    if(!on)
      {
       DeleteOurPendings("stopped by user");
+      GsxOcoCancelAllForSymbol(trade, _Symbol, InpMagic, "soft STOP");
+      GsxOcoClearGv(_Symbol, InpMagic);
+      GsxOcoInstClear(g_chartOco);
       gNeedSignalEval = false;
       gMarchOnce = false;
       ClearDrillWindow("STOP");
@@ -3217,8 +3351,14 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                      GsxSettingsAnnounce(gIgnoreSpread ? "IGN" : "SPREAD");
                     }
                   else
-                     if(click == gPfx + "BTN_AUTOLOT")
+                     if(click == gPfx + "BTN_OCO")
                        {
+                        ChartToggleOco();
+                        UpdatePanel(g_lastPanelState);
+                       }
+                     else
+                     if(click == gPfx + "BTN_AUTOLOT")
+                        {
                         SetAutoLot(!gAutoLot, true);
                         GsxSettingsAnnounce("AUTOLOT");
                        }
@@ -3416,11 +3556,23 @@ int OnInit()
    LoadFlipWaitMode();
    LoadIgnoreSpread();
    LoadAutoLot();
+   LoadOcoEnable();
    LoadEquityGuard();
    CheckAndResetDailyCounters();
 
    //--- sweep unfilled brackets left over from a previous session
    CleanupStalePendings();
+
+   //--- optional OCO straddle: restore GV then reconcile broker Labels
+   GsxOcoInstClear(g_chartOco);
+   g_chartOco.symbol = _Symbol;
+   if(gOcoEnable)
+     {
+      GsxOcoConfig ocfg = ChartBuildOcoConfig();
+      if(GsxOcoRestore(g_chartOco, _Symbol, InpMagic))
+         GsxOcoReconcile(trade, g_chartOco, ocfg);
+      GsxOcoPersist(g_chartOco, InpMagic, true);
+     }
 
    //--- if already PLAY on restart, open a fresh drill window
    if(gTradingEnabled && InpDrillEnable && gDrillStart == 0)
@@ -3604,6 +3756,7 @@ void OnTick()
 
    //--- bracket housekeeping and trailing run on every tick
    ManagePendings();
+   ChartManageOco();
    if(gDataReady)
       ManageTrailing();
 
@@ -3731,7 +3884,14 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
          return;
         }
       busy = true;
+      // Same-dir bracket OCO: cancel sibling LMT/STP (skips GSX_OCO_*).
       DeleteOurPendings("OCO - fill event");
+      // Optional two-sided straddle: cancel opposite GSX_OCO_* leg only.
+      {
+       GsxOcoConfig ocfg = ChartBuildOcoConfig();
+       if(ocfg.enable)
+          GsxOcoOnDealIn(trade, g_chartOco, ocfg, trans.deal);
+      }
       ResolveOverfill();
       busy = false;
 

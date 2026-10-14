@@ -11,6 +11,7 @@
 #include <GSignalX/BrandLinks.mqh>
 #include <GSignalX/RosterViewModel.mqh>
 #include <GSignalX/RosterStore.mqh>
+#include <GSignalX/OcoStraddle.mqh>
 #include <GSignalX/Fleet.mqh>
 #include <GSignalX/ScoutLink.mqh>
 #include <GSignalX/SymbolCanon.mqh>
@@ -76,6 +77,9 @@ int    g_msVision        = GSX_VISION_COMFORT;
 bool   g_msScoutLinkEnable = true;
 int    g_msScoutInstanceID = 1;
 int    g_msLastTotalH    = 0;      // measured panel height for clamp/drag
+// v2.20: GSXMS_ object-name cache for drag offset (avoid ObjectsTotal scan)
+string g_msObjNames[];
+int    g_msObjNameN      = 0;
 GsxSessionClockConfig g_msSessionCfg;
 
 // Announce prop-critical setting changes to Telegram (Desk-bound SettingsNotify).
@@ -447,16 +451,40 @@ void GsxMsPanelSavePos()
    GlobalVariableSet(GsxMsPosYVar(), (double)g_msPanelY);
   }
 
-// v2.19: drag without full redraw — nudge every GSXMS_ object by dx/dy
-void GsxMsPanelOffsetAll(const int dx, const int dy)
+void GsxMsObjCacheClear()
   {
-   if(dx == 0 && dy == 0)
-      return;
+   ArrayResize(g_msObjNames, 0);
+   g_msObjNameN = 0;
+  }
+
+// Rebuild after full/compact paint — one ObjectsTotal walk, then drag uses cache
+void GsxMsObjCacheRebuild()
+  {
+   GsxMsObjCacheClear();
    int total = ObjectsTotal(0, -1, -1);
    for(int i = 0; i < total; i++)
      {
       string name = ObjectName(0, i, -1, -1);
       if(StringFind(name, GSXMS_PFX) != 0)
+         continue;
+      int n = g_msObjNameN;
+      ArrayResize(g_msObjNames, n + 1);
+      g_msObjNames[n] = name;
+      g_msObjNameN = n + 1;
+     }
+  }
+
+// v2.19/v2.20: drag without full redraw — nudge cached GSXMS_ objects by dx/dy
+void GsxMsPanelOffsetAll(const int dx, const int dy)
+  {
+   if(dx == 0 && dy == 0)
+      return;
+   if(g_msObjNameN <= 0)
+      GsxMsObjCacheRebuild();
+   for(int i = 0; i < g_msObjNameN; i++)
+     {
+      string name = g_msObjNames[i];
+      if(ObjectFind(0, name) < 0)
          continue;
       long x = ObjectGetInteger(0, name, OBJPROP_XDISTANCE);
       long y = ObjectGetInteger(0, name, OBJPROP_YDISTANCE);
@@ -614,6 +642,7 @@ void GsxMsPanelInit(const long magic, const int pageSize, const bool compact,
 void GsxMsPanelDelete()
   {
    ObjectsDeleteAll(0, GSXMS_PFX);
+   GsxMsObjCacheClear();
    g_msRowsDrawn = 0;
    g_msCompactRowsDrawn = 0;
   }
@@ -1026,6 +1055,18 @@ void GsxMsDrawStatusRow(GsxLayCtx &lay, const GsxMsSnapshot &snap)
    else
       GsxMsPackPill(lay, GsxMsTextChipW(lotTxt, fs, GsxSx(g_msDense ? 40 : 60)),
                     "ST_LOT_BG", "ST_LOT", lotTxt, lotBg, lotFg, fs);
+   // Optional OCO straddle — state-aware chip (desk GV; no order scan)
+   string ocoTxt = GsxOcoChipLabel(snap.ocoEnable, snap.ocoDeskState, g_msDense);
+   color ocoBg = C'28,34,46';
+   color ocoFg = g_msColMuted;
+   GsxOcoChipColors(snap.ocoEnable, snap.ocoDeskState, ocoBg, ocoFg,
+                    C'28,34,46', g_msColAccent, g_msColBull, g_msColMuted, g_msColBg);
+   if(g_msShowButtons)
+      GsxMsPackPill(lay, GsxMsTextChipW(ocoTxt, fs, GsxSx(g_msDense ? 40 : 56)),
+                    "ST_OCO_BG", "BTN_OCO", ocoTxt, ocoBg, ocoFg, fs);
+   else
+      GsxMsPackPill(lay, GsxMsTextChipW(ocoTxt, fs, GsxSx(g_msDense ? 40 : 56)),
+                    "ST_OCO_BG", "ST_OCO", ocoTxt, ocoBg, ocoFg, fs);
    string eqTxt = g_msDense
                   ? (snap.eqGuardPct > 0.0 ? StringFormat("EQ%.0f", snap.eqGuardPct) : "EQ0")
                   : GsxRosterEqGuardLabel(snap.eqGuardPct);
@@ -1333,6 +1374,7 @@ void GsxMsPanelDrawCompact(const GsxMsSnapshot &snap, const int anchorX, const i
    string cbg = GSXMS_PFX + "CBG";
    if(ObjectFind(0, cbg) >= 0)
       ObjectSetInteger(0, cbg, OBJPROP_YSIZE, totalH);
+   GsxMsObjCacheRebuild();
    ChartRedraw();
   }
 
@@ -1485,6 +1527,16 @@ bool GsxMsPanelOnChartEvent(const int id,
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                           (on ? " AUTOLOT (desk risk%)" : " FIXED lot (desk)");
          GsxMsSettingsClick("AUTOLOT");
+         return(true);
+        }
+      if(tag == "BTN_OCO")
+        {
+         bool on = GsxRosterOcoEnableToggle(g_msMagic);
+         if(!on)
+            GsxRosterOcoDeskStateSet(g_msMagic, 0);
+         g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                          (on ? " OCO straddle ON (desk)" : " OCO straddle OFF (takeoff)");
+         GsxMsSettingsClick(on ? "OCO ON" : "OCO OFF");
          return(true);
         }
       if(tag == "BTN_EQGUARD")

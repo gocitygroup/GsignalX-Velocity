@@ -11,7 +11,7 @@ Step-by-step install, compile, run, and verify for the connector bus + opportuni
 
 **Guided deploy with confirmation gates:** [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md)
 
-**Current production cut (Best use + all UI controls):** [docs/RELEASE_v2.14_Input_Reliability.md](docs/RELEASE_v2.14_Input_Reliability.md) · Manual [System UI](docs/Gsignalx_Velocity_Users_Manual.html#desk213)
+**Current production cut (Integrations + OCO):** [docs/RELEASE_v2.20_Integrations_OCO.md](docs/RELEASE_v2.20_Integrations_OCO.md) · Manual [Integrations](docs/Gsignalx_Velocity_Users_Manual.html#integrations) · [System UI](docs/Gsignalx_Velocity_Users_Manual.html#desk213)
 
 **Desk capability update (commercial):** Profit Scouter **Profit CASH +100** / opt-in **Loss CASH** · Telegram **soft VERIFY** — teachable recipes in the Manual ([Profit CASH](docs/Gsignalx_Velocity_Users_Manual.html#profit-cash) · [Telegram](docs/Gsignalx_Velocity_Users_Manual.html#telegram)) · Scouter inputs: [README_ProfitScouter.md](README_ProfitScouter.md).
 

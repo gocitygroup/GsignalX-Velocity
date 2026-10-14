@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="description" content="Gsignalx Velocity 2.18 — adaptive risk trader manual. Profit CASH bank, Prop soft STOP, market-condition framework, RiskGuidance digital tips."/>
+<meta name="description" content="Gsignalx Velocity 2.20 — adaptive risk trader manual. Profit CASH bank, Prop soft STOP, market-condition framework, RiskGuidance digital tips."/>
 <meta name="color-scheme" content="dark light"/>
-<title>Gsignalx Velocity 2.18 — Trader Manual | Gocity Group</title>
+<title>Gsignalx Velocity 2.20 — Trader Manual | Gocity Group</title>
 <link rel="icon" href="assets/icons/group-icon.svg" type="image/svg+xml"/>
 <link rel="stylesheet" href="assets/css/gsx-docs.css"/>
 <script src="assets/js/gsx-theme.js"></script>
@@ -921,7 +921,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       <img class="brand-mark" src="assets/icons/group-icon.svg" width="120" height="66" alt="Gocity Group"/>
       <div class="brand-text">
         <strong>Gsignalx Velocity</strong>
-        <span data-i18n="ui.brand.tagline">by Gocity Group · MT5 Desk Manual · v2.18</span>
+        <span data-i18n="ui.brand.tagline">by Gocity Group · MT5 Desk Manual · v2.20</span>
       </div>
     </a>
     <nav class="header-tabs" id="headerTabs" aria-label="Manual sections" data-i18n-attr="aria-label:ui.nav.sections"></nav>
@@ -951,6 +951,10 @@ tr:nth-child(even) td { background: var(--row-stripe); }
           <a role="menuitem" class="header-link-item" href="https://www.gsignalx.cloud/" target="_blank" rel="noopener">
             <strong data-i18n="ui.links.service.title">Executive / Service</strong>
             <span>gsignalx.cloud</span>
+          </a>
+          <a role="menuitem" class="header-link-item" href="#integrations" data-tab="integrations">
+            <strong data-i18n="ui.links.integrations.title">Integrations</strong>
+            <span data-i18n="ui.links.integrations.hint">Cloud · TG · bus · OCO · ScoutLink</span>
           </a>
           <a role="menuitem" class="header-link-item" href="#cloud" data-tab="cloud">
             <strong data-i18n="ui.links.cloud.title">Cloud trading</strong>
@@ -1001,7 +1005,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
       <p class="lede" data-i18n-html="welcome.lede1">Run a prop / funded / practice MT5 desk: structured entries, <strong>cash-target harvest</strong> (winners only), and Telegram that proves delivery — soft STOP that never flattens your book.</p>
       <p class="lede" style="margin-top:0" data-i18n-html="welcome.lede2"><strong>Trader:</strong> live DIR, FOLLOW pads, deal + PROP alerts. <strong>Investor / monitor:</strong> quieter TG (DAILY + PROP), Compact strip, Scouter banking closed P/L with process.</p>
       <div class="meta-row" data-i18n-html="welcome.div1">
-        <span class="chip chip-version">Velocity 2.18 · bus schema v1</span>
+        <span class="chip chip-version">Velocity 2.20 · bus schema v1</span>
         <span class="chip chip-prop">Prop &amp; small fund</span>
         <span class="chip chip-beginner">Practice $20–$100</span>
       </div>
@@ -1022,7 +1026,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
           <li data-i18n-html="welcome.li5"><strong>ProfitScouter</strong> owns exits · desk PLAY/STOP never closes tickets · set <strong>Profit CASH</strong> to your book, leave <strong>CASH</strong> mode ON for scalps.</li>
           <li data-i18n-html="welcome.li6">EQ <strong>OFF</strong> unless you want a floating-DD brake · STOP clears pendings · practice packs $20/$50/$100 · press TG <strong>VERIFY</strong> until green.</li>
         </ol>
-        <p style="margin:0.6em 0 0" data-i18n-html="welcome.p1">All on-chart controls: <a href="#desk213">System UI Best Use</a> · Deploy: <code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code> · Practice: <code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code></p>
+        <p style="margin:0.6em 0 0" data-i18n-html="welcome.p1">All on-chart controls: <a href="#desk213">System UI Best Use</a> · <a href="#integrations">Integrations</a> (Cloud · TG · bus · OCO default On) · Deploy: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · Practice: <code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code></p>
       </div>
 
       <p style="margin:0 0 1.2em">
@@ -1303,7 +1307,7 @@ tr:nth-child(even) td { background: var(--row-stripe); }
 
       <div class="meta-row" data-i18n-html="deploy.div1">
         <span class="chip chip-beginner">Non-tech friendly</span>
-        <span class="chip chip-prop">Velocity 2.18</span>
+        <span class="chip chip-prop">Velocity 2.20</span>
       </div>
 
       <div class="callout gold" data-i18n-html="deploy.div2">
@@ -1407,7 +1411,7 @@ cd GsignalX-Velocity</pre>
           <tr><td data-i18n="deploy.td19">Want a human?</td><td data-i18n-html="deploy.td20">Share a <strong>redacted</strong> <code>CONFIRM_*.md</code> summary in the <a href="https://t.me/+ZDosSHfUCLU1ZGY0" target="_blank" rel="noopener noreferrer">trading group</a> — no tokens, login, or account numbers</td></tr>
         </tbody>
       </table>
-      <p data-i18n-html="deploy.p7">Longer table: <code>docs/WINDOWS_DEPLOY_SIMPLE.md</code> · Gates: <code>DEPLOYMENT_RUNBOOK.md</code> · Sign-off: <code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code>.</p>
+      <p data-i18n-html="deploy.p7">Longer table: <code>docs/WINDOWS_DEPLOY_SIMPLE.md</code> · Gates: <code>DEPLOYMENT_RUNBOOK.md</code> · Sign-off: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code>.</p>
       <div data-gsx-community="stuck"></div>
       <div data-gsx-premium="deploy"></div>
 
@@ -1743,7 +1747,7 @@ cd GsignalX-Velocity</pre>
     <section class="panel" id="desk200" data-title="Multisymbol Desk" data-short="Desk recipe">
       <div class="kicker" data-i18n="desk200.kicker1">Session recipe · London–NY</div>
       <h1 data-i18n="desk200.h11">Multisymbol Service + Trade Center</h1>
-      <p class="lede" data-i18n-html="desk200.lede1">Session roster recipe (FX START, Event SKIP, practice coach). <strong>How to run the live desk:</strong> <a href="#desk213">System UI Best Use (2.18)</a> · <code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code>.</p>
+      <p class="lede" data-i18n-html="desk200.lede1">Session roster recipe (FX START, Event SKIP, practice coach). <strong>How to run the live desk:</strong> <a href="#desk213">System UI Best Use (2.20)</a> · <code>docs/RELEASE_v2.20_Integrations_OCO.md</code>.</p>
 
       <h2 data-i18n="desk200.h21">Best use case (prop / small fund)</h2>
       <div class="callout gold" data-i18n-html="desk200.div1">
@@ -1777,7 +1781,7 @@ cd GsignalX-Velocity</pre>
         <li data-i18n-html="desk200.li10">Start <strong>GsignalX_Service</strong>, <strong>ProfitScouter_Service</strong>, <strong>ProfitOpportunity_Grader</strong>.</li>
         <li data-i18n-html="desk200.li11">Attach <strong>GsignalX_Multisymbol_Dashboard</strong> with seed list + shared magic.</li>
         <li data-i18n-html="desk200.li12">Optional: M5 chart GSignalX with <code>InpChartEntriesWhenService=false</code> for strip/UI.</li>
-        <li data-i18n-html="desk200.li13">Run <code>Confirm-After-Start.bat</code> — expect Trade Center / Service version <strong>2.18</strong> + bus schema <strong>1</strong>.</li>
+        <li data-i18n-html="desk200.li13">Run <code>Confirm-After-Start.bat</code> — expect Trade Center / Service version <strong>2.20</strong> + bus schema <strong>1</strong>.</li>
       </ol>
 
       <h2 data-i18n="desk200.h23">Multisymbol Service</h2>
@@ -1821,15 +1825,15 @@ cd GsignalX-Velocity</pre>
       </div>
     </section>
 
-    <!-- SYSTEM UI BEST USE 2.18 -->
-    <section class="panel" id="desk213" data-title="System UI Best Use 2.18" data-short="Best use">
-      <div class="kicker" data-i18n="desk213.kicker1">Velocity 2.18 · current production cut</div>
+    <!-- SYSTEM UI BEST USE 2.20 -->
+    <section class="panel" id="desk213" data-title="System UI Best Use 2.20" data-short="Best use">
+      <div class="kicker" data-i18n="desk213.kicker1">Velocity 2.20 · current production cut</div>
       <h1 data-i18n="desk213.h11">System UI Best Use</h1>
-      <p class="lede" data-i18n-html="desk213.lede1">Every on-chart control: Trade Center, Chart Signal panel, Chart roster strip, ProfitScouter. Bus schema <strong>v1</strong>. Operator note: <code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code>.</p>
+      <p class="lede" data-i18n-html="desk213.lede1">Every on-chart control: Trade Center, Chart Signal panel, Chart roster strip, ProfitScouter. Bus schema <strong>v1</strong>. Operator note: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · <a href="#integrations">Integrations</a>.</p>
 
       <div class="callout gold" data-i18n-html="desk213.div1">
         <strong class="label">Preferred live desk (Topology A)</strong>
-        One magic · <strong>DeskExecute ON</strong> · Service stopped (or Yield ON) · Chart EA <strong>not</strong> filling · FIXED <strong>0.01</strong> · EQ <strong>OFF</strong> unless you want a floating-DD entry brake · Scouter owns BANK/CUT/FLAT.
+        One magic · <strong>DeskExecute ON</strong> · Service stopped (or Yield ON) · Chart EA <strong>not</strong> filling · FIXED <strong>0.01</strong> · EQ <strong>OFF</strong> unless you want a floating-DD entry brake · OCO default <strong>On</strong> · Scouter owns BANK/CUT/FLAT.
       </div>
 
       <h2 id="ui-surfaces" data-i18n="desk213.h21">UI surfaces</h2>
@@ -1869,6 +1873,7 @@ cd GsignalX-Velocity</pre>
         <thead><tr><th data-i18n="desk213.th8">Control</th><th data-i18n="desk213.th9">What it does</th></tr></thead>
         <tbody>
           <tr><td data-i18n-html="desk213.td19"><strong>VERIFY</strong></td><td data-i18n-html="desk213.td20">Telegram soft health: getMe + plain <code>[TG] verify</code> per chat → Verified if ≥1 chat delivers (dead chats skipped)</td></tr>
+          <tr><td data-i18n-html="desk213.tdOco"><strong>OCO</strong> / ARM / OUT / IN</td><td data-i18n-html="desk213.tdOco2">Desk-wide OCO straddle enable (default On). Takeoff cancels straddles. States: off · waiting · both stops out · in trade. See <a href="#integrations">Integrations</a>.</td></tr>
           <tr><td data-i18n-html="desk213.td21"><strong>ALL / FX / CMD / CRYPTO</strong></td><td data-i18n="desk213.td22">Category filter for the roster view</td></tr>
           <tr><td data-i18n-html="desk213.td23"><strong>− / +</strong> (fleet)</td><td data-i18n="desk213.td24">Decrease / increase fleet target</td></tr>
           <tr><td data-i18n-html="desk213.td25"><strong>&lt; / &gt;</strong> (page)</td><td data-i18n="desk213.td26">Roster page (mouse wheel over the panel also pages)</td></tr>
@@ -2002,7 +2007,7 @@ cd GsignalX-Velocity</pre>
         <li data-i18n-html="desk213.li12"><strong>PLAY</strong> / START only the live book. Use <strong>PROP CLEAR</strong> if an old equity rule left LOCK.</li>
       </ol>
 
-      <p data-i18n-html="desk213.p4">Session roster recipe remains in <a href="#desk200">Multisymbol Desk</a>. Confirm: <code>Confirm-GSignalX.ps1 -Gate All</code> — expect V2.18 markers.</p>
+      <p data-i18n-html="desk213.p4">Session roster recipe remains in <a href="#desk200">Multisymbol Desk</a>. Confirm: <code>Confirm-GSignalX.ps1 -Gate All</code> — expect V2.20 markers.</p>
     </section>
 
     <!-- TELEGRAM ALERTS -->
@@ -2174,10 +2179,96 @@ cd GsignalX-Velocity</pre>
       </div>
     </section>
 
+    <!-- INTEGRATIONS (desk fabric + remote ops) -->
+    <section class="panel" id="integrations" data-title="Integrations" data-short="Integrations">
+      <div class="kicker" data-i18n="integrations.kicker1">Velocity 2.20 · prop desk fabric</div>
+      <h1 data-i18n="integrations.h11">Integrations the desk actually runs</h1>
+      <p class="lede" data-i18n-html="integrations.lede1">Fund-manager view: <strong>who owns risk, who banks P/L, what is advisory, what is remote.</strong> Soft STOP never flattens the book. Educational — no profit guarantee.</p>
+
+      <div class="callout gold" data-i18n-html="integrations.div1">
+        <strong class="label">Separation of duties</strong>
+        <strong>GSignalX</strong> opens risk · <strong>ProfitScouter</strong> banks winners · desk <strong>STOP / HALT</strong> pause entries (and Scouter on HALT) but <em>never</em> close tickets · cloud <strong>remote closes default OFF</strong>.
+      </div>
+
+      <h2 data-i18n="integrations.h21">Capability map</h2>
+      <table>
+        <thead><tr><th data-i18n="integrations.th1">Integration</th><th data-i18n="integrations.th2">Operator meaning</th><th data-i18n="integrations.th3">Key truth</th></tr></thead>
+        <tbody>
+          <tr>
+            <td data-i18n-html="integrations.td1"><strong>Cloud connector</strong></td>
+            <td data-i18n="integrations.td2">Phone / browser book control</td>
+            <td data-i18n-html="integrations.td3">Service group <strong>16</strong> only · remote opens default ON · <strong>remote closes default OFF</strong> · <a href="#cloud" data-tab="cloud">Cloud chapter</a></td>
+          </tr>
+          <tr>
+            <td data-i18n-html="integrations.td4"><strong>Telegram</strong></td>
+            <td data-i18n="integrations.td5">Ops channel (fills, PROP, closes)</td>
+            <td data-i18n-html="integrations.td6">Soft <strong>VERIFY</strong> · deals / PROP / CLOSE / SETTINGS · silent hours · <a href="#telegram" data-tab="telegram">Telegram chapter</a></td>
+          </tr>
+          <tr>
+            <td data-i18n-html="integrations.td7"><strong>Signal bus + Grader</strong></td>
+            <td data-i18n="integrations.td8">Multi-terminal DIR + advisory grades</td>
+            <td data-i18n-html="integrations.td9">Common Files <code>GSignalX/bus/v1</code> · schema <strong>v1</strong> · grades are advisory, not fills</td>
+          </tr>
+          <tr>
+            <td data-i18n-html="integrations.td10"><strong>ScoutLink</strong></td>
+            <td data-i18n="integrations.td11">Desk arms Scouter without closing</td>
+            <td data-i18n-html="integrations.td12">LINK / RUN / CASH / LOSS / TRAIL GVs · Trade Center never market-closes via ScoutLink</td>
+          </tr>
+          <tr>
+            <td data-i18n-html="integrations.td13"><strong>CloseTrigger</strong></td>
+            <td data-i18n="integrations.td14">Exit audit trail</td>
+            <td data-i18n-html="integrations.td15">jsonl audit + TG CLOSE <code>reason=</code> (incl. BROKER-SL)</td>
+          </tr>
+          <tr>
+            <td data-i18n-html="integrations.td16"><strong>SettingsNotify</strong></td>
+            <td data-i18n="integrations.td17">Prop-critical setting changes → TG</td>
+            <td data-i18n="integrations.td18">No PAGE / carousel spam — only desk-critical LOAD / announce</td>
+          </tr>
+          <tr>
+            <td data-i18n-html="integrations.td19"><strong>PropRisk</strong></td>
+            <td data-i18n="integrations.td20">Challenge soft STOP</td>
+            <td data-i18n-html="integrations.td21"><code>RUN=0</code> · never <code>PositionClose</code> · <a href="#prop" data-tab="prop">Prop Behaviour</a></td>
+          </tr>
+          <tr>
+            <td data-i18n-html="integrations.td22"><strong>OCO straddle</strong></td>
+            <td data-i18n="integrations.td23">Two-sided breakout (BuyStop + SellStop)</td>
+            <td data-i18n-html="integrations.td24">Default <strong>On</strong> · parallel to EntryMode · sibling cancel on fill · trail · Scouter still exits · Chart yields when Core owns magic</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 data-i18n="integrations.h22">OCO chip (Trade Center + Chart)</h2>
+      <p data-i18n-html="integrations.p1">Desk-wide <strong>BTN_OCO</strong> toggles enable. Seed-once from <code>InpEnableOcoStraddle=true</code>; after seed, UI / desk GV wins. Soft STOP and takeoff cancel straddle pendings.</p>
+      <table>
+        <thead><tr><th data-i18n="integrations.th4">Chip</th><th data-i18n="integrations.th5">Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><strong>OCO</strong></td><td data-i18n="integrations.td25">Off / takeoff — no new straddles; leftover pendings cancelled</td></tr>
+          <tr><td><strong>OCO·ARM</strong></td><td data-i18n="integrations.td26">Waiting for activation window</td></tr>
+          <tr><td><strong>OCO·OUT</strong></td><td data-i18n="integrations.td27">Both stops working</td></tr>
+          <tr><td><strong>OCO·IN</strong></td><td data-i18n="integrations.td28">One side filled; sibling cancelled; trail managing</td></tr>
+        </tbody>
+      </table>
+      <div class="callout" data-i18n-html="integrations.div2">
+        <strong class="label">Topology A</strong>
+        One Core host (Trade Center DeskExecute or Service) places and manages OCO. Chart attached with the same magic is a <em>consumer</em> — it does not dual-place. Details: <a href="#desk213" data-tab="desk213">System UI Best Use</a> · <a href="#bias-follow" data-tab="bias-follow">Daily Bias Follow</a> still gates one-side entries.
+      </div>
+
+      <h2 data-i18n="integrations.h23">Recommended production posture</h2>
+      <ul>
+        <li data-i18n-html="integrations.li1"><strong>Topology A</strong> — DeskExecute ON, Service Yield ON (or Service stopped).</li>
+        <li data-i18n-html="integrations.li2">FIXED <strong>0.01</strong> · EQ OFF unless you want a floating-DD brake.</li>
+        <li data-i18n-html="integrations.li3">OCO default On; takeoff with <strong>BTN_OCO</strong> when you do not want straddles.</li>
+        <li data-i18n-html="integrations.li4">Cloud: allowlist <code>https://trade-api.gsignalx.cloud</code>; keep remote closes <strong>OFF</strong>.</li>
+        <li data-i18n-html="integrations.li5">Telegram: allowlist <code>https://api.telegram.org</code>; press <strong>VERIFY</strong> until Verified.</li>
+        <li data-i18n-html="integrations.li6">Confirm: <code>Confirm-GSignalX.ps1 -Gate All</code> — expect hosts <strong>2.20</strong> + V2.20 markers.</li>
+      </ul>
+
+      <p data-i18n-html="integrations.p2">Operator cut note: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · Cloud how-to: <a href="#cloud" data-tab="cloud">Cloud Trading</a> · <code>docs/CLOUD_TRADING.md</code>.</p>
+    </section>
 
     <!-- DAILY BIAS FOLLOW -->
     <section class="panel" id="bias-follow" data-title="Daily Bias Follow" data-short="Bias">
-      <div class="kicker" data-i18n="bias-follow.kicker1">Velocity 2.18 · Daily Bias Follow</div>
+      <div class="kicker" data-i18n="bias-follow.kicker1">Velocity 2.20 · Daily Bias Follow</div>
       <h1 data-i18n="bias-follow.h11">Filter signal sides · stay one-directional</h1>
       <p class="lede" data-i18n-html="bias-follow.lede1">Bias is <strong>chart-aligned</strong> to each D1 bar’s open→close outcome — <strong>not EMA</strong>, not MACD, and not joinDir. Engines still produce BUY/SELL; an armed bias lane <strong>filters</strong> which sides may enter via FollowDir.</p>
 
@@ -2459,7 +2550,7 @@ cd GsignalX-Velocity</pre>
       </table>
 
       <h2 data-i18n-html="cheatsheet.h22">Trade Center desk buttons (see <a href="#desk213">Best Use</a>)</h2>
-      <p data-i18n-html="cheatsheet.p1">Automation: FIXED|AUTOLOT · EQ OFF/5/10/20 · REKICK · FollowDir FOLLOW/BUY/SELL/WAIT · PROP CLEAR · START/STOP ALL · ADD/REM · <strong>TV</strong> (TradingView foundation Alert). Default lot <strong>FIXED 0.01</strong>.</p>
+      <p data-i18n-html="cheatsheet.p1">Automation: FIXED|AUTOLOT · EQ OFF/5/10/20 · REKICK · FollowDir FOLLOW/BUY/SELL/WAIT · PROP CLEAR · START/STOP ALL · ADD/REM · <strong>OCO</strong> (straddle default On) · <strong>TV</strong> (TradingView foundation Alert). Default lot <strong>FIXED 0.01</strong>.</p>
 
       <h2 data-i18n="cheatsheet.h23">ProfitScouter buttons</h2>
       <table>
@@ -2475,7 +2566,7 @@ cd GsignalX-Velocity</pre>
         </tbody>
       </table>
 
-      <h2 data-i18n="cheatsheet.h24">Key GSignalX defaults (Velocity 2.18)</h2>
+      <h2 data-i18n="cheatsheet.h24">Key GSignalX defaults (Velocity 2.20)</h2>
       <table>
         <thead><tr><th data-i18n="cheatsheet.th5">Input</th><th data-i18n="cheatsheet.th6">Default</th></tr></thead>
         <tbody>
@@ -2492,6 +2583,7 @@ cd GsignalX-Velocity</pre>
           <tr><td><code>InpMaxLot</code></td><td>5.0</td></tr>
           <tr><td><code>InpPropMaxEquityDdPct</code></td><td data-i18n="cheatsheet.td35">0 (Prop peak DD guide off)</td></tr>
           <tr><td><code>InpDeskExecute</code></td><td data-i18n="cheatsheet.td36">true (Trade Center owns fills)</td></tr>
+          <tr><td><code>InpEnableOcoStraddle</code></td><td data-i18n-html="cheatsheet.tdOco"><strong>true</strong> (default On; UI takeoff still disables)</td></tr>
           <tr><td><code>InpPanelDensity</code></td><td>Compact</td></tr>
           <tr><td><code>InpMagic</code></td><td>20260904</td></tr>
           <tr><td><code>InpMaxSpreadPt</code></td><td>40</td></tr>
@@ -2790,7 +2882,7 @@ MONITOR → MANAGE → EXIT → POST-TRADE REVIEW</div>
           <tr><td><code>docs/RISK_MANUAL_AUDIT.md</code></td><td data-i18n="appendix.td2">Stage 1 adaptive risk audit</td></tr>
           <tr><td><code>docs/risk/RISK_GUIDANCE_BLOCKS.md</code></td><td data-i18n="appendix.td3">Reusable risk blocks</td></tr>
           <tr><td><code>docs/risk/RISK_GUIDANCE_SPEC.md</code></td><td data-i18n="appendix.td4">Digital tip selector spec</td></tr>
-          <tr><td><code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code></td><td data-i18n="appendix.td5">Production cut pointer → Best Use</td></tr>
+          <tr><td><code>docs/RELEASE_v2.20_Integrations_OCO.md</code></td><td data-i18n-html="appendix.td5">Production cut pointer → <a href="#integrations">Integrations</a> · Best Use</td></tr>
           <tr><td><code>docs/WINDOWS_DEPLOY_SIMPLE.md</code></td><td data-i18n="appendix.td6">Non-tech Windows install</td></tr>
           <tr><td><code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code></td><td data-i18n="appendix.td7">Practice packs pointer → Growth / Risk</td></tr>
           <tr><td><code>docs/PRESET_100EUR_RawSpread.md</code></td><td data-i18n="appendix.td8">EUR100 preset pointer → Growth</td></tr>
@@ -2865,7 +2957,7 @@ MONITOR → MANAGE → EXIT → POST-TRADE REVIEW</div>
       </table>
 
       <h2 data-i18n="appendix.h24">Version alignment</h2>
-      <p data-i18n-html="appendix.p2">This manual matches <strong>Gsignalx Velocity 2.18</strong> (Trade Center / Service <code>#property version "2.18"</code>; bus schema <strong>1</strong>) plus ProfitScouter <strong>2.02</strong> (<strong>Profit CASH / Loss CASH</strong>, independent <strong>ATR TRAIL</strong>) and Telegram <strong>soft VERIFY</strong> desk behaviour. Daily Bias Follow: <a href="#bias-follow">#bias-follow</a>. Run the desk from <a href="#desk213">System UI Best Use</a>. Operator note: <code>docs/RELEASE_v2.18_Daily_Bias_Follow.md</code>.</p>
+      <p data-i18n-html="appendix.p2">This manual matches <strong>Gsignalx Velocity 2.20</strong> (Trade Center / Service / Chart <code>#property version "2.20"</code>; bus schema <strong>1</strong>) plus ProfitScouter <strong>2.02</strong> (<strong>Profit CASH / Loss CASH</strong>, independent <strong>ATR TRAIL</strong>) and Telegram <strong>soft VERIFY</strong> desk behaviour. Integrations: <a href="#integrations">#integrations</a> · Daily Bias Follow: <a href="#bias-follow">#bias-follow</a>. Run the desk from <a href="#desk213">System UI Best Use</a>. Operator note: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code>.</p>
 
       <div class="callout gold" data-i18n-html="appendix.div2">
         <strong class="label">Executive signals</strong>
@@ -2894,7 +2986,7 @@ MONITOR → MANAGE → EXIT → POST-TRADE REVIEW</div>
       </div>
       <div data-gsx-premium="footer"></div>
 
-      <p class="footer-note" data-i18n-html="appendix.footer-note1">© Gocity Group — Gsignalx Velocity <strong>2.18</strong>. Noncommercial research and educational use with MetaTrader 5 (PolyForm-NC). Trade responsibly. Past performance is not indicative of future results.<br/>
+      <p class="footer-note" data-i18n-html="appendix.footer-note1">© Gocity Group — Gsignalx Velocity <strong>2.20</strong>. Noncommercial research and educational use with MetaTrader 5 (PolyForm-NC). Trade responsibly. Past performance is not indicative of future results.<br/>
         Desk community (channel primary): <a href="https://t.me/+yURbcVkPi1kxNDg0" target="_blank" rel="noopener noreferrer">macro channel</a>
         · <a href="https://t.me/+ZDosSHfUCLU1ZGY0" target="_blank" rel="noopener noreferrer">group</a>
         · Chart study: <a href="https://www.tradingview.com/script/wxa7lWXl-GsignalX-is-a-trend-following/" target="_blank" rel="noopener">TradingView</a>
