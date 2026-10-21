@@ -47,5 +47,17 @@
   "integrations.li4": "Cloud: allowlist <code>https://trade-api.gsignalx.cloud</code>; keep remote closes <strong>OFF</strong>.",
   "integrations.li5": "Telegram: allowlist <code>https://api.telegram.org</code>; press <strong>VERIFY</strong> until Verified.",
   "integrations.li6": "Confirm: <code>Confirm-GSignalX.ps1 -Gate All</code> — expect hosts <strong>2.20</strong> + V2.20 markers.",
-  "integrations.p2": "Operator cut note: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · Cloud how-to: <a href=\"#cloud\" data-tab=\"cloud\">Cloud Trading</a> · <code>docs/CLOUD_TRADING.md</code>."
+  "integrations.p2": "Notas de operador: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · <code>docs/RELEASE_v2.20_Native_TP.md</code> · Cloud: <a href=\"#cloud\" data-tab=\"cloud\">Cloud Trading</a> · <code>docs/CLOUD_TRADING.md</code>.",
+  "integrations.td29": "<strong>TP nativo</strong>",
+  "integrations.td30": "Nivel tip de estructura + TP de bróker en tickets abiertos",
+  "integrations.td31": "Por defecto <strong>OFF</strong> · chips Chart + Trade Center · GV compartidas · ON aplica el tip a posiciones · Scouter opcional <code>NATIVE-TP</code> con closeOnHit",
+  "integrations.h24": "TP nativo (Chart + Trade Center)",
+  "integrations.p3": "Los chips desk <strong>BTN_TP</strong> / <strong>BTN_TPTYPE</strong> comparten <code>GSX_MS_TPENABLE_*</code> / <code>GSX_MS_TPTYPE_*</code>. El toggle es O(1); el Desk drena pares abiertos en el timer. Detalle técnico: <code>docs/TP_NATIVE.md</code>.",
+  "integrations.th6": "Botón",
+  "integrations.th7": "Significado",
+  "integrations.td32": "Master OFF — sin HLINE, sin push de TP de bróker, sin hits pendientes",
+  "integrations.td33": "Tip activo; tickets abiertos coincidentes reciben PositionModify TP (SL intacto)",
+  "integrations.td34": "Distancia = mediana de diferencias de swing",
+  "integrations.td35": "Distancia = media de todas las diferencias de swing",
+  "integrations.li7": "TP nativo por defecto <strong>OFF</strong>; actívelo solo si quiere TP de estructura en el libro."
 }

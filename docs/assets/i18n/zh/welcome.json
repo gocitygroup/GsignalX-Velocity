@@ -12,7 +12,7 @@
   "welcome.li4": "<strong>Trade Center</strong> 在 DeskExecute ON 时负责成交（FIXED <strong>0.01</strong>）· Service 已停止或 Yield ON · 同一 magic 上不要再由图表 EA 进场。",
   "welcome.li5": "<strong>ProfitScouter</strong> 负责出场 · 交易台的 PLAY/STOP 从不平仓 · 按持仓组合设置 <strong>Profit CASH</strong>，剥头皮时保持 <strong>CASH</strong> 模式为 ON。",
   "welcome.li6": "除非你需要浮动回撤刹车，否则 EQ 保持 <strong>OFF</strong> · STOP 会撤销挂单 · 练习包 $20/$50/$100 · 按 Telegram <strong>VERIFY</strong> 直到变绿。",
-  "welcome.p1": "全部图表控件：<a href=\"#desk213\">系统界面最佳用法</a> · 部署：<code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · 练习：<code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code>",
+  "welcome.p1": "全部图表控件：<a href=\"#desk213\">System UI Best Use</a> · <a href=\"#integrations\">集成</a>（Cloud · TG · bus · OCO · 原生 TP）· Deploy：<code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · TP：<code>docs/RELEASE_v2.20_Native_TP.md</code> · Practice：<code>docs/PRACTICE_LIVE_SIM_20_50_100.md</code>",
   "welcome.div2": "<strong class=\"label\">风险披露</strong> 交易存在亏损风险，包括损失本金。本手册说明软件在 MetaTrader 5 中的行为。它不是投资建议，不是业绩保证，也不能代替你的 Prop 公司规则或经纪商风控。在投入实盘资金前，请先在模拟账户练习。",
   "welcome.rb-tag1": "风险原则",
   "welcome.p2": "<strong>管理这笔交易的理由，而不只是当前的盈利或亏损。</strong> 未平仓头寸必须持续证明自己仍有理由保持持仓。这些是决策原则 — 不是成功保证。",
@@ -53,5 +53,6 @@
   "welcome.h23": "如何浏览",
   "welcome.p15": "使用页眉中的金色<strong>标签</strong>或左侧栏。键盘：<code>←</code> / <code>→</code> 切换章节。带哈希的链接（例如 <code>#deploy</code>）会打开对应章节。打印会展开全部面板。",
   "welcome.div5": "<span class=\"node gold\">Executive 确信</span> <span class=\"arrow\">→</span> <span class=\"node\">Velocity PLAY</span> <span class=\"arrow\">→</span> <span class=\"node\">持仓</span> <span class=\"arrow\">→</span> <span class=\"node bull\">Profit CASH 兑现</span> <span class=\"arrow\">→</span> <span class=\"node\">已平仓盈亏</span>",
-  "welcome.div6": "<strong class=\"label\">可选：云端交易</strong> 在 <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">trade.gsignalx.cloud</a> 注册，于 <strong>Connect PC → Use Velocity toolkit</strong> 生成令牌，允许 <code>https://trade-api.gsignalx.cloud</code> 的 WebRequest，然后在 <strong>GsignalX_Service</strong> 上启用第 <strong>16</strong> 组输入。分步指南：<a href=\"https://github.com/gocitygroup/GsignalX-Velocity/blob/main/docs/CLOUD_TRADING.md\" target=\"_blank\" rel=\"noopener noreferrer\">CLOUD_TRADING.md</a> · <a href=\"#cloud\" data-tab=\"cloud\">本章</a>。搭配 <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">Executive 信号</a> 判断方向 — 仅供教育，不保证盈利。"
+  "welcome.div6": "<strong class=\"label\">可选：云端交易</strong> 在 <a href=\"https://trade.gsignalx.cloud\" target=\"_blank\" rel=\"noopener noreferrer\">trade.gsignalx.cloud</a> 注册，于 <strong>Connect PC → Use Velocity toolkit</strong> 生成令牌，允许 <code>https://trade-api.gsignalx.cloud</code> 的 WebRequest，然后在 <strong>GsignalX_Service</strong> 上启用第 <strong>16</strong> 组输入。分步指南：<a href=\"https://github.com/gocitygroup/GsignalX-Velocity/blob/main/docs/CLOUD_TRADING.md\" target=\"_blank\" rel=\"noopener noreferrer\">CLOUD_TRADING.md</a> · <a href=\"#cloud\" data-tab=\"cloud\">本章</a>。搭配 <a href=\"https://www.gsignalx.cloud/\" target=\"_blank\" rel=\"noopener\">Executive 信号</a> 判断方向 — 仅供教育，不保证盈利。",
+  "welcome.liTp": "<strong>原生 TP</strong> — 可选 Median/Average tip 水平；开启后对匹配的持仓写入券商 TP（<a href=\"#integrations\">集成</a> · <a href=\"#desk213\">Best Use</a>）。"
 }

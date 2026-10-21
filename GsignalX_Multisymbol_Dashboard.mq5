@@ -40,6 +40,7 @@ enum EnOffsetUnit
   };
 
 #include <GSignalX/ChartPanel.mqh> // ENUM_GSX_UI_VISION before panel inputs
+#include <GSignalX/TpNative/TpNativeTypes.mqh>
 
 //+------------------------------------------------------------------+
 input group "1) Identity & fleet"
@@ -104,6 +105,15 @@ input group "6) SuperBollingerTrend"
 input int    InpBBLen  = 12;
 input double InpBBMult = 2.0;
 input int    InpRiskAtrLen = 14;
+
+input group "6b) Native Take-Profit (tp_native)"
+input bool                  InpTpEnabled      = false;
+input ENUM_TPN_TYPE         InpTpType         = TPN_MEDIAN;
+input bool                  InpTpCloseOnHit   = false;
+input int                   InpTpPeriod       = 12;
+input double                InpTpMult         = 2.0;
+input ENUM_TPN_PIVOT_SOURCE InpTpPivotSource  = TPN_PIVOT_ZIGZAG;
+input int                   InpTpHistoryBars  = 500;
 
 input group "7) Trade management"
 input bool   InpAllowLong            = true;
@@ -227,6 +237,7 @@ input int    InpEvtPollSec            = 30;
 // Desk UI reads live joinDir/fill_skip from in-process Core (no bus lag)
 #define GSX_DESK_CORE_LIVE 1
 #include <GSignalX/MultisymbolPanel.mqh>
+#include <GSignalX/TpNative/TpNativeDesk.mqh>
 #include <GSignalX/TelegramNotifier.mqh>
 #include <GSignalX/TgDealWatch.mqh>
 #include <GSignalX/SettingsNotify.mqh>
@@ -526,6 +537,20 @@ int OnInit()
    // Product default: FIXED 0.01 — seed only if missing so reattach keeps desk toggle (v2.14)
    GsxRosterAutoLotSeed(InpMagic, InpAutoLotDefault);
    GsxRosterOcoEnableSeed(InpMagic, InpEnableOcoStraddle);
+   GsxRosterTpEnableSeed(InpMagic, InpTpEnabled);
+   GsxRosterTpTypeSeed(InpMagic, (InpTpType == TPN_AVERAGE) ? 1 : 0);
+   {
+      TpnSettings tps;
+      TpnSettingsDefaults(tps);
+      tps.enabled = InpTpEnabled;
+      tps.type = InpTpType;
+      tps.closeOnHit = InpTpCloseOnHit;
+      tps.period = InpTpPeriod;
+      tps.mult = InpTpMult;
+      tps.pivotSource = InpTpPivotSource;
+      tps.historyBars = InpTpHistoryBars;
+      TpnDeskInit(tps, InpMagic);
+   }
 
    if(!GlobalVariableCheck(GsxEventModeVar(InpMagic)))
       GsxEventModeSet(InpMagic, (InpEvtModeDefault == 1 ? GSX_EVT_MODE_SKIP : GSX_EVT_MODE_TRADE));
@@ -596,6 +621,8 @@ int OnInit()
 void OnDeinit(const int reason)
   {
    EventKillTimer();
+   TpnDeskFlushAll();
+   TpnDrawClear("GSXMS_TP_" + _Symbol + "_");
    DashStopCore("OnDeinit");
    GsxTgDeinit(g_tgCfg, g_tgwSessionPl);
    GsxPropSave(InpMagic, g_propSt);
@@ -675,6 +702,14 @@ void OnTimer()
    GsxTgProcessQueueEx(g_tgCfg, 1);
    GsxTgPublishStatus(InpMagic);
    DashMaybeSummaries();
+
+   // Native TP: chart symbol + open-position symbols (budgeted)
+   ENUM_TIMEFRAMES deskTf = InpTimeframe;
+   if(Period() > 0)
+      deskTf = (ENUM_TIMEFRAMES)Period();
+   TpnDeskTick(_Symbol, deskTf, InpMagic, 4);
+   TpnDeskDrawChart(_Symbol, g_msColAccent);
+
    DashRefreshPanel(false);
   }
 

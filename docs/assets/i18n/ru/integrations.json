@@ -47,5 +47,17 @@
   "integrations.li4": "Cloud: allowlist <code>https://trade-api.gsignalx.cloud</code>; keep remote closes <strong>OFF</strong>.",
   "integrations.li5": "Telegram: allowlist <code>https://api.telegram.org</code>; press <strong>VERIFY</strong> until Verified.",
   "integrations.li6": "Confirm: <code>Confirm-GSignalX.ps1 -Gate All</code> — expect hosts <strong>2.20</strong> + V2.20 markers.",
-  "integrations.p2": "Operator cut note: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · Cloud how-to: <a href=\"#cloud\" data-tab=\"cloud\">Cloud Trading</a> · <code>docs/CLOUD_TRADING.md</code>."
+  "integrations.p2": "Операторские заметки: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · <code>docs/RELEASE_v2.20_Native_TP.md</code> · Cloud: <a href=\"#cloud\" data-tab=\"cloud\">Cloud Trading</a> · <code>docs/CLOUD_TRADING.md</code>.",
+  "integrations.td29": "<strong>Нативный TP</strong>",
+  "integrations.td30": "Структурный tip + брокерский TP на открытых тикетах",
+  "integrations.td31": "По умолчанию <strong>OFF</strong> · чипы Chart + Trade Center · общие GV · ON применяет tip к позициям · опционально Scouter <code>NATIVE-TP</code> при closeOnHit",
+  "integrations.h24": "Нативный TP (Chart + Trade Center)",
+  "integrations.p3": "Чипы desk <strong>BTN_TP</strong> / <strong>BTN_TPTYPE</strong> делят <code>GSX_MS_TPENABLE_*</code> / <code>GSX_MS_TPTYPE_*</code>. Переключение O(1); Desk дренирует открытые пары по таймеру. Инженерно: <code>docs/TP_NATIVE.md</code>.",
+  "integrations.th6": "Чип",
+  "integrations.th7": "Смысл",
+  "integrations.td32": "Master OFF — нет HLINE, нет push брокерского TP, нет pending hit",
+  "integrations.td33": "Tip активен; подходящие открытые тикеты получают PositionModify TP (SL сохранён)",
+  "integrations.td34": "Дистанция = медиана swing-разниц",
+  "integrations.td35": "Дистанция = среднее всех swing-разниц",
+  "integrations.li7": "Нативный TP по умолчанию <strong>OFF</strong>; включайте ON только для структурного TP на книге."
 }

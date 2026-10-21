@@ -648,6 +648,17 @@ function Confirm-Files {
   Test-PathMark (Join-Path $mql5 "Services\ProfitScouter_Service.mq5") "Services ProfitScouter" | Out-Null
   Test-PathMark (Join-Path $mql5 "Services\ProfitOpportunity_Grader.mq5") "Services Grader" | Out-Null
   Test-PathMark (Join-Path $mql5 "Scripts\ProfitHarvest_Now.mq5") "Scripts Harvest" | Out-Null
+  # Native TP module (repo always; Terminal after deploy)
+  Test-PathMark (Join-Path $RepoRoot "Include\GSignalX\TpNative\TpNativeEngine.mqh") "Repo TpNativeEngine.mqh" | Out-Null
+  Test-PathMark (Join-Path $RepoRoot "Include\GSignalX\TpNative\TpNativeHost.mqh") "Repo TpNativeHost.mqh" | Out-Null
+  Test-PathMark (Join-Path $RepoRoot "GSX_TpNative_Test.mq5") "Repo GSX_TpNative_Test.mq5" | Out-Null
+  Test-PathMark (Join-Path $RepoRoot "tests\tp_native\tp_golden_vectors.json") "Repo tp_golden_vectors.json" | Out-Null
+  if (Test-Path (Join-Path $mql5 "Include\GSignalX\TpNative\TpNativeEngine.mqh")) {
+    Test-PathMark (Join-Path $mql5 "Include\GSignalX\TpNative\TpNativeEngine.mqh") "Include TpNativeEngine.mqh" | Out-Null
+  }
+  else {
+    Add-Line "WARN  Include TpNative not in Terminal yet (deploy to sync)"
+  }
 }
 
 function Confirm-Compile {

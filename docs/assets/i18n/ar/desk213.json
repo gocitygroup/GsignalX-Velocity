@@ -180,5 +180,13 @@
   "desk213.li10": "تأكد أن الأتمتة تعرض <strong>FIXED</strong> واللوت <strong>0.01</strong>.",
   "desk213.li11": "اضغط <strong>STOP</strong> مرة واحدة، ثم <strong>REM</strong> للأزواج التي لا تريدها.",
   "desk213.li12": "<strong>PLAY</strong> / START للكتاب الحي فقط. استخدم <strong>PROP CLEAR</strong> إذا تركت قاعدة equity قديمة حالة LOCK.",
-  "desk213.p4": "تبقى وصفة قائمة الجلسة في <a href=\"#desk200\">Desk متعدد الرموز</a>. التأكيد: <code>Confirm-GSignalX.ps1 -Gate All</code> — توقّع علامات V2.20."
+  "desk213.p4": "تبقى وصفة قائمة الجلسة في <a href=\"#desk200\">Desk متعدد الرموز</a>. التأكيد: <code>Confirm-GSignalX.ps1 -Gate All</code> — توقّع علامات V2.20.",
+  "desk213.tdTp": "<strong>TP ON / OFF</strong>",
+  "desk213.tdTp2": "مفتاح tip الأصلي (GV مشترك). ON يرسم المستوى ويدفع TP الوسيط للصفقات المطابقة. انظر <a href=\"#integrations\">التكاملات</a>.",
+  "desk213.tdTpType": "<strong>Median / Average</strong>",
+  "desk213.tdTpType2": "نوع مسافة tip (يظهر عند TP ON)",
+  "desk213.tdTpChart": "<strong>TP ON / OFF</strong>",
+  "desk213.tdTpChart2": "نفس GV لـ Trade Center؛ HLINE tip ومزامنة TP الوسيط لهذا magic",
+  "desk213.tdTpTypeChart": "<strong>Median / Average</strong>",
+  "desk213.tdTpTypeChart2": "نوع tip (يُعرض عند TP ON)"
 }

@@ -194,6 +194,8 @@ void SubscribeSymbols()
 //+------------------------------------------------------------------+
 //| Main monitoring cycle                                            |
 //+------------------------------------------------------------------+
+void TpnScouterProcessPending(); // defined after CloseTicket (TpNativeScouter.mqh)
+
 void Monitor()
   {
    RefreshCurrencyFactor(false);
@@ -221,6 +223,9 @@ void Monitor()
    else
       g_closerYieldLogged = false;
 #endif
+
+   // Native TP hit queue (Chart/Desk emit; Scouter closes when closeOnHit)
+   TpnScouterProcessPending();
 
    //--- 1. collect eligible positions -------------------------------
    ArrayResize(g_agg, 0);
@@ -1136,6 +1141,8 @@ bool CloseTicket(ulong ticket, string tag, const bool allowLoss = false, const s
      }
    return false;
   }
+
+#include <GSignalX/TpNative/TpNativeScouter.mqh>
 
 //+------------------------------------------------------------------+
 //| Manual desk closes (EA panel): side +1 winners, -1 losers, 0 all |

@@ -61,6 +61,8 @@ struct GsxMsSnapshot
    bool   autoLot;       // v2.09: desk AUTOLOT
    bool   ocoEnable;     // v2.19: desk OCO straddle enable
    int    ocoDeskState;  // v2.19: max lifecycle (Idle/Waiting/Orders/Managing)
+   bool   tpEnable;      // native TP module ON/OFF
+   int    tpType;        // 0=MEDIAN 1=AVERAGE
    double eqGuardPct;    // v2.09: desk EQ guard %
    int    drillSecLeft;  // v2.10: desk drill seconds remaining (0=off/expired)
    int    fleetActive;
@@ -445,7 +447,7 @@ bool GsxMsNeedLivePulse(const bool force)
 string GsxMsSnapshotFingerprint(const GsxMsSnapshot &snap)
   {
    // Round money fields so micro equity/PL noise does not force 10Hz paints
-   string f = StringFormat("%I64d|%d|%d|%d|%d|%d|%d|%d|%d|%.0f|%d|%d|%.1f|%d|%.0f|%d|%s|%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%.1f|%.1f|%.1f|%s|%.1f|%.1f|%d|%d|%d|%.1f|%d|",
+   string f = StringFormat("%I64d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%.0f|%d|%d|%.1f|%d|%.0f|%d|%s|%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%.1f|%.1f|%.1f|%s|%.1f|%.1f|%d|%d|%d|%.1f|%d|",
                            snap.magic, snap.own ? 1 : 0, snap.run ? 1 : 0,
                            snap.svcAlive ? 1 : 0,
                            snap.hbFresh ? 1 : 0,
@@ -453,6 +455,8 @@ string GsxMsSnapshotFingerprint(const GsxMsSnapshot &snap)
                            snap.autoLot ? 1 : 0,
                            snap.ocoEnable ? 1 : 0,
                            snap.ocoDeskState,
+                           snap.tpEnable ? 1 : 0,
+                           snap.tpType,
                            snap.eqGuardPct,
                            snap.fleetActive, snap.fleetTarget, snap.fleetPl,
                            snap.positions, snap.rosterSeq, snap.page,
@@ -520,6 +524,8 @@ void GsxMsBuildSnapshot(const long magic,
    out.autoLot      = GsxRosterAutoLotGet(magic, false);
    out.ocoEnable    = GsxRosterOcoEnableGet(magic, false);
    out.ocoDeskState = out.ocoEnable ? GsxRosterOcoDeskStateGet(magic, 0) : 0;
+   out.tpEnable     = GsxRosterTpEnableGet(magic, false);
+   out.tpType       = GsxRosterTpTypeGet(magic, 0);
    out.eqGuardPct   = GsxRosterEqGuardGet(magic, 0.0);
    out.drillSecLeft = GsxRosterDrillSecGet(magic);
    out.rosterSeq    = GsxRosterSeqGet(magic);

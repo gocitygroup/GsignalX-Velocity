@@ -405,6 +405,28 @@ void GsxMsDrawQuadLL(GsxLayCtx &col, const GsxMsSnapshot &snap,
      }
    GsxLayAdvance(col, bh);
 
+   // Native TP — same BTN_TP / BTN_TPTYPE names as MultisymbolPanel (shared handlers)
+   GsxLayRowStart(col, bh);
+   GsxMsQuadInsetBegin(col, inset);
+   avail = MathMax(1, col.packRemain - inset);
+   col.packRemain = avail;
+   int tpSlots = snap.tpEnable ? 2 : 1;
+   GsxLayEqual(col, tpSlots, slots);
+   if(ArraySize(slots) >= 1)
+     {
+      string tpTxt = snap.tpEnable ? "TP ON" : "TP OFF";
+      GsxPanelSlotButtonPad("BTN_TP", slots[0], tpTxt,
+                            snap.tpEnable ? g_msColBull : chipIdle,
+                            snap.tpEnable ? g_msColBg : g_msColText, pad);
+     }
+   if(snap.tpEnable && ArraySize(slots) >= 2)
+     {
+      string typTxt = (snap.tpType == 1) ? "Average" : "Median";
+      GsxPanelSlotButtonPad("BTN_TPTYPE", slots[1], typTxt,
+                            g_msColAccent, g_msColBg, pad);
+     }
+   GsxLayAdvance(col, bh);
+
    // v2.13 feature-guard summary + drill REKICK (no duplicate click tags)
    GsxLayRowStart(col, bh);
    GsxMsQuadInsetBegin(col, inset);

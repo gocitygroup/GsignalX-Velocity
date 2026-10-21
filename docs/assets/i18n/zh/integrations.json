@@ -47,5 +47,17 @@
   "integrations.li4": "Cloud: allowlist <code>https://trade-api.gsignalx.cloud</code>; keep remote closes <strong>OFF</strong>.",
   "integrations.li5": "Telegram: allowlist <code>https://api.telegram.org</code>; press <strong>VERIFY</strong> until Verified.",
   "integrations.li6": "Confirm: <code>Confirm-GSignalX.ps1 -Gate All</code> — expect hosts <strong>2.20</strong> + V2.20 markers.",
-  "integrations.p2": "Operator cut note: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · Cloud how-to: <a href=\"#cloud\" data-tab=\"cloud\">Cloud Trading</a> · <code>docs/CLOUD_TRADING.md</code>."
+  "integrations.p2": "运营说明：<code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · <code>docs/RELEASE_v2.20_Native_TP.md</code> · Cloud：<a href=\"#cloud\" data-tab=\"cloud\">Cloud Trading</a> · <code>docs/CLOUD_TRADING.md</code>。",
+  "integrations.td29": "<strong>原生 TP</strong>",
+  "integrations.td30": "结构 tip 水平 + 对持仓写入券商 TP",
+  "integrations.td31": "默认 <strong>OFF</strong> · Chart + Trade Center 芯片 · 共享 GV · 开启后对匹配仓位应用 tip · 可选 Scouter <code>NATIVE-TP</code>（closeOnHit）",
+  "integrations.h24": "原生 TP（Chart + Trade Center）",
+  "integrations.p3": "桌面 <strong>BTN_TP</strong> / <strong>BTN_TPTYPE</strong> 共享 <code>GSX_MS_TPENABLE_*</code> / <code>GSX_MS_TPTYPE_*</code>。切换为 O(1)；Desk 在定时器上消化未平仓品种。工程说明：<code>docs/TP_NATIVE.md</code>。",
+  "integrations.th6": "芯片",
+  "integrations.th7": "含义",
+  "integrations.td32": "总开关 OFF — 无线、不推送券商 TP、无 pending hit",
+  "integrations.td33": "tip 生效；匹配持仓 PositionModify TP（保留 SL）",
+  "integrations.td34": "距离 = swing 差值中位数",
+  "integrations.td35": "距离 = 全部 swing 差值平均",
+  "integrations.li7": "原生 TP 默认 <strong>OFF</strong>；仅在需要结构 TP 时打开。"
 }

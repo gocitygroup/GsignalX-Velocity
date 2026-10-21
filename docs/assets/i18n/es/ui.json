@@ -184,7 +184,7 @@
   "chapters.bias-follow.title": "Seguimiento de sesgo diario",
   "chapters.bias-follow.short": "Sesgo",
   "ui.links.integrations.title": "Integrations",
-  "ui.links.integrations.hint": "Cloud · TG · bus · OCO · ScoutLink",
+  "ui.links.integrations.hint": "Cloud · TG · bus · OCO · ScoutLink · TP",
   "chapters.integrations.title": "Integrations",
   "chapters.integrations.short": "Integrations"
 }

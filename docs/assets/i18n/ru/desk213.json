@@ -180,5 +180,13 @@
   "desk213.li10": "Подтвердите, что Автоматизация показывает <strong>FIXED</strong> и лот <strong>0.01</strong>.",
   "desk213.li11": "Нажмите <strong>STOP</strong> один раз, затем <strong>REM</strong> для пар, которые не нужны.",
   "desk213.li12": "<strong>PLAY</strong> / START только на живом портфеле. Используйте <strong>PROP CLEAR</strong>, если старое правило equity оставило LOCK.",
-  "desk213.p4": "Рецепт списка сессии остаётся в <a href=\"#desk200\">Мультисимвольный Desk</a>. Проверка: <code>Confirm-GSignalX.ps1 -Gate All</code> — ожидайте маркеры V2.20."
+  "desk213.p4": "Рецепт списка сессии остаётся в <a href=\"#desk200\">Мультисимвольный Desk</a>. Проверка: <code>Confirm-GSignalX.ps1 -Gate All</code> — ожидайте маркеры V2.20.",
+  "desk213.tdTp": "<strong>TP ON / OFF</strong>",
+  "desk213.tdTp2": "Master нативного tip (общий desk GV). ON рисует уровень и ставит брокерский TP на подходящие позиции. См. <a href=\"#integrations\">Интеграции</a>.",
+  "desk213.tdTpType": "<strong>Median / Average</strong>",
+  "desk213.tdTpType2": "Тип дистанции tip (виден при TP ON)",
+  "desk213.tdTpChart": "<strong>TP ON / OFF</strong>",
+  "desk213.tdTpChart2": "Тот же GV, что у Trade Center; HLINE tip + sync брокерского TP для этого magic",
+  "desk213.tdTpTypeChart": "<strong>Median / Average</strong>",
+  "desk213.tdTpTypeChart2": "Тип tip (показан при TP ON)"
 }

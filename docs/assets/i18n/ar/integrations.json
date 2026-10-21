@@ -47,5 +47,17 @@
   "integrations.li4": "Cloud: allowlist <code>https://trade-api.gsignalx.cloud</code>; keep remote closes <strong>OFF</strong>.",
   "integrations.li5": "Telegram: allowlist <code>https://api.telegram.org</code>; press <strong>VERIFY</strong> until Verified.",
   "integrations.li6": "Confirm: <code>Confirm-GSignalX.ps1 -Gate All</code> — expect hosts <strong>2.20</strong> + V2.20 markers.",
-  "integrations.p2": "Operator cut note: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · Cloud how-to: <a href=\"#cloud\" data-tab=\"cloud\">Cloud Trading</a> · <code>docs/CLOUD_TRADING.md</code>."
+  "integrations.p2": "ملاحظات التشغيل: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · <code>docs/RELEASE_v2.20_Native_TP.md</code> · Cloud: <a href=\"#cloud\" data-tab=\"cloud\">Cloud Trading</a> · <code>docs/CLOUD_TRADING.md</code>.",
+  "integrations.td29": "<strong>جني ربح أصلي</strong>",
+  "integrations.td30": "مستوى tip هيكلي + TP وسيط على التذاكر المفتوحة",
+  "integrations.td31": "الافتراضي <strong>OFF</strong> · شرائح Chart + Trade Center · متغيرات مشتركة · ON يطبّق tip على الصفقات · Scouter اختياري <code>NATIVE-TP</code> مع closeOnHit",
+  "integrations.h24": "جني الربح الأصلي (Chart + Trade Center)",
+  "integrations.p3": "شرائح المكتب <strong>BTN_TP</strong> / <strong>BTN_TPTYPE</strong> تشارك <code>GSX_MS_TPENABLE_*</code> / <code>GSX_MS_TPTYPE_*</code>. التبديل فوري O(1)؛ المكتب يصرف الأزواج المفتوحة عبر المؤقت. مرجع هندسي: <code>docs/TP_NATIVE.md</code>.",
+  "integrations.th6": "الشريحة",
+  "integrations.th7": "المعنى",
+  "integrations.td32": "Master OFF — بلا HLINE ولا دفع TP وسيط ولا hits معلّقة",
+  "integrations.td33": "tip نشط؛ التذاكر المفتوحة المطابقة تحصل على PositionModify TP (مع الإبقاء على SL)",
+  "integrations.td34": "المسافة = وسيط فروقات الـ swing",
+  "integrations.td35": "المسافة = متوسط كل فروقات الـ swing",
+  "integrations.li7": "Native TP افتراضيًا <strong>OFF</strong>؛ فعّل ON فقط عندما تريد TP هيكليًا على الدفتر."
 }

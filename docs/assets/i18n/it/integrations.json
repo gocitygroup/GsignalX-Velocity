@@ -47,5 +47,17 @@
   "integrations.li4": "Cloud: allowlist <code>https://trade-api.gsignalx.cloud</code>; keep remote closes <strong>OFF</strong>.",
   "integrations.li5": "Telegram: allowlist <code>https://api.telegram.org</code>; press <strong>VERIFY</strong> until Verified.",
   "integrations.li6": "Confirm: <code>Confirm-GSignalX.ps1 -Gate All</code> — expect hosts <strong>2.20</strong> + V2.20 markers.",
-  "integrations.p2": "Operator cut note: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · Cloud how-to: <a href=\"#cloud\" data-tab=\"cloud\">Cloud Trading</a> · <code>docs/CLOUD_TRADING.md</code>."
+  "integrations.p2": "Note operative: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · <code>docs/RELEASE_v2.20_Native_TP.md</code> · Cloud: <a href=\"#cloud\" data-tab=\"cloud\">Cloud Trading</a> · <code>docs/CLOUD_TRADING.md</code>.",
+  "integrations.td29": "<strong>TP nativo</strong>",
+  "integrations.td30": "Livello tip di struttura + TP broker sui ticket aperti",
+  "integrations.td31": "Default <strong>OFF</strong> · chip Chart + Trade Center · GV condivise · ON applica il tip alle posizioni · Scouter opzionale <code>NATIVE-TP</code> con closeOnHit",
+  "integrations.h24": "TP nativo (Chart + Trade Center)",
+  "integrations.p3": "I chip desk <strong>BTN_TP</strong> / <strong>BTN_TPTYPE</strong> condividono <code>GSX_MS_TPENABLE_*</code> / <code>GSX_MS_TPTYPE_*</code>. Il toggle è O(1); il Desk scarica le coppie aperte sul timer. Dettaglio tecnico: <code>docs/TP_NATIVE.md</code>.",
+  "integrations.th6": "Pulsante",
+  "integrations.th7": "Significato",
+  "integrations.td32": "Master OFF — niente HLINE, niente push TP broker, niente hit pending",
+  "integrations.td33": "Tip attivo; i ticket aperti corrispondenti ricevono PositionModify TP (SL invariato)",
+  "integrations.td34": "Distanza = mediana delle differenze di swing",
+  "integrations.td35": "Distanza = media di tutte le differenze di swing",
+  "integrations.li7": "TP nativo default <strong>OFF</strong>; attiva ON solo se vuoi il TP di struttura sul book."
 }

@@ -396,6 +396,79 @@ bool GsxRosterOcoEnableToggle(const long magic)
    return(next);
   }
 
+//+------------------------------------------------------------------+
+//| Native TP enable + type (desk/chart shared GVs)                   |
+//+------------------------------------------------------------------+
+string GsxRosterTpEnableVarName(const long magic)
+  {
+   return("GSX_MS_TPENABLE_" + IntegerToString((int)magic));
+  }
+
+bool GsxRosterTpEnableGet(const long magic, const bool defaultOn = false)
+  {
+   string name = GsxRosterTpEnableVarName(magic);
+   if(!GlobalVariableCheck(name))
+      return(defaultOn);
+   return(GlobalVariableGet(name) > 0.5);
+  }
+
+void GsxRosterTpEnableSet(const long magic, const bool on)
+  {
+   GlobalVariableSet(GsxRosterTpEnableVarName(magic), on ? 1.0 : 0.0);
+  }
+
+bool GsxRosterTpEnableSeed(const long magic, const bool defaultOn)
+  {
+   string name = GsxRosterTpEnableVarName(magic);
+   if(GlobalVariableCheck(name))
+      return(false);
+   GsxRosterTpEnableSet(magic, defaultOn);
+   return(true);
+  }
+
+bool GsxRosterTpEnableToggle(const long magic)
+  {
+   bool next = !GsxRosterTpEnableGet(magic, false);
+   GsxRosterTpEnableSet(magic, next);
+   return(next);
+  }
+
+string GsxRosterTpTypeVarName(const long magic)
+  {
+   return("GSX_MS_TPTYPE_" + IntegerToString((int)magic));
+  }
+
+// 0=MEDIAN 1=AVERAGE
+int GsxRosterTpTypeGet(const long magic, const int defaultType = 0)
+  {
+   string name = GsxRosterTpTypeVarName(magic);
+   if(!GlobalVariableCheck(name))
+      return(defaultType);
+   int v = (int)GlobalVariableGet(name);
+   return(v == 1 ? 1 : 0);
+  }
+
+void GsxRosterTpTypeSet(const long magic, const int typ)
+  {
+   GlobalVariableSet(GsxRosterTpTypeVarName(magic), (typ == 1) ? 1.0 : 0.0);
+  }
+
+bool GsxRosterTpTypeSeed(const long magic, const int defaultType)
+  {
+   string name = GsxRosterTpTypeVarName(magic);
+   if(GlobalVariableCheck(name))
+      return(false);
+   GsxRosterTpTypeSet(magic, defaultType);
+   return(true);
+  }
+
+int GsxRosterTpTypeToggle(const long magic)
+  {
+   int next = (GsxRosterTpTypeGet(magic, 0) == 0) ? 1 : 0;
+   GsxRosterTpTypeSet(magic, next);
+   return(next);
+  }
+
 // Desk-wide max OCO lifecycle state for Multi chrome (Core writes; panel reads).
 string GsxRosterOcoDeskStateVarName(const long magic)
   {

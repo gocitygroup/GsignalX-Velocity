@@ -180,5 +180,13 @@
   "desk213.li10": "确认自动化显示 <strong>FIXED</strong> 且手数为 <strong>0.01</strong>。",
   "desk213.li11": "按一次 <strong>STOP</strong>，然后对不需要的货币对按 <strong>REM</strong>。",
   "desk213.li12": "只对实盘组合使用 <strong>PLAY</strong> / START。若旧的净值规则留下了 LOCK，请使用 <strong>PROP CLEAR</strong>。",
-  "desk213.p4": "时段名单配方仍在 <a href=\"#desk200\">多品种 Desk</a>。确认：<code>Confirm-GSignalX.ps1 -Gate All</code> — 应出现 V2.20 标记。"
+  "desk213.p4": "时段名单配方仍在 <a href=\"#desk200\">多品种 Desk</a>。确认：<code>Confirm-GSignalX.ps1 -Gate All</code> — 应出现 V2.20 标记。",
+  "desk213.tdTp": "<strong>TP ON / OFF</strong>",
+  "desk213.tdTp2": "原生 tip 总开关（共享 desk GV）。开启后画线并对匹配持仓写入券商 TP。见 <a href=\"#integrations\">集成</a>。",
+  "desk213.tdTpType": "<strong>Median / Average</strong>",
+  "desk213.tdTpType2": "tip 距离类型（TP ON 时可见）",
+  "desk213.tdTpChart": "<strong>TP ON / OFF</strong>",
+  "desk213.tdTpChart2": "与 Trade Center 相同 GV；本 magic 的 tip 水平线 + 券商 TP 同步",
+  "desk213.tdTpTypeChart": "<strong>Median / Average</strong>",
+  "desk213.tdTpTypeChart2": "tip 类型（TP ON 时显示）"
 }

@@ -180,5 +180,13 @@
   "desk213.li10": "Confirme que Automatización muestra <strong>FIXED</strong> y lote <strong>0.01</strong>.",
   "desk213.li11": "Pulse <strong>STOP</strong> una vez y luego <strong>REM</strong> en los pares que no quiera.",
   "desk213.li12": "<strong>PLAY</strong> / START solo en el book en vivo. Use <strong>PROP CLEAR</strong> si una regla de equity antigua dejó LOCK.",
-  "desk213.p4": "La receta de la lista de sesión sigue en <a href=\"#desk200\">Desk multisímbolo</a>. Confirme: <code>Confirm-GSignalX.ps1 -Gate All</code> — espere marcadores V2.20."
+  "desk213.p4": "La receta de la lista de sesión sigue en <a href=\"#desk200\">Desk multisímbolo</a>. Confirme: <code>Confirm-GSignalX.ps1 -Gate All</code> — espere marcadores V2.20.",
+  "desk213.tdTp": "<strong>TP ON / OFF</strong>",
+  "desk213.tdTp2": "Master tip nativo (GV desk compartida). ON dibuja el nivel y empuja el TP de bróker a posiciones coincidentes. Ver <a href=\"#integrations\">Integraciones</a>.",
+  "desk213.tdTpType": "<strong>Median / Average</strong>",
+  "desk213.tdTpType2": "Tipo de distancia tip (visible con TP ON)",
+  "desk213.tdTpChart": "<strong>TP ON / OFF</strong>",
+  "desk213.tdTpChart2": "Misma GV que Trade Center; HLINE tip + sync de TP de bróker para este magic",
+  "desk213.tdTpTypeChart": "<strong>Median / Average</strong>",
+  "desk213.tdTpTypeChart2": "Tipo tip (se muestra con TP ON)"
 }

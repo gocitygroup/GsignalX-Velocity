@@ -22,6 +22,8 @@
 #include <GSignalX/PracticeSim.mqh>
 #include <GSignalX/RiskGuidance.mqh>
 #include <GSignalX/LotSizing.mqh>
+#include <GSignalX/TpNative/TpNativeOpenBook.mqh>
+#include <GSignalX/TpNative/TpNativeDesk.mqh>
 
 #define GSXMS_PFX        "GSXMS_"
 #define GSXMS_WIDTH      1280  // v2.05 true quadrant board width
@@ -1067,6 +1069,28 @@ void GsxMsDrawStatusRow(GsxLayCtx &lay, const GsxMsSnapshot &snap)
    else
       GsxMsPackPill(lay, GsxMsTextChipW(ocoTxt, fs, GsxSx(g_msDense ? 40 : 56)),
                     "ST_OCO_BG", "ST_OCO", ocoTxt, ocoBg, ocoFg, fs);
+   // Native TP ON/OFF + Median/Average (type active only when ON)
+   string tpTxt = snap.tpEnable ? "TP ON" : "TP OFF";
+   color tpBg = snap.tpEnable ? C'18,56,40' : C'28,34,46';
+   color tpFg = snap.tpEnable ? g_msColBull : g_msColMuted;
+   if(g_msShowButtons)
+      GsxMsPackPill(lay, GsxMsTextChipW(tpTxt, fs, GsxSx(g_msDense ? 44 : 56)),
+                    "ST_TP_BG", "BTN_TP", tpTxt, tpBg, tpFg, fs);
+   else
+      GsxMsPackPill(lay, GsxMsTextChipW(tpTxt, fs, GsxSx(g_msDense ? 44 : 56)),
+                    "ST_TP_BG", "ST_TP", tpTxt, tpBg, tpFg, fs);
+   if(snap.tpEnable)
+     {
+      string typTxt = (snap.tpType == 1) ? "AVG" : "MED";
+      color typBg = C'56,40,18';
+      color typFg = g_msColAccent;
+      if(g_msShowButtons)
+         GsxMsPackPill(lay, GsxMsTextChipW(typTxt, fs, GsxSx(40)),
+                       "ST_TPTYPE_BG", "BTN_TPTYPE", typTxt, typBg, typFg, fs);
+      else
+         GsxMsPackPill(lay, GsxMsTextChipW(typTxt, fs, GsxSx(40)),
+                       "ST_TPTYPE_BG", "ST_TPTYPE", typTxt, typBg, typFg, fs);
+     }
    string eqTxt = g_msDense
                   ? (snap.eqGuardPct > 0.0 ? StringFormat("EQ%.0f", snap.eqGuardPct) : "EQ0")
                   : GsxRosterEqGuardLabel(snap.eqGuardPct);
@@ -1546,6 +1570,28 @@ bool GsxMsPanelOnChartEvent(const int id,
          g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
                           (on ? " OCO straddle ON (desk)" : " OCO straddle OFF (takeoff)");
          GsxMsSettingsClick(on ? "OCO ON" : "OCO OFF");
+         return(true);
+        }
+      if(tag == "BTN_TP")
+        {
+         bool on = !GsxRosterTpEnableGet(g_msMagic, false);
+         TpnOnTpUiChanged(g_msMagic, on);
+         TpnDeskApplyUiAfterToggle(g_msMagic);
+         g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                          (on ? " Take Profit ON (native)" : " Take Profit OFF");
+         GsxMsSettingsClick(on ? "TP ON" : "TP OFF");
+         return(true);
+        }
+      if(tag == "BTN_TPTYPE")
+        {
+         if(!GsxRosterTpEnableGet(g_msMagic, false))
+            return(true);
+         int typ = (GsxRosterTpTypeGet(g_msMagic, 0) == 0) ? 1 : 0;
+         TpnOnTpTypeChanged(g_msMagic, typ);
+         TpnDeskApplyUiAfterToggle(g_msMagic);
+         g_msLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                          (typ == 1 ? " TP type AVERAGE" : " TP type MEDIAN");
+         GsxMsSettingsClick(typ == 1 ? "TP AVG" : "TP MED");
          return(true);
         }
       if(tag == "BTN_EQGUARD")

@@ -26,6 +26,16 @@ Writes `assets/i18n/{it,fr,ru,ar,zh,es}/bias-follow.json` from [`_bias_follow_co
 
 English lives in the HTML via `data-i18n` / `data-i18n-html` on section `#bias-follow`.
 
+## Native TP locale catalogs
+
+```bash
+cd docs
+python _gen_tp_native_i18n.py
+python _audit_i18n.py
+```
+
+Merges keys from [`_tp_native_manual.py`](_tp_native_manual.py) into `welcome.json`, `integrations.json`, `desk213.json`, and `ui.json` for each locale. Audit fails on missing HTML keys (hard for TP/`ui.*`) and TP EN-parity.
+
 ## Edit bias copy
 
 1. Change EN strings in `_bias_follow_content.py` (`BIAS_I18N` + `BIAS_FOLLOW_CHAPTER`).

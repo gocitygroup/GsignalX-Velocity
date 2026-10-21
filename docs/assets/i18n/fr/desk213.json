@@ -180,5 +180,13 @@
   "desk213.li10": "Confirmez qu’Automatisation affiche <strong>FIXED</strong> et le lot <strong>0.01</strong>.",
   "desk213.li11": "Appuyez une fois sur <strong>STOP</strong>, puis <strong>REM</strong> pour les paires que vous ne voulez pas.",
   "desk213.li12": "<strong>PLAY</strong> / START seulement sur le book live. Utilisez <strong>PROP CLEAR</strong> si une ancienne règle d’equity a laissé LOCK.",
-  "desk213.p4": "La recette de liste de session reste dans <a href=\"#desk200\">Desk multisymbole</a>. Confirmez : <code>Confirm-GSignalX.ps1 -Gate All</code> — attendez les marqueurs V2.20."
+  "desk213.p4": "La recette de liste de session reste dans <a href=\"#desk200\">Desk multisymbole</a>. Confirmez : <code>Confirm-GSignalX.ps1 -Gate All</code> — attendez les marqueurs V2.20.",
+  "desk213.tdTp": "<strong>TP ON / OFF</strong>",
+  "desk213.tdTp2": "Master tip natif (GV desk partagée). ON trace le niveau et pousse le TP courtier vers les positions correspondantes. Voir <a href=\"#integrations\">Intégrations</a>.",
+  "desk213.tdTpType": "<strong>Median / Average</strong>",
+  "desk213.tdTpType2": "Type de distance tip (visible si TP ON)",
+  "desk213.tdTpChart": "<strong>TP ON / OFF</strong>",
+  "desk213.tdTpChart2": "Même GV que Trade Center ; HLINE tip + sync TP courtier pour ce magic",
+  "desk213.tdTpTypeChart": "<strong>Median / Average</strong>",
+  "desk213.tdTpTypeChart2": "Type tip (affiché si TP ON)"
 }

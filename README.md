@@ -11,7 +11,8 @@ Structured entries · winners-only harvest · prop-safe soft STOP · one magic.
 **GSignalX** opens risk. **ProfitScouter** banks winners. Desk PLAY/STOP never closes tickets.  
 Default lot **FIXED 0.01**. Bus schema **v1**. Current cut **Velocity 2.20**.  
 **OCO straddle** default **On** (BuyStop+SellStop parallel to EntryMode; takeoff via desk chip).  
-**Daily Bias Follow:** chart-aligned D1 lanes live one-side → FollowDir (BULL→BUY / BEAR→SELL / NEUT→WAIT; entries only; no EMA).
+**Daily Bias Follow:** chart-aligned D1 lanes live one-side → FollowDir (BULL→BUY / BEAR→SELL / NEUT→WAIT; entries only; no EMA).  
+**Native Take-Profit (`tp_native`):** optional Median/Average TP from closed bars → own SBT/ZigZag pipeline (independent of Engines SBT). Default **OFF**. Chart + Desk chips; Scouter closes on hit when `closeOnHit` is armed. Plan: [TP_NATIVE_PLAN](docs/plans/TP_NATIVE_PLAN.md).
 
 **Start here**
 
@@ -65,6 +66,7 @@ cd GsignalX-Velocity
 | `ProfitScouter_DollarTarget.mq5` | Expert | Same harvest on chart |
 | `ProfitOpportunity_Grader.mq5` | Service | Cross-terminal opportunity grades |
 | `ProfitHarvest_Now.mq5` | Script | One-shot close-at-target |
+| `GSX_TpNative_Test.mq5` | Script | Native TP golden-vector asserts |
 
 **Best use:** Topology A — Trade Center DeskExecute ON, Service stopped (or Yield ON), FIXED 0.01, OCO On (takeoff when unwanted), EQ OFF unless you want a floating-DD brake, STOP clears pendings, Scouter owns exits, cloud remote closes Off. Details: [RELEASE 2.20](docs/RELEASE_v2.20_Integrations_OCO.md) · Manual [Integrations](docs/Gsignalx_Velocity_Users_Manual.html#integrations) · [System UI Best Use](docs/Gsignalx_Velocity_Users_Manual.html#desk213).
 

@@ -53,6 +53,7 @@
 #include <GSignalX/HostConfig.mqh>
 #include <GSignalX/StrategicStop.mqh>
 #include <GSignalX/OcoStraddle.mqh>
+#include <GSignalX/TpNative/TpNativeHost.mqh>
 
 //+------------------------------------------------------------------+
 //| Enumerations                                                     |
@@ -134,6 +135,16 @@ input int         InpMaLen         = 20;           // MA Period
 input group "4) SuperBollingerTrend"
 input int         InpBBLen         = 12;           // BB Period
 input double      InpBBMult        = 2.0;          // BB Multiplier
+
+input group "4b) Native Take-Profit (tp_native)"
+input bool                 InpTpEnabled      = false;          // Take Profit master switch
+input ENUM_TPN_TYPE        InpTpType         = TPN_MEDIAN;     // Median or Average distance
+input bool                 InpTpCloseOnHit   = false;          // Scouter closes on hit (pending)
+input int                  InpTpPeriod       = 12;             // SBT Bollinger period
+input double               InpTpMult         = 2.0;            // SBT std-dev mult
+input ENUM_TPN_PIVOT_SOURCE InpTpPivotSource = TPN_PIVOT_ZIGZAG; // Pivot source at flip
+input int                  InpTpHistoryBars  = 500;            // Bootstrap bar count
+input bool                 InpTpShowAdvanced = false;          // Expose crossMode (advanced)
 
 input group "5) Trade management"
 input bool        InpAllowLong     = true;         // Allow Longs
@@ -306,6 +317,25 @@ bool     gNeedSignalEval = false; // retry EvaluateSignals until gates pass this
 bool     gFirstEntryDone = false;
 bool     gDataReady    = false;
 string   gStatus       = "initialising";
+TpnHostState g_tpn;           // standalone native TP (independent of Engines SBT)
+datetime     g_tpnLastClosed = 0;
+bool         g_tpnNeedBootstrap = false; // defer heavy bootstrap off click path
+
+TpnSettings ChartTpSettingsFromInputs()
+  {
+   TpnSettings s;
+   TpnSettingsDefaults(s);
+   s.enabled = GsxRosterTpEnableGet(InpMagic, InpTpEnabled);
+   s.type = (GsxRosterTpTypeGet(InpMagic, (InpTpType == TPN_AVERAGE) ? 1 : 0) == 1)
+            ? TPN_AVERAGE : TPN_MEDIAN;
+   s.closeOnHit = InpTpCloseOnHit;
+   s.period = InpTpPeriod;
+   s.mult = InpTpMult;
+   s.pivotSource = InpTpPivotSource;
+   s.crossMode = TPN_CROSS_SERIES;
+   s.historyBars = InpTpHistoryBars;
+   return(s);
+  }
 string   gLastAction   = "-";
 GsxBiasSnapshot g_chartBias;      // v2.18 Daily / Pre / Third display (no EMA)
 GsxBiasD1Cache  g_chartBiasCache;
@@ -2912,6 +2942,24 @@ void UpdatePanel(string tradeState)
          GsxPanelSlotButtonPad("BTN_PRM", bslots[5], GSX_PREMIUM_LABEL,
                                InpColAccent, InpColPanelBg, bpad);
         }
+      GsxLayAdvance(blay, bh);
+
+      // Native Take-Profit row (independent of Engines SBT)
+      bool tpOn = GsxRosterTpEnableGet(InpMagic, InpTpEnabled);
+      int tpTyp = GsxRosterTpTypeGet(InpMagic, (InpTpType == TPN_AVERAGE) ? 1 : 0);
+      GsxLayRowStart(blay, bh);
+      GsxLayEqual(blay, tpOn ? 2 : 1, bslots);
+      if(ArraySize(bslots) >= 1)
+         GsxPanelSlotButtonPad("BTN_TP", bslots[0],
+                               tpOn ? "TP ON" : "TP OFF",
+                               tpOn ? InpColBull : chipIdle,
+                               tpOn ? InpColPanelBg : InpColText, bpad);
+      if(tpOn && ArraySize(bslots) >= 2)
+         GsxPanelSlotButtonPad("BTN_TPTYPE", bslots[1],
+                               (tpTyp == 1) ? "Average" : "Median",
+                               InpColAccent, InpColPanelBg, bpad);
+      GsxLayAdvance(blay, bh);
+      TpnHostDraw(g_tpn, InpColAccent);
 
       // Grow panel to real button stack (fixes black gap / roster collision)
       int stackH = GsxLayMeasuredH(blay) + GsxSx(8);
@@ -3266,6 +3314,19 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
          // v2.19: drag offsets objects in-panel; skip full UpdatePanel until mouse-up
          if(g_msDragging && id == CHARTEVENT_MOUSE_MOVE)
             return;
+         // Strip BTN_TP / BTN_TPTYPE share GVs — mirror onto chart host (O(1), no bootstrap)
+         bool tpOn = GsxRosterTpEnableGet(InpMagic, InpTpEnabled);
+         TpnHostApplyUiSettings(g_tpn, tpOn,
+            (GsxRosterTpTypeGet(InpMagic, 0) == 1) ? TPN_AVERAGE : TPN_MEDIAN,
+            InpTpCloseOnHit);
+         if(tpOn)
+           {
+            if(!g_tpn.ready)
+               g_tpnNeedBootstrap = true;
+            TpnHostDraw(g_tpn, InpColAccent);
+           }
+         else
+            TpnHostClearDraw(g_tpn);
          GsxUiMarkDirty();
          UpdatePanel(g_lastPanelState);
          return;
@@ -3385,6 +3446,48 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                                                " Premium → Experts / Alert";
                                  GsxUiMarkDirty();
                                  UpdatePanel(g_lastPanelState);
+                                }
+                              else
+                              if(click == gPfx + "BTN_TP")
+                                {
+                                 bool on = !GsxRosterTpEnableGet(InpMagic, false);
+                                 TpnOnTpUiChanged(InpMagic, on);
+                                 TpnHostApplyUiSettings(g_tpn, on,
+                                    (GsxRosterTpTypeGet(InpMagic, 0) == 1) ? TPN_AVERAGE : TPN_MEDIAN,
+                                    InpTpCloseOnHit);
+                                 if(on)
+                                   {
+                                    if(!g_tpn.ready)
+                                       g_tpnNeedBootstrap = true;
+                                    TpnRefreshQPush(_Symbol);
+                                    TpnHostDraw(g_tpn, InpColAccent);
+                                   }
+                                 else
+                                    TpnHostClearDraw(g_tpn);
+                                 gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                                               (on ? " Take Profit ON" : " Take Profit OFF");
+                                 GsxSettingsAnnounce(on ? "TP ON" : "TP OFF");
+                                 GsxUiMarkDirty();
+                                 UpdatePanel(g_lastPanelState);
+                                }
+                              else
+                              if(click == gPfx + "BTN_TPTYPE")
+                                {
+                                 if(GsxRosterTpEnableGet(InpMagic, false))
+                                   {
+                                    int typ = (GsxRosterTpTypeGet(InpMagic, 0) == 0) ? 1 : 0;
+                                    TpnOnTpTypeChanged(InpMagic, typ);
+                                    TpnHostApplyUiSettings(g_tpn, true,
+                                       (typ == 1) ? TPN_AVERAGE : TPN_MEDIAN,
+                                       InpTpCloseOnHit);
+                                    TpnRefreshQPush(_Symbol);
+                                    TpnHostDraw(g_tpn, InpColAccent);
+                                    gLastAction = TimeToString(TimeCurrent(), TIME_MINUTES) +
+                                                  (typ == 1 ? " TP Average" : " TP Median");
+                                    GsxSettingsAnnounce(typ == 1 ? "TP AVG" : "TP MED");
+                                    GsxUiMarkDirty();
+                                    UpdatePanel(g_lastPanelState);
+                                   }
                                 }
                               else
                                  if(click == gPfx + "TITLE")
@@ -3557,6 +3660,12 @@ int OnInit()
    LoadIgnoreSpread();
    LoadAutoLot();
    LoadOcoEnable();
+   GsxRosterTpEnableSeed(InpMagic, InpTpEnabled);
+   GsxRosterTpTypeSeed(InpMagic, (InpTpType == TPN_AVERAGE) ? 1 : 0);
+   TpnHostInit(g_tpn, _Symbol, (ENUM_TIMEFRAMES)_Period, ChartTpSettingsFromInputs(),
+               gPfx, InpMagic);
+   if(!g_tpn.ready)
+      TpnHostBootstrap(g_tpn, _Symbol, (ENUM_TIMEFRAMES)_Period, InpTpHistoryBars);
    LoadEquityGuard();
    CheckAndResetDailyCounters();
 
@@ -3682,6 +3791,8 @@ int OnInit()
 void OnDeinit(const int reason)
   {
    EventKillTimer();
+   TpnHostFlush(g_tpn, _Symbol, (int)_Period);
+   TpnHostClearDraw(g_tpn);
    if(InpTgEnable)
       GsxTgDeinit(g_chartTgCfg, g_tgwSessionPl);
    Comment("");
@@ -3782,6 +3893,31 @@ void OnTick()
          gLastBarTime = barTime;
          gNeedSignalEval = true;
          gUiNeedChartArt = true;
+         GsxUiMarkDirty();
+        }
+     }
+
+   // Native TP: deferred bootstrap (never on click) + closed-bar feed
+   if(g_tpnNeedBootstrap && !g_tpn.ready)
+     {
+      if(TpnHostBootstrap(g_tpn, _Symbol, (ENUM_TIMEFRAMES)_Period, InpTpHistoryBars))
+        {
+         g_tpnNeedBootstrap = false;
+         TpnHostDraw(g_tpn, InpColAccent);
+         GsxUiMarkDirty();
+        }
+     }
+   datetime closedOpen = iTime(_Symbol, _Period, 1);
+   if(closedOpen != 0 && closedOpen != g_tpnLastClosed)
+     {
+      TpnHostApplyUiSettings(g_tpn,
+                             GsxRosterTpEnableGet(InpMagic, InpTpEnabled),
+                             (GsxRosterTpTypeGet(InpMagic, 0) == 1) ? TPN_AVERAGE : TPN_MEDIAN,
+                             InpTpCloseOnHit);
+      if(TpnHostOnClosedBar(g_tpn, _Symbol, (ENUM_TIMEFRAMES)_Period, closedOpen))
+        {
+         g_tpnLastClosed = closedOpen;
+         TpnHostDraw(g_tpn, InpColAccent);
          GsxUiMarkDirty();
         }
      }

@@ -47,5 +47,17 @@
   "integrations.li4": "Cloud: allowlist <code>https://trade-api.gsignalx.cloud</code>; keep remote closes <strong>OFF</strong>.",
   "integrations.li5": "Telegram: allowlist <code>https://api.telegram.org</code>; press <strong>VERIFY</strong> until Verified.",
   "integrations.li6": "Confirm: <code>Confirm-GSignalX.ps1 -Gate All</code> — expect hosts <strong>2.20</strong> + V2.20 markers.",
-  "integrations.p2": "Operator cut note: <code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · Cloud how-to: <a href=\"#cloud\" data-tab=\"cloud\">Cloud Trading</a> · <code>docs/CLOUD_TRADING.md</code>."
+  "integrations.p2": "Notes opérateur : <code>docs/RELEASE_v2.20_Integrations_OCO.md</code> · <code>docs/RELEASE_v2.20_Native_TP.md</code> · Cloud : <a href=\"#cloud\" data-tab=\"cloud\">Cloud Trading</a> · <code>docs/CLOUD_TRADING.md</code>.",
+  "integrations.td29": "<strong>TP natif</strong>",
+  "integrations.td30": "Niveau tip de structure + TP courtier sur tickets ouverts",
+  "integrations.td31": "Par défaut <strong>OFF</strong> · chips Chart + Trade Center · GV partagées · ON applique le tip aux positions · Scouter optionnel <code>NATIVE-TP</code> si closeOnHit",
+  "integrations.h24": "TP natif (Chart + Trade Center)",
+  "integrations.p3": "Les chips desk <strong>BTN_TP</strong> / <strong>BTN_TPTYPE</strong> partagent <code>GSX_MS_TPENABLE_*</code> / <code>GSX_MS_TPTYPE_*</code>. Le basculement est O(1) ; le Desk draine les paires ouvertes au timer. Détail ingénieur : <code>docs/TP_NATIVE.md</code>.",
+  "integrations.th6": "Puce",
+  "integrations.th7": "Signification",
+  "integrations.td32": "Master OFF — pas de HLINE, pas de push TP courtier, pas d’hits pending",
+  "integrations.td33": "Tip actif ; tickets ouverts correspondants reçoivent PositionModify TP (SL conservé)",
+  "integrations.td34": "Distance = médiane des écarts de swing",
+  "integrations.td35": "Distance = moyenne de tous les écarts de swing",
+  "integrations.li7": "TP natif par défaut <strong>OFF</strong> ; activez ON seulement pour un TP de structure sur le book."
 }
